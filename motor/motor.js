@@ -49,8 +49,12 @@
     const sq = (g, w, h) => { const uv = g.attributes.uv; for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * w / 1.3, uv.getY(i) * h / 1.3); return g; };
     const back = new THREE.Mesh(sq(new THREE.PlaneGeometry(GW, GH, 36, 12), GW, GH), netMat); back.position.copy(p(bx, W / 2, GH / 2)); back.rotation.y = Math.PI / 2; S.add(back);
     const top = new THREE.Mesh(sq(new THREE.PlaneGeometry(GW, GD, 36, 10), GW, GD), netMat); top.position.copy(p(gx + dir * GD / 2, W / 2, GH)); top.rotation.set(-Math.PI / 2, 0, Math.PI / 2); S.add(top);
-    for (const yy of [y0, y1]) { const sd = new THREE.Mesh(sq(new THREE.PlaneGeometry(GD, GH, 10, 12), GD, GH), netMat); sd.position.copy(p(gx + dir * GD / 2, yy, GH / 2)); S.add(sd); }
-    nets.push({ side, back, base: back.geometry.attributes.position.array.slice(), hit: 0, hy: 0, hz: 0 });
+    const sds = [y0, y1].map(yy => { const sd = new THREE.Mesh(sq(new THREE.PlaneGeometry(GD, GH, 14, 12), GD, GH), netMat); sd.position.copy(p(gx + dir * GD / 2, yy, GH / 2)); S.add(sd); return sd; });
+    // cada paño de red se deforma hacia fuera donde pega el balón
+    const reg = (mesh, part, out) => { mesh.updateMatrixWorld(true); const ar = mesh.geometry.attributes.position, wpos = new Float32Array(ar.count * 3), v = new THREE.Vector3();
+      for (let i = 0; i < ar.count; i++) { v.fromBufferAttribute(ar, i).applyMatrix4(mesh.matrixWorld); wpos[i * 3] = v.x; wpos[i * 3 + 1] = v.y; wpos[i * 3 + 2] = v.z; }
+      const zw = new THREE.Vector3(0, 0, 1).transformDirection(mesh.matrixWorld); nets.push({ side, part, mesh, base: ar.array.slice(), wpos, sgn: Math.sign(zw.dot(out)) || 1, hit: 0 }); };
+    reg(back, "back", new THREE.Vector3(dir, 0, 0)); reg(top, "top", new THREE.Vector3(0, 1, 0)); reg(sds[0], "s0", new THREE.Vector3(0, 0, -1)); reg(sds[1], "s1", new THREE.Vector3(0, 0, 1));
   }
   setLoad("estadio");
   const white = new THREE.MeshStandardMaterial({ color: 0xf4f4f0, roughness: .35, metalness: .3 });
@@ -238,7 +242,7 @@
     for (const side of [0, 1]) { const gx = side ? L : 0, dir = side ? 1 : -1, inside = (b.x - gx) * dir;
       for (const py of [W / 2 - GW / 2, W / 2 + GW / 2]) { const dx = b.x - gx, dy = b.y - py, d = Math.hypot(dx, dy); if (d < BR + .06 && b.z < GH) { const nx = dx / d, ny = dy / d, vn = b.vx * nx + b.vy * ny; if (vn < 0) { b.vx -= 1.7 * vn * nx; b.vy -= 1.7 * vn * ny; b.x = gx + nx * (BR + .061); b.y = py + ny * (BR + .061); hit("poste"); } } }
       if (Math.abs(inside) < BR + .06 && Math.abs(b.z - GH) < BR + .06 && Math.abs(b.y - W / 2) < GW / 2) { const dz = b.z - GH, dx = b.x - gx, d = Math.hypot(dx, dz) || 1; const nx = dx / d, nz = dz / d, vn = b.vx * nx + b.vz * nz; if (vn < 0) { b.vx -= 1.7 * vn * nx; b.vz -= 1.7 * vn * nz; hit("larguero"); } }
-      if (inside > 0 && inside < GD + .5 && Math.abs(b.y - W / 2) < GW / 2 && b.z < GH) { if (!b.inNet) { b.inNet = true; goalScored(side); } if (inside > GD - .2) { b.vx *= -.15; b.x = gx + dir * (GD - .2); b.vy *= .4; b.vz *= .3; const n = nets.find(q => q.side === side); n.hit = 1; n.hy = b.y - W / 2; n.hz = b.z; } }
+      if (inside > 0 && inside < GD + .5 && Math.abs(b.y - W / 2) < GW / 2 && b.z < GH) { if (!b.inNet) { b.inNet = true; goalScored(side); } if (inside > GD - .2) { b.vx *= -.15; b.x = gx + dir * (GD - .2); b.vy *= .4; b.vz *= .3; const n = nets.find(q => q.side === side && q.part === "back"); n.hit = 1; n.hx = b.x; n.hy = b.y; n.hz = b.z; } }
     }
     // fuera del campo: rebota en las vallas para seguir jugando
     if (b.x < -4 || b.x > L + 4) { b.vx *= -.4; b.x = clamp(b.x, -4, L + 4); } if (b.y < -4.5 || b.y > W + 4.5) { b.vy *= -.4; b.y = clamp(b.y, -4.5, W + 4.5); }
@@ -544,7 +548,7 @@
     place(pl, dt); place(gk, dt);
     ballMesh.position.copy(P3(ball.x, ball.y, ball.z + BR));
     const bs = Math.hypot(ball.vx, ball.vy); if (bs > .05) ballMesh.rotateOnWorldAxis(new THREE.Vector3(ball.vy, 0, -ball.vx).normalize(), -bs * dt / BR);
-    for (const n of nets) { if (n.hit <= 0) continue; n.hit = Math.max(0, n.hit - dt * 1.6); const ar = n.back.geometry.attributes.position, bs2 = n.base; for (let i = 0; i < ar.count; i++) { const dx = bs2[i * 3] - n.hy, dy = bs2[i * 3 + 1] - (n.hz - GH / 2); ar.array[i * 3 + 2] = Math.exp(-(dx * dx + dy * dy) / 1.4) * n.hit * .55; } ar.needsUpdate = true; }
+    for (const n of nets) { if (!(n.hit > 0)) continue; n.hit = Math.max(0, n.hit - dt * 1.4); const hp = P3(n.hx || 0, n.hy || 0, n.hz || 0), ar = n.mesh.geometry.attributes.position, wp = n.wpos, amp = Math.sin(Math.min(1, n.hit) * Math.PI * .5) * .5 * n.sgn; for (let i = 0; i < ar.count; i++) { const dx = wp[i * 3] - hp.x, dy = wp[i * 3 + 1] - hp.y, dz = wp[i * 3 + 2] - hp.z; ar.array[i * 3 + 2] = n.base[i * 3 + 2] + Math.exp(-(dx * dx + dy * dy + dz * dz) / .9) * amp; } ar.needsUpdate = true; }
     camera(dt);
     if (msgT > 0) { msgT -= dt; if (msgT <= 0) $("#msg").style.opacity = 0; }
   }
