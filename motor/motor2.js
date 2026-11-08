@@ -13,6 +13,7 @@
   if (!window.MA) (window.PREF || []).forEach(n => asset(n).catch(() => {}));
   // calidad gráfica: alta / media / baja (se guarda en el navegador); por defecto media en tabletas, móviles y equipos con poca memoria
   const QUAL = (() => { let q = null; try { q = localStorage.getItem("mdg27q"); } catch (e) {} if (q) return q; const touch = matchMedia("(pointer: coarse)").matches, mem = navigator.deviceMemory || 8; return touch || mem <= 4 ? "baja" : "media"; })();
+  let REAL = (() => { try { const v = localStorage.getItem("mdg27real"); return v == null ? QUAL === "alta" : v === "1"; } catch (e) { return false; } })();
   window.QUAL = QUAL; const TEXMAX = QUAL === "alta" ? 2048 : QUAL === "media" ? 1024 : 768;   // descargas en paralelo desde el principio
   const T0_ = performance.now(); window.__LT0 = Math.round(T0_); let TL_ = T0_; window.__LT = []; const setLoad = t => { const n = performance.now(); window.__LT.push([t, Math.round(n - TL_)]); TL_ = n; const e = $("#load b"); if (e) e.textContent = t; };
 
@@ -552,7 +553,7 @@
     p.mh += clamp(dh, -(faceMode ? 9 : wMax) * dt, (faceMode ? 9 : wMax) * dt);
     if (faceMode) p.h += clamp(angD(p.h, C.face), -8 * dt, 8 * dt); else p.h += clamp(angD(p.h, p.mh), -wMax * 1.6 * dt, wMax * 1.6 * dt);
     const tgt = want * (adh > .5 && !faceMode ? clamp(1 - (adh - .5) * .35, .45, 1) : 1) * (faceMode ? Math.min(1, 3.3 / Math.max(want, .1)) : 1);
-    const accel = tgt > p.v ? (p.v < 3 ? 6.5 : 3.8) * (.85 + (p.st.acc - 70) * .01) : 9;
+    const accel = tgt > p.v ? (p.v < 3 ? 6 : 3.6) * (.85 + (p.st.acc - 70) * .01) : (p.v > 5 ? 7 : 8.5);
     p.v += clamp(tgt - p.v, -accel * dt, accel * dt);
     p.x += Math.cos(p.mh) * p.v * dt; p.y += Math.sin(p.mh) * p.v * dt;
     const om = clamp(dh, -wMax * dt, wMax * dt) / Math.max(dt, 1e-3); p.lean = lerp(p.lean, clamp(-om * p.v * .016, -.22, .22), Math.min(1, dt * 6));
@@ -617,7 +618,7 @@
     if (M.pass && p !== M.pass.from) { const k = M.pass.k, d = (M.pl = M.pl || {})[k] || (M.pl[k] = { n: 0, ok: 0, int: 0 }); if (p.t === M.pass.t) { TEAMS[p.t].stats.pc++; d.ok++; } else d.int++; }
     if (M.last && M.last !== p && M.last.t === p.t && !M.last.gk) M.assist = M.last; else if (M.last && M.last.t !== p.t) M.assist = null;
     if (M.owner && M.owner.t !== p.t || (!M.owner && M.last && M.last.t !== p.t)) { M.turnT = simT; M.turnLost = 1 - p.t; }
-    M.pass = null; M.last = p; if (M.owner !== p) { M.owner = p; onOwner(p); const pr = openness(p, p.t); p.ai.t = pr < 2.5 ? .25 + Math.random() * .3 : .6 + Math.random() * .9; }
+    M.pass = null; M.last = p; if (M.owner !== p) { M.owner = p; p.ai.gotT = simT; onOwner(p); const pr = openness(p, p.t); p.ai.t = pr < 2.5 ? .25 + Math.random() * .3 : .6 + Math.random() * .9; }
   }
   // segundo jugador humano (el invitado online, equipo 1): se usa el mismo código de control cambiando el "contexto"
   const R2 = NET ? { human: null, team: 1, swT: 0, charge: null, lastI: { dir: null }, prev: {} } : null;
@@ -648,7 +649,7 @@
     const q = clamp((p.st.dri + p.st.pas) / 170 - rv * .012, .25, 1); let wantH = p === M.human && lastI.dir != null ? lastI.dir : p.h;
     if (p !== M.human) { const gh = Math.atan2(W / 2 - p.y, opp(p.t) - p.x), free = !team(1 - p.t).some(o => Math.hypot(o.x - (p.x + Math.cos(gh) * 4), o.y - (p.y + Math.sin(gh) * 4)) < 3.5); if (free && prog(p.t, p.x) > .3) wantH = p.h + clamp(angD(p.h, gh), -1.2, 1.2); }
     const knock = p === M.human && lastI.spr && lastI.dir != null ? 2.4 + (p.st.pac - 70) * .03 : 0;
-    const sp = p.v + .8 + knock + (1 - q) * rv * .35, a = wantH + (Math.random() - .5) * (1 - q) * 1.2;
+    const sp = p.v * .9 + .55 + knock + (1 - q) * rv * .28, a = wantH + (Math.random() - .5) * (1 - q) * .85;
     const z0 = ball.z;
     ball.vx = Math.cos(a) * sp; ball.vy = Math.sin(a) * sp;
     if (z0 > .32 && !p.one) { // balón a media altura: control con el muslo, el balón cae amortiguado delante
@@ -970,6 +971,10 @@
     if (p.cat === "fwd") d = Math.max(d, att ? .58 : .4); if (att && p.cat === "mid") d = Math.max(d, bd - .05);
     // línea defensiva: no por detrás del área si el balón está lejos
     if (p.cat === "def" && bd > .45) d = Math.max(d, .18);
+    if (!att && !p.gk) {   // bloque: tres líneas juntas (unos 12-14 m entre líneas) que bascula hacia el lado del balón
+      const dl = clamp(bd - (STREET ? .2 : .25), .07, .48); d = p.cat === "def" ? dl : p.cat === "mid" ? dl + (STREET ? .15 : .135) : dl + (STREET ? .3 : .28);
+      w = clamp(ball.y / W + (bw - .5) * (p.cat === "fwd" ? .75 : .64), .05, .95); }
+    else if (att && !p.gk && (p.role === "EI" || p.role === "ED" || p.role === "MI" || p.role === "MD")) w = bw < .5 ? .07 : .93;   // atacando: extremos abiertos para dar amplitud
     const mt = TEAMS[t].ment || 0; if (!p.gk) d += mt === 2 ? (att ? .03 : .07) : mt * .045;   // táctica: defensiva -1, equilibrada 0, ofensiva 1, presión alta 2
     return { x: fx(t, clamp(d, .05, .93)), y: clamp(w * W, 3, W - 3) };
   }
@@ -977,7 +982,7 @@
     const t = p.t, C = { dir: null, m: 0, spr: false };
     if (p.gk || p.down > 0 || p.one) return C;
     if (DR) return drAI(p, dt, C);
-    const goTo = (x, y, spr, face, slow) => { const d = Math.hypot(x - p.x, y - p.y); if (d < .6) { C.m = 0; if (face != null) C.face = face; return; } C.dir = Math.atan2(y - p.y, x - p.x); C.m = d < 2.5 ? .5 : d < 6 && !spr ? .7 : 1; C.spr = spr && d > 4; if (slow) C.m = Math.min(C.m, .62); if (face != null) C.face = face; };
+    const goTo = (x, y, spr, face, slow) => { const d = Math.hypot(x - p.x, y - p.y); if (d < (p.v < .5 ? 1.1 : .6)) { C.m = 0; if (face != null) C.face = face; return; } C.dir = Math.atan2(y - p.y, x - p.x); C.m = d < 2.5 ? .5 : d < 6 && !spr ? .7 : 1; C.spr = spr && d > 4; if (slow) C.m = Math.min(C.m, .62); if (face != null) C.face = face; };
     const owner = M.owner, mineBall = owner && owner.t === t, loose = !owner;
     // con el balón
     if (owner === p) return carrierAI(p, dt, C);
@@ -996,7 +1001,7 @@
     if (mineBall) { // apoyo y desmarques
       const h = homePos(p);
       if (p.ai.run && simT < p.ai.run.until) { goTo(p.ai.run.x, p.ai.run.y, true); return C; } else p.ai.run = null;
-      if (p.cat === "fwd" && Math.random() < dt * .25 && prog(t, owner.x) > .3) {          // delantero: desmarque al espacio, saliendo desde la línea
+      if (p.cat === "fwd" && Math.random() < dt * (owner === M.human ? .45 : .25) && prog(t, owner.x) > .3) {          // delantero: desmarque al espacio, saliendo desde la línea
         const line = lastLine(t); p.ai.run = { x: fx(t, Math.min(.96, line + .09)), y: clamp(p.y + (Math.random() - .5) * 10, 6, W - 6), until: simT + 2.2 };
       }
       if (p.fb && prog(t, owner.x) > .55 && Math.abs(owner.y - p.y) < 22 && Math.random() < dt * .15) p.ai.run = { x: fx(t, Math.min(.88, prog(t, owner.x) + .12)), y: (M.dirOf[t] > 0 ? p.base.w : 1 - p.base.w) < .5 ? 4 : W - 4, until: simT + 2.5 };
@@ -1004,10 +1009,19 @@
       if (p.cat === "fwd" && !p.ai.run && prog(t, owner.x) < .45 && Math.random() < dt * .35) { const pz = team(1 - t).some(o => dist(o, owner) < 3.5); if (pz) p.ai.run = { x: fx(t, clamp(prog(t, owner.x) + .16, .3, .7)), y: clamp(lerp(p.y, owner.y, .4), 5, W - 5), until: simT + 1.6 }; }
       // llegada desde segunda línea: un medio pisa el área cuando el balón está en el último tercio
       if (p.cat === "mid" && !p.ai.run && prog(t, owner.x) > .62 && Math.random() < dt * .12 && !team(t).some(q => q !== p && q.ai.run && q.cat === "mid")) p.ai.run = { x: fx(t, .86), y: clamp(W / 2 + (Math.random() - .5) * 14, 8, W - 8), until: simT + 2.4 };
-      // ofrecerse: mantener línea de pase libre
-      let tx = h.x, ty = h.y; const dO = dist(p, owner); if (dO < 9 && p.cat === "mid") { const a = Math.atan2(p.y - owner.y, p.x - owner.x); tx = owner.x + Math.cos(a) * 12; ty = owner.y + Math.sin(a) * 12; }
+      // ofrecerse: los dos más cercanos al poseedor forman un triángulo con línea de pase libre; el resto mantiene su sitio
+      let tx = h.x, ty = h.y;
+      const sup = team(t).filter(q => !q.gk && q !== owner && q.down <= 0 && !q.ai.run && !(M.lockP && q === M.lockP)).sort((a, b) => dist(a, owner) - dist(b, owner)).slice(0, 2);
+      if (sup.includes(p)) { const S0 = p.ai.sup; if (!S0 || simT > S0.until || dist(owner, S0) > (STREET ? 11 : 20)) {
+          const fwdA = M.dirOf[t] > 0 ? 0 : Math.PI, R = STREET ? 6.5 : 11.5, other = sup.find(q => q !== p), oS = other && other.ai.sup; let best = null, bs = -1e9;
+          for (const da of [-1.05, -.55, .55, 1.05, 1.75, -1.75, 2.5, -2.5]) { const a = fwdA + da, x = clamp(owner.x + Math.cos(a) * R, 2, L - 2), y = clamp(owner.y + Math.sin(a) * R, 2, W - 2);
+            const sc = Math.min(6, openness({ x, y }, t)) * .8 - passRisk(owner, x, y) * 2.5 + Math.cos(da) * .9 - Math.hypot(x - p.x, y - p.y) * .08 - (oS && Math.hypot(x - oS.x, y - oS.y) < R * .8 ? 4 : 0);
+            if (sc > bs) { bs = sc; best = { x, y }; } }
+          p.ai.sup = best ? { x: best.x, y: best.y, until: simT + .7 } : null; }
+        if (p.ai.sup) { tx = p.ai.sup.x; ty = p.ai.sup.y; } }
+      else p.ai.sup = null;
       const line = lastLine(t); if (prog(t, tx) > line && !p.ai.run) tx = fx(t, line - .005);            // quedarse en línea (no en fuera de juego)
-      goTo(tx, ty, Math.hypot(tx - p.x, ty - p.y) > 12, null, true); return C;
+      goTo(tx, ty, Math.hypot(tx - p.x, ty - p.y) > 16, null, true); return C;
     }
     // defendiendo
     if (owner && owner.t !== t) {
@@ -1027,10 +1041,10 @@
       if (pr[1] === p) { const mate = bestMate(owner, 30); const tx = mate ? lerp(owner.x, mate.x, .45) : homePos(p).x, ty = mate ? lerp(owner.y, mate.y, .45) : homePos(p).y; goTo(tx, ty, true); return C; }
       // marca: el rival más peligroso de mi zona, siempre entre él y la portería
       const h = homePos(p); let mk = null, md = 9; for (const o of team(1 - t)) { if (o.gk || o === owner) continue; const d = Math.hypot(o.x - h.x, o.y - h.y); if (d < md) { md = d; mk = o; } }
-      if (mk && p.cat !== "fwd") { const gx = own(t), k = 1.8 / Math.max(2, Math.hypot(gx - mk.x, W / 2 - mk.y)); goTo(mk.x + (gx - mk.x) * k, mk.y + (W / 2 - mk.y) * k, Math.hypot(mk.x - p.x, mk.y - p.y) > 6, Math.atan2(ball.y - p.y, ball.x - p.x)); return C; }
-      goTo(h.x, h.y, Math.hypot(h.x - p.x, h.y - p.y) > 10, Math.atan2(ball.y - p.y, ball.x - p.x)); return C;
+      if (mk && p.cat !== "fwd") { const gx = own(t), k = 1.8 / Math.max(2, Math.hypot(gx - mk.x, W / 2 - mk.y)); const behind = prog(t, p.x) > prog(t, ball.x) - .03; goTo(mk.x + (gx - mk.x) * k, mk.y + (W / 2 - mk.y) * k, behind && Math.hypot(mk.x - p.x, mk.y - p.y) > 8, Math.atan2(ball.y - p.y, ball.x - p.x)); return C; }
+      { const behind = prog(t, p.x) > prog(t, ball.x) - .03; goTo(h.x, h.y, behind && Math.hypot(h.x - p.x, h.y - p.y) > 12, Math.atan2(ball.y - p.y, ball.x - p.x), !behind); } return C;
     }
-    const h = homePos(p); goTo(h.x, h.y, Math.hypot(h.x - p.x, h.y - p.y) > 12, null, true); return C;
+    const h = homePos(p); goTo(h.x, h.y, Math.hypot(h.x - p.x, h.y - p.y) > 18, null, true); return C;
   }
   const lastLine = t => { const o = team(1 - t).map(q => prog(t, q.x)).sort((a, b) => b - a); return Math.max(.5, o[1] != null ? o[1] : .5); };
   let TRAJ = null, trajT = -1;
@@ -1071,7 +1085,8 @@
         if (q.ai.run && !off && q.cat === "fwd" && thruSpot(p, q)) { s += 2.2; k = "thru"; }
         if (q === M.lockP && risk < 1) s += 1.1;
         if (s > bs) { bs = s; best = [q, k]; } }
-      if (best && (press < 3 || bs > 1.8 || Math.random() < .12)) { passTo(p, best[0], best[1], .5 + Math.random() * .2); return C; }
+      const dribT = simT - (p.ai.gotT || simT);
+      if (best && (press < 3 || bs > 1.8 || (dribT > 1.8 && bs > .9) || Math.random() < .12)) { passTo(p, best[0], best[1], .5 + Math.random() * .2); return C; }
     }
     // conducir: hacia la portería, apartándose del rival más cercano
     let dirx = M.dirOf[t], diry = (W / 2 - p.y) / 60;
@@ -1493,6 +1508,7 @@
   const subB = pzBtn("Cambios", () => openSubs());
   const QN = { alta: "Alta", media: "Media", baja: "Baja" }; let qNext = QUAL;
   const qB = pzBtn("Calidad: " + QN[QUAL], () => { qNext = qNext === "alta" ? "media" : qNext === "media" ? "baja" : "alta"; try { localStorage.setItem("mdg27q", qNext); } catch (e) {} qB.textContent = "Calidad: " + QN[qNext] + (qNext !== QUAL ? " (en el próximo partido)" : ""); });
+  const realB = pzBtn("", () => { REAL = !REAL; try { localStorage.setItem("mdg27real", REAL ? "1" : "0"); } catch (e) {} realB.textContent = "Imagen: " + (REAL ? "Realista TV" : "Normal"); }); realB.textContent = "Imagen: " + (REAL ? "Realista TV" : "Normal");
   pzBtn("Configurar mando", () => startPadCfg());
   pzBtn("Controles", () => { const h = $("#help"); if (h) h.style.display = ""; });
   // panel de cambios: primero el que sale (con su energía), luego el que entra
@@ -1713,12 +1729,24 @@
       fragmentShader: "uniform sampler2D t; varying vec2 vU; void main(){ vec3 c = texture2D(t, vU).rgb; float l = dot(c, vec3(.2126,.7152,.0722)); gl_FragColor = vec4(c * smoothstep(.85, 1.6, l), 1.); }" });
     PF.blur = new THREE.ShaderMaterial({ uniforms: { t: { value: null }, d: { value: new THREE.Vector2() } }, vertexShader: VS, depthTest: false,
       fragmentShader: "uniform sampler2D t; uniform vec2 d; varying vec2 vU; void main(){ vec3 c = texture2D(t, vU).rgb * .227; c += (texture2D(t, vU + d).rgb + texture2D(t, vU - d).rgb) * .316; c += (texture2D(t, vU + d * 2.3).rgb + texture2D(t, vU - d * 2.3).rgb) * .07; gl_FragColor = vec4(c, 1.); }" });
-    PF.comp = new THREE.ShaderMaterial({ uniforms: { t: { value: null }, bl: { value: null }, ex: { value: 1.05 } }, vertexShader: VS, depthTest: false,
-      fragmentShader: `uniform sampler2D t; uniform sampler2D bl; uniform float ex; varying vec2 vU;
+    PF.comp = new THREE.ShaderMaterial({ uniforms: { t: { value: null }, bl: { value: null }, ex: { value: 1.05 }, real: { value: REAL ? 1 : 0 }, tm: { value: 0 }, px: { value: new THREE.Vector2(1 / 1280, 1 / 720) } }, vertexShader: VS, depthTest: false,
+      fragmentShader: `uniform sampler2D t; uniform sampler2D bl; uniform float ex; uniform float real; uniform float tm; uniform vec2 px; varying vec2 vU;
         vec3 aces(vec3 x){ x *= ex * .6; return clamp((x * (2.51 * x + .03)) / (x * (2.43 * x + .59) + .14), 0., 1.); }
         vec3 toSRGB(vec3 c){ return mix(c * 12.92, 1.055 * pow(c, vec3(1. / 2.4)) - .055, step(.0031308, c)); }
-        void main(){ vec3 c = texture2D(t, vU).rgb + texture2D(bl, vU).rgb * .35;
+        void main(){ vec3 b0 = texture2D(t, vU).rgb; vec2 q0 = vU - .5;
+          if (real > .5) {   // filtro realista: aberración de lente en los bordes y nitidez tipo cámara de TV
+            float ca = dot(q0, q0) * .006; b0 = vec3(texture2D(t, vU + q0 * ca).r, b0.g, texture2D(t, vU - q0 * ca).b);
+            vec3 nb = (texture2D(t, vU + vec2(px.x, 0.)).rgb + texture2D(t, vU - vec2(px.x, 0.)).rgb + texture2D(t, vU + vec2(0., px.y)).rgb + texture2D(t, vU - vec2(0., px.y)).rgb) * .25;
+            b0 += (b0 - nb) * .55; b0 = max(b0, 0.); }
+          vec3 c = (b0 + texture2D(bl, vU).rgb * (real > .5 ? .22 : .35)) * (real > .5 ? 1.12 : 1.);
           c = aces(c);
+          if (real > .5) { float lr = dot(c, vec3(.2126,.7152,.0722));
+            c = mix(c, c * vec3(.93, 1.0, 1.09), (1. - smoothstep(0., .45, lr)) * .28);   // sombras frías
+            c = mix(c, c * vec3(1.07, 1.01, .9), smoothstep(.5, 1., lr) * .35);          // luces cálidas
+            c = mix(c, c * c * (3. - 2. * c), .3);                                      // curva de contraste fílmica
+            c = mix(vec3(dot(c, vec3(.2126,.7152,.0722))), c, .9);
+            float n = fract(sin(dot(vU * vec2(1280., 720.) + tm * 61.7, vec2(12.9898, 78.233))) * 43758.5453); c += (n - .5) * .03;   // grano de película
+            c *= 1. - dot(q0, q0) * .3; }
           float l = dot(c, vec3(.2126,.7152,.0722)); c = mix(vec3(l), c, .9);            // un poco menos saturado (césped menos chillón)
           c = (c - .5) * 1.07 + .5; c *= vec3(1.03, 1.0, .96);                             // contraste y tono cálido de retransmisión
           vec2 q = vU - .5; c *= 1. - dot(q, q) * .42;                                      // viñeta suave
@@ -1727,7 +1755,8 @@
   function renderFrame() {
     if (!Rn.shadowMap.autoUpdate) Rn.shadowMap.needsUpdate = ((renderFrame.n = (renderFrame.n || 0) + 1) % 3) === 0;
     if (!PF.on) { Rn.render(S, cam); return; }
-    const w = cv.width, h = cv.height; if (PF.main.width !== w || PF.main.height !== h) { PF.main.setSize(w, h); PF.a.setSize(w >> 2, h >> 2); PF.b.setSize(w >> 2, h >> 2); }
+    const w = cv.width, h = cv.height; if (PF.main.width !== w || PF.main.height !== h) { PF.main.setSize(w, h); PF.a.setSize(w >> 2, h >> 2); PF.b.setSize(w >> 2, h >> 2); PF.comp.uniforms.px.value.set(1 / w, 1 / h); }
+    PF.comp.uniforms.tm.value = (performance.now() / 1000) % 100; PF.comp.uniforms.real.value = REAL ? 1 : 0;
     const tm = Rn.toneMapping; Rn.setRenderTarget(PF.main); Rn.render(S, cam);
     const pass = (m, src, dst) => { PF.quad.material = m; m.uniforms.t.value = src.texture; Rn.setRenderTarget(dst); Rn.render(PF.sc, PF.cam); };
     if (!PF.lite) { pass(PF.bright, PF.main, PF.a); PF.blur.uniforms.d.value.set(1.5 / PF.a.width, 0); pass(PF.blur, PF.a, PF.b); PF.blur.uniforms.d.value.set(0, 1.5 / PF.a.height); pass(PF.blur, PF.b, PF.a); }
