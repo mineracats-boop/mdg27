@@ -1,0 +1,36 @@
+<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MDG27 Partido</title>
+<style>
+html,body{margin:0;height:100%;background:#050a14;overflow:hidden;font-family:system-ui,sans-serif;color:#fff}
+#cv{position:fixed;inset:0;width:100%;height:100%;display:block}
+#sb{position:fixed;left:16px;top:12px;display:flex;gap:0;font-weight:800;font-size:16px;border-radius:6px;overflow:hidden;box-shadow:0 2px 10px #0008}
+#sb span{padding:6px 12px;background:#0b1220e6}
+#clock{background:#ffd23a!important;color:#111}
+#fps{position:fixed;right:14px;top:12px;font-size:12px;opacity:.7}
+#help{position:fixed;left:16px;bottom:12px;font-size:12px;line-height:1.5;background:#0009;padding:8px 12px;border-radius:8px;max-width:calc(100% - 64px)}
+#help b{color:#ffd23a}
+#pw{display:none;position:fixed;left:50%;bottom:176px;transform:translateX(-50%);width:240px;height:12px;border:2px solid #fff;border-radius:8px;background:#0008}
+#pw i{display:block;height:100%;width:0;border-radius:6px;background:linear-gradient(90deg,#3ddc84,#ffd23a 70%,#ff4d5e)}
+#msg{position:fixed;left:0;right:0;top:24%;text-align:center;font-size:clamp(28px,6vw,64px);font-weight:900;font-style:italic;opacity:0;transition:opacity .25s;text-shadow:0 4px 18px #000;padding:0 16px}
+#load{position:fixed;inset:0;display:grid;place-items:center;background:#050a14;font-size:18px}
+#end{display:none;position:fixed;inset:0;place-items:center;align-content:center;gap:14px;background:#050a14ee;text-align:center}
+#end h2{margin:0;font-size:40px;font-style:italic}#end .es{font-size:22px}#end b{color:#ffd23a;margin:0 10px}
+#end table{border-collapse:collapse;margin:0 auto;font-size:16px}#end td,#end th{padding:5px 16px}#end th{font-weight:600;opacity:.75}
+#end button{margin-top:10px;font:inherit;font-weight:800;padding:10px 22px;border-radius:8px;border:0;background:#ffd23a;color:#111;cursor:pointer}
+#hb{position:fixed;right:14px;bottom:12px;font:inherit;font-size:12px;background:#0009;color:#fff;border:1px solid #fff4;border-radius:8px;padding:6px 10px;cursor:pointer}
+</style></head><body>
+<canvas id="cv"></canvas>
+<div id="sb"><span id="score"></span><span id="clock">00'</span></div>
+<div id="fps"></div><div id="msg"></div><div id="pw"><i></i></div>
+<div id="help"><b>Ataque:</b> WASD mover · Shift esprint · J pase · I al hueco · L centro/pase alto · Espacio tiro (mantén) · F + tiro = rosca · <b>C</b> cubrir/temporizar · <b>R</b> ruleta · <b>T</b> frenar · <b>Esc</b> pausa<br>
+<b>Defensa:</b> J presionar · Espacio entrada · L segada · Q cambiar jugador &nbsp; <b>Mando:</b> A pase · Y al hueco · X centro · B tiro · RB rosca · RT esprint · LB cambiar · LT cubrir/temporizar · R3 ruleta · L3 frenar · Start pausa</div>
+<button id="hb" onclick="document.getElementById('help').style.display=document.getElementById('help').style.display==='none'?'':'none'">Controles</button>
+<a href="entrenamiento.html" style="position:fixed;right:104px;bottom:12px;font-size:12px;color:#fff;background:#0009;padding:6px 10px;border-radius:8px;border:1px solid #fff4;text-decoration:none">Entrenamiento</a>
+<div id="end"></div>
+<button id="quit" style="display:none;position:fixed;right:14px;top:40px;font:inherit;font-size:12px;background:#0009;color:#fff;border:1px solid #fff4;border-radius:8px;padding:6px 10px;cursor:pointer" onclick="if(confirm('¿Abandonar el partido?'))parent.postMessage({type:'mdg27quit'},'*')">Salir</button>
+<script>if(/embed/.test(location.search)){document.getElementById('quit').style.display='';var e=document.querySelector('a[href="entrenamiento.html"]');if(e)e.remove();}</script>
+<div id="load">Cargando <b>…</b></div>
+<script>window.PREF=["m_mx","campo2","m_est_grada","m_est_foco","m_est_banquillo","m_est_marcador","balon","red","vallas","camisetas","sonidos","m_gn01","m_gn02","m_gn03","m_arbitro","m_juez","m_entrenador1","m_entrenador2","m_aficionado1","m_aficionado2","m_aficionado3"].concat(Array.from({length:12},(_,i)=>"m_pn"+String(i+1).padStart(2,"0")),["m_pj01","m_pj05","m_pj02","m_pj07","m_pj11","m_pj14","m_pj03","m_pj04","m_pj06","m_pj08"]);</script>
+<script src="three.js"></script>
+<script src="motor2.js"></script>
+</body></html>
