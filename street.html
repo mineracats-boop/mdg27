@@ -22,7 +22,7 @@ canvas{display:block}
 </style></head><body>
 <div id="load">Cargando el barrio…</div>
 <div id="hud"></div><div id="msg"></div><div id="tip"></div><div id="power"><i></i></div><div id="panel"></div>
-<div id="help"><b>Street Football</b><br>Mover: WASD / flechas · Correr: Shift<br>Girar cámara: Z / X o arrastrar<br><b>En el barrio</b> Entrar / usar: E<br><b>Partido</b> los mismos controles que el fútbol 11 (botón Controles dentro del partido)<br><span style="opacity:.6;font-size:10px">Modelos 3D (CC BY, sketchfab.com): «Street Props» de syedraza · «Plant Series – Palm Tree» de UPWARD · «Beach Umbrella» de stealth86 · «Sun lounger 3D» de rodestrela</span></div>
+<div id="help"><b>Street Football</b><br>Mover: WASD / flechas · Correr: Shift<br>Girar cámara: Z / X o arrastrar<br><b>En el barrio</b> Entrar / usar: E<br><b>Partido</b> los mismos controles que el fútbol 11 (botón Controles dentro del partido)<br><span style="opacity:.6;font-size:10px">Modelos 3D (CC BY, sketchfab.com): «Street Props» de syedraza · «Plant Series – Palm Tree» de UPWARD · «Beach Umbrella» de stealth86 · «Sun lounger 3D» de rodestrela · «Ice Cream Cart» de tylerlherring</span></div>
 <a id="back" href="index.html">← MDG 27</a><button id="onl" onclick="goOnline()">Online con amigos</button>
 <div class="tc" id="joy"><i></i></div><div class="tc tb" id="bA">PASE</div><div class="tc tb" id="bB">TIRO</div><div class="tc tb" id="bC">CORRER</div><div class="tc tb" id="bD">REGATE</div>
 <script src="three.js"></script>
@@ -260,7 +260,7 @@ async function addProps() {
   const load = n => (window.SA && SA["prop_" + n + ".glb"] ? Promise.resolve(SA["prop_" + n + ".glb"]) : fetch("street/prop_" + n + ".txt").then(r => r.text())).then(t => loader.parseAsync(b64buf(t), ""));
   const inBeach = x => x > BEACH.x0 - 6 && x < BEACH.x1 + 6;
   try {
-    const [pk, palm, umb, lng] = await Promise.all(["props", "palmera", "sombrilla", "tumbona"].map(load));
+    const [pk, palm, umb, lng, cart] = await Promise.all(["props", "palmera", "sombrilla", "tumbona", "carrito"].map(load));
     const bench = bakeProp(pk.scene.getObjectByName("bench"), 1.9, "len"), bin = bakeProp(pk.scene.getObjectByName("bin"), .95), palmP = bakeProp(palm.scene, 7.2);
     const palms = [], benches = [], bins = [];
     for (let x = X0 + 12; x < X1 + 36; x += 16) { if (inBeach(x)) continue; palms.push([x, SEA_Z - 2.7, rnd() * 6.28, .85 + rnd() * .35]); if ((x / 16 | 0) % 2 === 0) benches.push([x + 3.4, SEA_Z - 1.9, 0]); bins.push([x - 6.6, SEA_Z - 1.7, 0]); }
@@ -272,6 +272,7 @@ async function addProps() {
     const um = bakeProp(umb.scene, 2.5), lg = bakeProp(lng.scene, 1.9, "len"), U = [], Lg = [];
     for (const x of [BEACH.x0 - 3.4, BEACH.x1 + 3.4]) for (const z of [BEACH.z0 + 1.6, (BEACH.z0 + BEACH.z1) / 2 + 1, BEACH.z1 - 1]) { U.push([x, z, rnd() * 6.28]); Lg.push([x + (x < BEACH.x0 ? -1.2 : 1.2), z - .6, Math.PI / 2]); }
     U.y = .2; Lg.y = .2; instance(um, U); instance(lg, Lg);
+    instance(bakeProp(cart.scene, 2.2, "len"), [[BEACH.x1 + 9, SEA_Z - 5.5, -.4], [TOQ.x + 9, TOQ.z - 3, .5], [X0 + 30, 9, 2.6]]);   // carritos de helados
   } catch (e) { console.warn("props", e); }
 }
 
