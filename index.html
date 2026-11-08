@@ -9148,7 +9148,7 @@ function startNew(cfg) {
   fr.style.cssText = "position:fixed;inset:0;width:100%;height:100%;border:0;z-index:9999;background:#050a14"; document.body.appendChild(fr);
   document.body.classList.add("inmatch"); MATCH_ON = true;
   const data = { teams: cfg.teams.map(T => ({ name: T.name, sh: T.sh, c1: T.c1, c2: T.c2, pl: T.pl.map(d => ({ n: d.n, role: d.role, st: d.st, ov: d.ov, u: d.u })), bench: (T.bench || []).map(d => ({ n: d.n, role: d.role, st: d.st, ov: d.ov, u: d.u })) })),
-    human: cfg.humans && cfg.humans[0] ? cfg.humans[0].t : 0, cpu: cfg.cpuTeams || [], diff: cfg.diff, halfLen: cfg.halfLen, tod: cfg.tod || "Auto", padmap: store.get("padmap", {}), weather: cfg.weather === undefined ? undefined : cfg.weather, drill: cfg.drill || null, knockout: !!cfg.knockout };
+    human: cfg.humans && cfg.humans[0] ? cfg.humans[0].t : 0, cpu: cfg.cpuTeams || [], diff: cfg.diff, halfLen: cfg.halfLen, tod: cfg.tod || "Auto", padmap: store.get("padmap", {}), weather: cfg.weather === undefined ? undefined : cfg.weather, drill: cfg.drill || null, knockout: !!cfg.knockout, lock: cfg.lock || null };
   const onMsg = e => { if (e.source !== fr.contentWindow) return; const d = e.data || {};
     if (d.type === "mdg27ready") fr.contentWindow.postMessage({ type: "mdg27cfg", cfg: data }, "*");
     if (d.type === "mdg27end" || d.type === "mdg27quit") { removeEventListener("message", onMsg); fr.remove(); document.body.classList.remove("inmatch"); MATCH_ON = false; setTimeout(() => fr.focus && window.focus(), 0);
@@ -12333,7 +12333,7 @@ const CT = { tab: "inicio", comp: null, f: { pos: "", liga: "", min: 70, edad: 4
 const carD = () => (typeof CAR_DATA !== "undefined" ? CAR_DATA : {});
 
 /* ---------------- utilidades de datos ---------------- */
-const carSave = () => { try { store.set("car", CAR); } catch (e) { toast("No se pudo guardar la carrera (memoria llena)"); } };
+const carSave = () => { try { store.set(CAR && CAR.mode === "jug" ? "carj" : "car", CAR); } catch (e) { toast("No se pudo guardar la carrera (memoria llena)"); } };
 const CL = ci => CLUBS[ci];
 const cname = id => typeof id === "string" ? id.slice(2) : (CL(id) || {}).nombre || "?";
 const cshort = id => typeof id === "string" ? id.slice(2, 5).toUpperCase() : CL(id).sh;
@@ -12576,14 +12576,15 @@ function carStep() {
     if (p) { const fin = e.kind === "ko" && e.C.ko.name === "Final", nat = e.kind === "nat_md" || e.kind === "nat_ko" || e.kind === "win";
       CAR.pending = nat ? { cid: e.C.id, kind: e.kind, h: p.h, a: p.a, nat: true, name: e.kind === "win" ? `${natName(myNat())} · Partido internacional` : e.C.name + " · " + natEvName(e), ko: e.kind === "nat_ko", neutral: e.kind !== "win" }
         : { cid: e.C.id, kind: e.kind, h: p.h, a: p.a, name: e.C.name + " · " + evName(e), ko: e.kind === "copa" || e.kind === "super" || fin, neutral: e.kind === "super" || fin, agg: e.kind === "ko" && e.C.ko.leg ? aggFor(e.C) : null };
-      if (rnd() < .45) CAR.press = pressFor("previa"); carSave(); return; }
+      if (CAR.mode === "jug" && jugAutoSim(CAR.pending)) continue;
+      if (rnd() < .45) CAR.press = pressFor(CAR.mode === "jug" ? "j_previa" : "previa"); carSave(); return; }
   }
 }
 function aggFor(C) { const i = C.ko.ties.findIndex(t => t.includes(CAR.club)); return i >= 0 ? C.ko.agg[i] : null; }
 function finishUser(r) {
   const P = CAR.pending; CAR.pending = null;
   const C = CAR.comps.find(c => c.id === P.cid) || (CAR.ntours || []).find(c => c.id === P.cid) || { id: P.cid, name: "Ventana internacional", type: "win" }, e = { C, kind: P.kind };
-  if (P.nat) { r.nat = true; natAfterMatch(r); } else { applyStats(r); userAfterMatch(r); }
+  if (P.nat) { r.nat = true; if (CAR.mode === "jug") jugAfterMatch(r); else natAfterMatch(r); } else { applyStats(r); userAfterMatch(r); }
   runEvent(e, r); carSave();
 }
 
@@ -12619,14 +12620,14 @@ function teamFor(id, user) {
   const c = CL(id), order = user ? userSquad() : null, F = FORMS[user ? CAR.form : "4-3-3"];
   const ks = user ? order.slice(0, 11) : bestXI(id).map(p => p.k), bn = user ? order.slice(11, 20) : ROST[id].filter(k => !ks.includes(k)).sort((a, b) => cps(b)[1] - cps(a)[1]).slice(0, 9);
   const mk = (k, role) => { const p = pinfo(k), s = cps(k), d = s[1] - p.ov, fm = user ? Math.round((s[4] - 100) / 12 + (s[3] - 60) / 15) : 0, pen = role === p.pos ? 0 : luPen(p.pos, role);
-    return { n: shortName(p.n), full: p.n, pos: p.pos, role, u: k, ov: Math.max(20, s[1] + pen + fm), st: Object.fromEntries(Object.entries(p.f).map(([x, v]) => [x, clamp(v + d + pen + fm, 20, 99)])) }; };
+    return { n: shortName(p.n), full: p.n, pos: p.pos, role, u: k, num: p.num, ov: Math.max(20, s[1] + pen + fm), st: Object.fromEntries(Object.entries(p.f).map(([x, v]) => [x, clamp(v + d + pen + fm, 20, 99)])) }; };
   return { name: c.nombre, sh: c.sh, c1: c.c1, c2: c.c2, pl: ks.map((k, i) => mk(k, F[i] ? F[i][0] : pinfo(k).pos)), bench: bn.map(k => mk(k, pinfo(k).pos)) };
 }
 function carPlay() {
   const P = CAR.pending; if (!P) return; fixUnavailable();
   const home = isMe(P.h), me = home ? P.h : P.a, opp = home ? P.a : P.h;
   const teams = [teamFor(me, true), teamFor(opp, false)];
-  startMatch({ teams, humans: [{ t: 0, src: "any" }], cpuTeams: [1], diff: CAR.diff, halfLen: CAR.dur * 60, knockout: !!P.ko && !P.agg, tod: "Auto",
+  startMatch({ teams, humans: [{ t: 0, src: "any" }], cpuTeams: [1], diff: CAR.diff, halfLen: CAR.dur * 60, knockout: !!P.ko && !P.agg, tod: "Auto", lock: CAR.mode === "jug" && CAR.ctl === "jugador" ? CAR.me : null,
     onEnd: x => { const gU = x.score[0], gO = x.score[1], pens = x.pens ? (home ? x.pens : [x.pens[1], x.pens[0]]) : null;
       const byName = (s, n) => { const T = teams[s]; const p = T.pl.concat(T.bench).find(q => q.n === n); return p && p.u; };
       const ev = x.ev.map(g => { const s = g.s === 0 ? (home ? 0 : 1) : (home ? 1 : 0); return { m: g.m, s, k: g.su || byName(g.s, g.sc), as: byName(g.s, g.as) }; });
@@ -12645,13 +12646,13 @@ function userAfterMatch(r) {
   const win = gf > ga || (gf === ga && r.pens && (home ? r.pens[0] > r.pens[1] : r.pens[1] > r.pens[0])), draw = gf === ga && !r.pens;
   const exp = cstr(CAR.club) + (home ? 1 : -1) - cstr(opp);
   const d = win ? (exp < -2 ? 6 : 3) : draw ? (exp > 2 ? -2 : 1) : (exp > 2 ? -5 : -2);
-  CAR.junta = clamp(CAR.junta + d * .6, 0, 100); CAR.afi = clamp(CAR.afi + d, 0, 100);
+  if (CAR.mode !== "jug") { CAR.junta = clamp(CAR.junta + d * .6, 0, 100); CAR.afi = clamp(CAR.afi + d, 0, 100); }
   ROST[CAR.club].forEach(k => { const s = cps(k); s[3] = clamp(s[3] + (win ? 4 : draw ? 0 : -4) + (xi.includes(k) ? 1 : -1), 10, 100); });
   xi.forEach(k => { const s = cps(k); s[9]++; s[4] = clamp(s[4] - 14, 30, 100); if (rnd() < .035) { s[5] = 1 + Math.floor(rnd() * 6); carNews("lesion", `${pinfo(k).n} se lesiona`, `Estará de baja unas ${s[5]} semana${s[5] > 1 ? "s" : ""}.`); } });
   ROST[CAR.club].forEach(k => { if (cps(k)[6] && !xi.includes(k)) cps(k)[6] = 0; });   // los sancionados cumplen
   (r.cards || []).forEach(c => { if (!c.k || !cps(c.k)) return; const s = cps(c.k); if (c.c === "R") { s[6] = 1; carNews("sancion", `${pinfo(c.k).n}, expulsado`, "Se perderá el próximo partido."); } else { s[10]++; if (s[10] % 5 === 0) { s[6] = 1; carNews("sancion", `${pinfo(c.k).n} cumple ciclo de amarillas`, "Sancionado un partido."); } } });
   CAR.money = (CAR.money || 0) + (win ? .4 : draw ? .15 : 0) * prizeMul(); CAR.bud[CAR.club] += (win ? .4 : draw ? .15 : 0) * prizeMul();
-  dirty(CAR.club); if (rnd() < .5) CAR.press = pressFor(win ? "win" : draw ? "draw" : "loss", { opp, gf, ga });
+  dirty(CAR.club); if (CAR.mode === "jug") { jugAfterMatch(r); return; } if (rnd() < .5) CAR.press = pressFor(win ? "win" : draw ? "draw" : "loss", { opp, gf, ga });
 }
 const prizeMul = () => { const lg = CAR.liga[CAR.club]; return lg === "Premier League" ? 2.5 : ["LaLiga EA Sports", "Serie A", "Bundesliga"].includes(lg) ? 1.6 : lg === "Ligue 1" || lg === "Saudi Pro League" ? 1.2 : .6; };
 
@@ -12659,8 +12660,8 @@ const prizeMul = () => { const lg = CAR.liga[CAR.club]; return lg === "Premier L
 function endWeek() {
   const w = CAR.week;
   for (const k of ROST[CAR.club]) { const s = cps(k); s[4] = clamp(s[4] + 12, 30, 100); if (s[5] > 0) s[5]--; s[3] = clamp(s[3] + (60 - s[3]) * .05, 10, 100); }
-  if (CAR_WIN(w)) { aiTransfers(w); offersForMine(); }
-  if ((w % 4 === 0 || w === 1) && w <= CAR_W) boardCheck();
+  if (CAR_WIN(w)) { aiTransfers(w); if (CAR.mode === "jug") { jugOffers(); if (CAR.pendingMove) { const o = CAR.pendingMove; CAR.pendingMove = null; jugTransfer(o.club, o.amt, o.wage); } } else offersForMine(); }
+  if (CAR.mode === "jug") jugCallUp(); else if ((w % 4 === 0 || w === 1) && w <= CAR_W) boardCheck();
   diarioEdition(w);
   CAR.wk = { res: [], deals: [] }; dirty(CAR.club);
   CAR.week++;
@@ -12703,6 +12704,15 @@ function offersForMine() {
 
 /* ---------------- ruedas de prensa ---------------- */
 const PRESS = {
+  j_presen: [["¿Qué esperas de esta etapa?", [["Trabajar y ganarme el sitio poco a poco.", { trust: 4 }], ["Vengo a ser titular desde el primer día.", { fame: 4, trust: -3, pmor: 4 }], ["Aprender de los veteranos del vestuario.", { trust: 2, fame: 1 }]]],
+    ["La afición tiene ganas de verte. ¿Qué les dices?", [["Que lo daré todo por esta camiseta.", { fame: 4 }], ["Que se preparen para muchos goles.", { fame: 6, trust: -2 }], ["Que tengan paciencia conmigo.", { trust: 2 }]]]],
+  j_previa: [["Llega {opp}. ¿Cómo te encuentras?", [["Muy bien, con ganas de ayudar.", { trust: 1 }], ["Mañana voy a marcar, seguro.", { fame: 3, pmor: 3 }], ["Lo importante es el equipo.", { trust: 2 }]]],
+    ["¿Te molesta no jugar todos los minutos que quieres?", [["El míster decide, yo trabajo.", { trust: 4 }], ["Sí, creo que merezco más minutos.", { trust: -6, fame: 2, pmor: 2 }], ["Ya llegará mi momento.", { trust: 1 }]]],
+    ["Se habla de interés de otros clubes. ¿Qué hay de cierto?", [["Estoy feliz aquí.", { trust: 4, fame: 1 }], ["Escucharé ofertas si llegan.", { trust: -5, fame: 3 }], ["No hablo de rumores.", {}]]]],
+  j_bien: [["Partidazo. ¿Es tu mejor día como profesional?", [["Gracias al equipo, me lo han puesto fácil.", { trust: 3, fame: 2 }], ["Esto es solo el principio.", { fame: 5, pmor: 3 }], ["Hay que seguir trabajando.", { trust: 2 }]]],
+    ["¿Te ves ya en la selección?", [["Es mi sueño, trabajaré para ello.", { fame: 3 }], ["Si sigo así, el seleccionador me tiene que llamar.", { fame: 5, trust: -1 }], ["Ahora solo pienso en mi club.", { trust: 3 }]]]],
+  j_normal: [["¿Cómo valoras tu partido?", [["Correcto, pero puedo dar más.", { trust: 2 }], ["He estado bien, no tengo queja.", { fame: 1 }], ["Lo importante es el resultado.", { trust: 2 }]]]],
+  j_mal: [["No ha sido tu día. ¿Qué ha pasado?", [["Asumo mi parte de culpa.", { trust: 3, pmor: -2 }], ["El rival me ha cerrado bien.", { fame: -1 }], ["No estoy de acuerdo con mi posición.", { trust: -6, pmor: 2 }]]]],
   presentacion: [["¿Qué espera de esta temporada?", [["Trabajo y humildad, partido a partido.", { junta: 3, mor: 2 }], ["Venimos a ganar títulos, sin excusas.", { afi: 6, junta: -2, mor: 3 }], ["Con esta plantilla nos faltan refuerzos.", { junta: -6, afi: 2, mor: -4 }]]],
     ["La afición está ilusionada. ¿Qué les dice?", [["Que llenen el estadio, los necesitamos.", { afi: 6 }], ["Que tengan paciencia, esto es un proyecto.", { junta: 4, afi: -2 }], ["Que el que no crea, que no venga.", { afi: -6, mor: 3 }]]]],
   previa: [["Llega {opp}. ¿Cómo ve el partido?", [["Respeto máximo, es un rival muy serio.", { mor: 1 }], ["Somos favoritos y lo vamos a demostrar.", { afi: 4, mor: 3, risk: 1 }], ["Nos jugamos mucho, hay presión.", { mor: -2, junta: 1 }]]],
@@ -12725,6 +12735,7 @@ function pressFor(kind, ctx = {}) {
 function answerPress(i) {
   const P = CAR.press; if (!P) return; const fx = P.a[i].fx;
   CAR.junta = clamp(CAR.junta + (fx.junta || 0), 0, 100); CAR.afi = clamp(CAR.afi + (fx.afi || 0), 0, 100);
+  if (CAR.mode === "jug") { CAR.trust = clamp(CAR.trust + (fx.trust || 0), 0, 100); CAR.fame = clamp(CAR.fame + (fx.fame || 0), 0, 100); if (fx.pmor) cps(CAR.me)[3] = clamp(cps(CAR.me)[3] + fx.pmor, 10, 100); }
   if (fx.mor) ROST[CAR.club].forEach(k => cps(k)[3] = clamp(cps(k)[3] + fx.mor, 10, 100));
   if (fx.pmor && P.star && cps(P.star)) cps(P.star)[3] = clamp(cps(P.star)[3] + fx.pmor, 10, 100);
   carNews("prensa", `${CAR.name}: «${P.a[i].txt}»`, `Rueda de prensa. Pregunta: ${P.q}`); CAR.press = null; dirty(CAR.club); carSave();
@@ -12756,7 +12767,7 @@ function seasonEnd() {
   const tgt = { "campeón": 1, champions: 4, europa: 7, mitad: Math.round(n * .65), salvacion: n - 3, ascenso: 6 }[CAR.obj] || n;
   const ok = pos <= tgt; CAR.junta = clamp(CAR.junta + (ok ? 15 : -20 - (pos - tgt) * 2), 0, 100);
   CAR.hist.push({ s: S, liga: L.name, pos, obj: CAR.obj, ok, tit: CAR.trophies.filter(t => t.s === S).map(t => t.n) });
-  if (!ok && CAR.junta < 30) { CAR.fired = true; carNews("despido", "La directiva no renueva al entrenador", `No se cumplió el objetivo (${OBJ_TXT[CAR.obj]}): ${pos}.º.`); }
+  if (CAR.mode === "jug") jugSeasonEnd(); else if (!ok && CAR.junta < 30) { CAR.fired = true; carNews("despido", "La directiva no renueva al entrenador", `No se cumplió el objetivo (${OBJ_TXT[CAR.obj]}): ${pos}.º.`); }
   // ascensos y descensos
   for (const [up, down] of PAIRS) { const U = CAR.comps.find(c => c.id === "L:" + up), D = CAR.comps.find(c => c.id === "L:" + down); if (!U || !D) continue;
     const uo = sortT(U.T, U.teams), dn = uo.slice(-3), dO = sortT(D.T, D.teams), po = dO.slice(2, 6);
@@ -12778,13 +12789,14 @@ function seasonEnd() {
     const a = s[2], pot = s[11] || s[1]; let d;
     if (a <= 23) d = Math.max(0, Math.round((pot - s[1]) * .35 + (rnd() * 3 - 1))); else if (a <= 28) d = s[1] < pot ? Math.round(rnd() * 2) : Math.round(rnd() * 2 - 1);
     else if (a <= 31) d = -Math.round(rnd() * 2); else d = -1 - Math.round(rnd() * 3);
+    if (k === CAR.me && d > 0) d = Math.round(d * clamp(s[9] / 25, .2, 1));   // tu jugador crece según los minutos que juega
     s[1] = clamp(s[1] + d, 40, 95); s[7] = s[8] = s[9] = s[10] = 0; s[5] = 0; s[6] = 0; s[4] = 100; s[3] = 65;
     const pr = a >= 38 ? 1 : a >= 36 ? .6 : a >= 34 ? (s[1] < 80 ? .35 : .12) : a >= 32 ? (s[1] < 70 ? .15 : 0) : 0;
-    if (rnd() < pr) { retired.push(k); s[0] = -1; } }
+    if (rnd() < pr && k !== CAR.me) { retired.push(k); s[0] = -1; } }
   const big = retired.filter(k => cps(k)[1] >= 78).sort((a, b) => cps(b)[1] - cps(a)[1]);
   if (big.length) carNews("retiro", `Se retiran ${big.slice(0, 4).map(k => pinfo(k).n).join(", ")}${big.length > 4 ? ` y ${big.length - 4} más` : ""}`, "Cuelgan las botas tras grandes carreras.");
   if (retired.some(k => CAR.p[k] && ROST[CAR.club].includes(k))) carNews("retiro", "Bajas por retirada en tu plantilla", retired.filter(k => ROST[CAR.club].includes(k)).map(k => pinfo(k).n).join(", "));
-  carIndex(); youth(); natFill(); natDirty(); natOffers();
+  carIndex(); youth(); natFill(); natDirty(); if (CAR.mode !== "jug") natOffers();
   // presupuestos nuevos
   CLUBS.forEach((c, i) => { const d = clubData(i), lg = CAR.liga[i], f = isLower(lg) ? .35 : 1; CAR.bud[i] = Math.round(Math.max(1, d.tb * f + Math.max(0, (CAR.bud[i] || 0)) * .25) * 10) / 10; });
   CAR.season++; CAR.inbox = []; CAR.listed = []; CAR.ord = null; CAR.trophiesSeason = null;
@@ -12834,12 +12846,14 @@ function tryBuy(k, amt) {
 }
 
 /* ---------------- interfaz ---------------- */
-function carLoad() { if (CAR) return CAR; const c = store.get("car", null); if (c && c.v === 1) { CAR = c; carIndex(); NPOOL = null; natDirty(); if (!CAR.ntours) { natFill(); natSetupSeason(); } } return CAR; }
-ONSHOW.car = () => { carLoad(); renderCar(); };
+function carLoadMode() { CAR = null; const c = store.get(CT.mode === "jug" ? "carj" : "car", null); if (c && c.v === 1) { CAR = c; carIndex(); NPOOL = null; natDirty(); if (!CAR.ntours) { natFill(); natSetupSeason(); } } return CAR; }
+ONSHOW.car = () => { CT.mode = null; CAR = null; renderCar(); };
 const meter = (lbl, v) => `<div class="cmeter"><span>${lbl}</span><i><b style="width:${v}%;background:${v >= 60 ? "#3ddc84" : v >= 35 ? "#ffd23a" : "#ff4d5e"}"></b></i><em>${Math.round(v)}</em></div>`;
 function renderCar() {
   const B = $("#carBody");
-  if (!CAR) return renderCarSetup();
+  if (!CT.mode) return renderCarModes();
+  if (!CAR) return CT.mode === "jug" ? renderJugSetup() : renderCarSetup();
+  if (CAR.mode === "jug") return renderJug();
   if (CAR.fired) { if (!CAR.jobOff) { const my = cstr(CAR.club); CAR.jobOff = shuffle(CLUBS.map((c, i) => i).filter(i => i !== CAR.club && cstr(i) < my - 1 && cstr(i) > my - 9)).slice(0, 3); carSave(); }
     B.innerHTML = `<div class="panel" style="max-width:76rem;margin:2rem auto;padding:2.4rem;text-align:center;overflow:auto"><h2 class="ctit">DESPEDIDO</h2><p>${esc((CAR.news.find(n => n.type === "despido") || {}).body || "")}</p>
       <p class="mute">Temporadas: ${CAR.hist.length} · Títulos: ${CAR.trophies.length}</p><div class="lbl">Ofertas de otros clubes</div>
@@ -12974,7 +12988,7 @@ ACT.carSC = el => { CT.setup.ci = +el.dataset.i; renderCarSetup(); reFocus('[dat
 ACT.carSD = el => { CT.setup.diff = el.dataset.d; renderCarSetup(); };
 ACT.carSM = el => { CT.setup.dur = clamp((CT.setup.dur || 4) + +el.dataset.d, 1, 10); renderCarSetup(); };
 ACT.carStart = () => { toast("Preparando el mundo: 12 ligas, copas y Europa…"); setTimeout(() => { carNew(CT.setup.ci, { diff: CT.setup.diff, dur: CT.setup.dur }); CT.tab = "inicio"; renderCar(); }, 30); };
-ACT.carReset = () => dlg("Abandonar carrera", "Se borrará la partida del modo carrera. ¿Seguro?", [["Sí, borrar", () => { CAR = null; store.set("car", null); closeDlg(); renderCar(); }, true], ["Cancelar", closeDlg]]);
+ACT.carReset = () => dlg("Abandonar carrera", "Se borrará esta partida del modo carrera. ¿Seguro?", [["Sí, borrar", () => { store.set(CAR && CAR.mode === "jug" ? "carj" : "car", null); CAR = null; closeDlg(); renderCar(); }, true], ["Cancelar", closeDlg]]);
 
 function natAfterMatch(r) {
   const me = myNat(), home = r.h === me, gf = home ? r.hg : r.ag, ga = home ? r.ag : r.hg, win = gf > ga || (gf === ga && r.pens && (home ? r.pens[0] > r.pens[1] : r.pens[1] > r.pens[0]));
@@ -13119,7 +13133,7 @@ function natClose(e, out) {
   if (e.kind === "nat_md") { out.forEach(r => addRes(T.T, r.h, r.a, r.hg, r.ag)); T.gmd++; if (T.gmd >= 3) natKOStart(T); return; }
   const win = out.map(winnerOf);
   if (win.length === 1) { T.champ = win[0]; T.done = true; carNews("titulo", `¡${natName(T.champ)} gana el ${T.name}!`, `Final: ${natName(out[0].h)} ${out[0].hg}-${out[0].ag} ${natName(out[0].a)}${out[0].pens ? ` (pen. ${out[0].pens[0]}-${out[0].pens[1]})` : ""}.`);
-    if (T.champ === myNat()) { CAR.trophies.push({ s: CAR.season, n: T.name }); CAR.fed = clamp((CAR.fed || 60) + 30, 0, 100); } natJudge(T); return; }
+    if (T.champ === myNat() && CAR.nat) { CAR.trophies.push({ s: CAR.season, n: T.name }); CAR.fed = clamp((CAR.fed || 60) + 30, 0, 100); } natJudge(T); return; }
   const ties = []; for (let i = 0; i + 1 < win.length; i += 2) ties.push([win[i], win[i + 1]]);
   T.ko = { name: CUP_RN(win.length), ties }; T.kwk++;
 }
@@ -13145,7 +13159,7 @@ function natWindowClose(w, out) {
   if (mine.length) { carNews("seleccion", `${mine.length} jugador${mine.length > 1 ? "es" : ""} de tu club, convocado${mine.length > 1 ? "s" : ""} con su selección`, mine.slice(0, 8).map(k => `${shortName(pinfo(k).n)} (${natOf(pinfo(k).nac)})`).join(", ") + ".");
     mine.forEach(k => { const s = cps(k); s[4] = clamp(s[4] - 10, 30, 100); if (rnd() < .03) { s[5] = 1 + Math.floor(rnd() * 4); carNews("lesion", `${pinfo(k).n} vuelve lesionado de la selección`, `Baja de ${s[5]} semana(s).`); } }); }
   const r = out.find(x => x.h === myNat() || x.a === myNat());
-  if (r) { const home = r.h === myNat(), gf = home ? r.hg : r.ag, ga = home ? r.ag : r.hg, pts = gf > ga ? 3 : gf === ga ? 1 : 0;
+  if (r && !CAR.nat.jug) { const home = r.h === myNat(), gf = home ? r.hg : r.ag, ga = home ? r.ag : r.hg, pts = gf > ga ? 3 : gf === ga ? 1 : 0;
     CAR.natPts = (CAR.natPts || []).concat(pts).slice(-6); CAR.natQ = CAR.natPts.reduce((a, b) => a + b, 0) / CAR.natPts.length;
     CAR.fed = clamp((CAR.fed || 60) + (pts === 3 ? 4 : pts ? 0 : -6), 0, 100);
     if (CAR.fed < 15) natFire("Malos resultados en la clasificación."); }
@@ -13160,7 +13174,7 @@ const natSummerLeft = () => (CAR.ntours || []).some(T => !T.done && T.w0 > CAR_W
 function natObjective(T) { const r = T.teams.slice().sort((a, b) => natStr(natName(b)) - natStr(natName(a))).indexOf(myNat()); return r === 0 ? "campeón" : r < 4 ? "semis" : r < 8 ? "cuartos" : r < T.teams.length / 2 ? "octavos" : "grupos"; }
 const NOBJ = { "campeón": "ganar el torneo", semis: "llegar a semifinales", cuartos: "llegar a cuartos", octavos: "pasar la fase de grupos", grupos: "competir con dignidad" };
 function natJudge(T) {
-  if (!CAR.nat || !T.teams.includes(myNat())) return; const ko = T.res.filter(r => r.r.some(x => x.h === myNat() || x.a === myNat())).map(r => r.name);
+  if (!CAR.nat || CAR.nat.jug || !T.teams.includes(myNat())) return; const ko = T.res.filter(r => r.r.some(x => x.h === myNat() || x.a === myNat())).map(r => r.name);
   const reached = T.champ === myNat() ? 5 : ko.includes("Final") ? 4 : ko.includes("Semifinales") ? 3 : ko.includes("Cuartos") ? 2 : ko.some(n => /Octavos|Dieciseisavos/.test(n)) ? 1 : 0;
   const need = { "campeón": 5, semis: 3, cuartos: 2, octavos: 1, grupos: 0 }[CAR.nat.obj || "grupos"];
   CAR.nat.hist = (CAR.nat.hist || []).concat({ t: T.name, r: reached });
@@ -13205,6 +13219,222 @@ ACT.natQuit = () => dlg("Dimitir", `¿Dejar la selección de ${CAR.nat.n}?`, [["
 ACT.natPick = el => { const k = el.dataset.k, sq = CAR.natSq = CAR.natSq || natAuto(CAR.nat.n);
   if (sq.includes(k)) CAR.natSq = sq.filter(x => x !== k); else if (sq.length >= 26) return toast("Máximo 26 convocados"); else sq.push(k);
   natDirty(); carSave(); renderCar(); reFocus(`[data-a="natPick"][data-k="${k}"]`); };
+
+/* =====================================================================
+   MODO CARRERA DE JUGADOR (tradicional): creas tu futbolista, el míster
+   decide si juegas, te ponen nota, progresas, te fichan o te echan, ruedas
+   de prensa, diario y convocatorias con tu selección.
+   Reutiliza todo el mundo del modo mánager (ligas, copas, Europa, selecciones).
+   ===================================================================== */
+const JPOS = ["DC", "ED", "EI", "MP", "MC", "MCD", "DFC", "LD", "LI"];
+const JPOS_N = { DC: "Delantero centro", ED: "Extremo derecho", EI: "Extremo izquierdo", MP: "Mediapunta", MC: "Centrocampista", MCD: "Pivote", DFC: "Central", LD: "Lateral derecho", LI: "Lateral izquierdo" };
+const JS = { name: "", nac: "España", num: 9, foot: "Derecho", pos: "DC", ctl: "jugador", diff: "Normal", dur: 4, liga: null, ci: null };
+const isJug = () => CAR && CAR.mode === "jug";
+const jMe = () => CAR.me;
+const jS = () => cps(CAR.me);
+
+function jugStats(pos, ov) {
+  const b = { pac: ov, sho: ov, pas: ov, dri: ov, def: ov, phy: ov }, add = o => Object.keys(o).forEach(k => b[k] += o[k]);
+  if (pos === "DC") add({ pac: 6, sho: 8, pas: -6, dri: 2, def: -30, phy: 4 });
+  else if (pos === "ED" || pos === "EI") add({ pac: 10, sho: 2, pas: 0, dri: 8, def: -28, phy: -4 });
+  else if (pos === "MP") add({ pac: 2, sho: 4, pas: 8, dri: 8, def: -24, phy: -6 });
+  else if (pos === "MC") add({ pac: -2, sho: -2, pas: 8, dri: 4, def: -4, phy: 0 });
+  else if (pos === "MCD") add({ pac: -4, sho: -8, pas: 4, dri: -2, def: 8, phy: 6 });
+  else if (pos === "DFC") add({ pac: -6, sho: -26, pas: -6, dri: -12, def: 10, phy: 8 });
+  else add({ pac: 8, sho: -18, pas: 0, dri: 0, def: 4, phy: 0 });
+  Object.keys(b).forEach(k => b[k] = clamp(b[k], 25, 95)); return b;
+}
+
+/* ---------------- crear carrera ---------------- */
+function carNewJug(ci, o) {
+  carNew(ci, { diff: o.diff, dur: o.dur, name: o.name });
+  CAR.mode = "jug"; CAR.ctl = o.ctl; CAR.news = [];
+  const k = "yo." + Date.now(), ov = 64, num = o.num;
+  CAR.gen[k] = { k, n: o.name, pos: o.pos, nac: o.nac, edad: 18, ov, f: jugStats(o.pos, ov), foot: o.foot, num, me: true };
+  CAR.p[k] = [ci, ov, 18, 75, 100, 0, 0, 0, 0, 0, 0, 90]; ROST[ci].push(k); dirty(ci); NPOOL = null; natDirty();
+  CAR.me = k; CAR.trust = 55; CAR.fame = 5; CAR.xp = 0; CAR.notas = []; CAR.contract = { years: 3, wage: .3 }; CAR.jhist = []; CAR.ord = null;
+  CAR.junta = CAR.trust; CAR.afi = CAR.fame;
+  carNews("presentacion", `${o.name} firma su primer contrato profesional con el ${CL(ci).nombre}`, `${JPOS_N[o.pos]}, ${o.nac}, dorsal ${num}, pie ${o.foot.toLowerCase()}. Contrato de 3 temporadas.`);
+  CAR.press = pressFor("j_presen"); CAR.pending = null; jugSave();
+}
+const jugSave = () => { try { store.set("carj", CAR); } catch (e) { toast("No se pudo guardar la carrera (memoria llena)"); } };
+
+/* ---------------- el míster decide ---------------- */
+function jugOrder() {   // once del entrenador: tu nivel cuenta más o menos según su confianza en ti
+  const all = ROST[CAR.club].slice(), me = jMe(), boost = (CAR.trust - 50) / 4 + (cps(me)[2] <= 21 ? 1.5 : 0);
+  const ok = all.filter(k => !cps(k)[5] && !cps(k)[6]).map(k => ({ k, pos: pinfo(k).pos, ov: cps(k)[1] * (cps(k)[4] / 200 + .5) + (k === me ? boost : 0) }));
+  const xi = pickXI(ok, CAR.form).filter(Boolean).map(p => p.k), rest = ok.filter(p => !xi.includes(p.k)).sort((a, b) => b.ov - a.ov).map(p => p.k);
+  const gk = rest.find(k => pinfo(k).pos === "POR"), bn = gk ? [gk, ...rest.filter(k => k !== gk)] : rest;
+  CAR.ord = xi.concat(bn).concat(all.filter(k => !xi.includes(k) && !bn.includes(k))); return CAR.ord;
+}
+const jugRole = () => { if (CAR.pending && CAR.pending.nat) return natXI(CAR.nat.n).some(p => p.k === jMe()) ? "titular" : "suplente"; const o = CAR.ord || jugOrder(), i = o.indexOf(jMe()); return jS()[5] ? "lesionado" : jS()[6] ? "sancionado" : i < 11 ? "titular" : i < 20 ? "suplente" : "no convocado"; };
+// si no eres titular el partido se simula (y puedes salir en la segunda parte)
+function jugAutoSim(P) {
+  if (!P.nat) jugOrder(); const role = jugRole(); if (role === "titular") return false;
+  const r = simGame(P.h, P.a, { ko: !!P.ko && !P.agg, neutral: P.neutral }); r.cards = []; let mins = 0;
+  if (role === "suplente" && rnd() < .3 + (CAR.trust - 50) / 120) { mins = 15 + Math.floor(rnd() * 30); const mine = (P.nat ? myNat() : CAR.club), side = r.h === mine ? 0 : 1, myG = side ? r.ag : r.hg;
+    if (myG > 0 && rnd() < .12 + (jS()[1] - 60) * .006) { const e = r.ev.find(x => x.s === side); if (e) e.k = jMe(); } }
+  r.jmins = mins; finishUser(r); return true;
+}
+
+/* ---------------- nota y progresión ---------------- */
+function jugRate(r, mins) {
+  const mine = r.nat ? myNat() : CAR.club, side = r.h === mine ? 0 : 1, gf = side ? r.ag : r.hg, ga = side ? r.hg : r.ag, me = jMe(), pos = pinfo(me).pos;
+  const g = r.ev.filter(e => e.s === side && e.k === me).length, a = r.ev.filter(e => e.s === side && e.as === me).length, cd = (r.cards || []).filter(c => c.k === me);
+  let n = 6 + g * 1.15 + a * .7 + (gf > ga ? .4 : gf < ga ? -.4 : 0) + (ga === 0 && /DFC|LD|LI|MCD/.test(pos) ? .6 : 0) - ga * (/DFC|LD|LI/.test(pos) ? .2 : 0) + (rnd() - .5) * (r.played ? .5 : 1.1);
+  n += (jS()[1] - (r.nat ? natStr(CAR.nat.n) : cstr(CAR.club))) * .04; if (cd.some(c => c.c === "R")) n -= 1.8; else if (cd.length) n -= .3;
+  if (mins < 60) n = 6 + (n - 6) * .7;
+  return { n: clamp(Math.round(n * 10) / 10, 3, 10), g, a };
+}
+function jugAfterMatch(r) {
+  const me = jMe(), s = jS(), played = r.jmins !== 0 && (r.jmins || jugRole() === "titular" || (r.nat && natXI(CAR.nat.n).some(p => p.k === me)));
+  if (!played) { if (!r.nat) { CAR.trust = clamp(CAR.trust + (s[3] > 55 ? .8 : -.4), 0, 100); s[3] = clamp(s[3] - 1.5, 10, 100); } return; }   // si entrenas con buena moral el míster lo nota
+  const mins = r.jmins || 90, R = jugRate(r, mins); CAR.notas.push(R.n); if (CAR.notas.length > 60) CAR.notas.shift();
+  if (r.nat) CAR.natApps = (CAR.natApps || 0) + 1; else s[9] = s[9];   // los partidos jugados ya se cuentan al aplicar el resultado
+  if (!r.nat) CAR.trust = clamp(CAR.trust + (R.n - 6.3) * 4, 0, 100);
+  CAR.fame = clamp(CAR.fame + (R.n - 6.2) * (r.nat ? 2.5 : 1.2) + R.g * .8, 0, 100); s[3] = clamp(s[3] + (R.n - 6.3) * 5, 10, 100);
+  // progresión durante la temporada: los buenos partidos suben tu media (más si eres joven)
+  CAR.xp += mins / 90 * Math.max(0, R.n - 5.2) * (s[2] <= 23 ? 1.3 : s[2] <= 28 ? 1 : .5);
+  while (CAR.xp >= 9 && s[1] < s[11]) { CAR.xp -= 9; s[1]++; carNews("progreso", `${pinfo(me).n} sube a media ${s[1]}`, "Su rendimiento le hace crecer como futbolista."); }
+  CAR.junta = CAR.trust; CAR.afi = CAR.fame;
+  carNews("nota", `Nota de ${DIARIO} para ${shortName(pinfo(me).n)}: ${R.n.toFixed(1)}`, `${r.nat ? "Con la selección. " : ""}${mins}' jugados${R.g ? ` · ${R.g} gol${R.g > 1 ? "es" : ""}` : ""}${R.a ? ` · ${R.a} asistencia${R.a > 1 ? "s" : ""}` : ""}. ${R.n >= 8.5 ? "Partidazo." : R.n >= 7 ? "Buen partido." : R.n >= 5.5 ? "Cumplió." : "Partido para olvidar."}`);
+  if (rnd() < .45) CAR.press = pressFor(R.n >= 7.5 ? "j_bien" : R.n < 5.5 ? "j_mal" : "j_normal", { nota: R.n });
+}
+
+/* ---------------- ofertas, traspasos, contrato, despido ---------------- */
+function jugOffers() {
+  const me = jMe(), s = jS(), avg = CAR.notas.slice(-10).reduce((a, b) => a + b, 0) / Math.max(1, Math.min(10, CAR.notas.length)) || 6;
+  const want = CAR.wantOut ? .5 : .12 + Math.max(0, avg - 6.5) * .15 + CAR.fame / 400; if (rnd() > want) return;
+  const lvl = s[1] + (avg - 6.5) * 2, cands = CLUBS.map((c, i) => i).filter(i => i !== CAR.club && cstr(i) <= lvl + 4 && cstr(i) >= lvl - 6 && (CAR.bud[i] || 0) > pval(me) * .7);
+  if (!cands.length) return; const b = pick(cands), amt = Math.round(pval(me) * (.9 + rnd() * .5) * 10) / 10, wage = Math.round(pwage(me) * (1.1 + rnd() * .6) * 100) / 100;
+  if (!CAR.inbox.some(o => o.club === b)) { CAR.inbox.push({ id: CAR.nid++, type: "jfichaje", club: b, amt, wage, w: CAR.week }); carNews("rumor", `El ${cname(b)} pregunta por ${shortName(pinfo(me).n)}`, `Ofrece ${money(amt)} y un sueldo de ${money(wage)} al año.`); }
+}
+function jugTransfer(club, amt, wage, free) {
+  const me = jMe(), from = CAR.club; movePlayer(me, club, free ? 0 : amt); CAR.club = club; CAR.trust = 45; CAR.ord = null; CAR.inbox = []; CAR.wantOut = false; CAR.fired = false; CAR.jobOff = null;
+  CAR.contract = { years: 3, wage: wage || pwage(me) }; CAR.obj = carObjective(club); CAR.form = "4-3-3"; dirty();
+  carNews("fichaje", free ? `${pinfo(me).n} firma por el ${CL(club).nombre}` : `¡${pinfo(me).n} ficha por el ${CL(club).nombre}!`, free ? "Llega con la carta de libertad." : `El ${cname(from)} lo traspasa por ${money(amt)}.`);
+  CAR.press = pressFor("j_presen"); jugSave();
+}
+function jugSeasonEnd() {
+  const me = jMe(), s = jS(), n = CAR.notas.length ? CAR.notas.reduce((a, b) => a + b, 0) / CAR.notas.length : 0;
+  CAR.jhist.push({ s: CAR.season, club: CL(CAR.club).nombre, pj: s[9], g: s[7], a: s[8], nota: Math.round(n * 10) / 10, ov: s[1] });
+  CAR.notas = []; CAR.contract.years--;
+  // el club decide: renovar, dar la baja o seguir
+  if (CAR.trust < 22 || s[1] < cstr(CAR.club) - 9) { CAR.fired = true; CAR.jobOff = null; carNews("despido", `El ${CL(CAR.club).nombre} da la baja a ${pinfo(me).n}`, "El club no cuenta contigo. Toca buscar equipo."); }
+  else if (CAR.contract.years <= 0) { if (CAR.trust >= 40) { CAR.contract = { years: 3, wage: Math.max(CAR.contract.wage, pwage(me)) }; carNews("contrato", `${pinfo(me).n} renueva hasta ${CAR.season + 4}`, `Nuevo sueldo: ${money(CAR.contract.wage)} al año.`); }
+    else { CAR.fired = true; CAR.jobOff = null; carNews("despido", `${pinfo(me).n} termina contrato y no renueva`, "Queda libre: escucha ofertas."); } }
+}
+function jugJobOffers() {   // clubes que te quieren cuando te quedas sin equipo
+  const lvl = jS()[1]; return shuffle(CLUBS.map((c, i) => i).filter(i => i !== CAR.club && cstr(i) <= lvl + 2 && cstr(i) >= lvl - 10)).slice(0, 4);
+}
+// convocatoria: antes de cada ventana o torneo, si estás entre los mejores de tu país
+function jugCallUp() {
+  const n = natOf(pinfo(jMe()).nac); if (!NAT[n]) { CAR.nat = null; return; } NPOOL = null; natDirty();
+  const sq = natAuto(n), called = sq.includes(jMe()) && !jS()[5];
+  if (called && !CAR.nat) carNews("seleccion", `¡${pinfo(jMe()).n}, convocado con ${n}!`, (CAR.natApps ? `Lleva ${CAR.natApps} partidos internacionales.` : "Primera llamada del seleccionador."));
+  CAR.nat = called ? { n, jug: true } : null; CAR.natSq = null;
+}
+
+/* ---------------- interfaz ---------------- */
+function renderJug() {
+  const B = $("#carBody");
+  if (CAR.fired) { if (!CAR.jobOff) { CAR.jobOff = jugJobOffers(); jugSave(); }
+    B.innerHTML = `<div class="panel" style="max-width:76rem;margin:2rem auto;padding:2.4rem;text-align:center;overflow:auto"><h2 class="ctit">SIN EQUIPO</h2><p>${esc((CAR.news.find(n => n.type === "despido") || {}).body || "")}</p><div class="lbl">Clubes interesados</div>
+      ${CAR.jobOff.map(i => `<div class="lrow"><span>${esc(CLUBS[i].nombre)}</span><span class="sc">${esc(CAR.liga[i])}</span><span class="r"><button class="mbtn sm pri" data-nav data-a="jugJob" data-i="${i}">Firmar</button></span></div>`).join("") || `<div class="mute">Nadie te llama todavía.</div>`}
+      <button class="mbtn" data-nav data-a="jugMore" style="margin-top:1rem">Esperar más ofertas</button> <button class="mbtn" data-nav data-a="carReset">Retirarse</button></div>`; return; }
+  $("#carTitle").textContent = `${shortName(pinfo(jMe()).n).toUpperCase()} · ${CL(CAR.club).nombre.toUpperCase()} · ${CAR.season}-${String(CAR.season + 1).slice(2)} · SEM. ${CAR.week}`;
+  const tabs = [["inicio", "Inicio"], ["yo", "Mi jugador"], ["plantilla", "Equipo"], ["comps", "Competiciones"], ["fichajes", "Ofertas" + (CAR.inbox.length ? ` (${CAR.inbox.length})` : "")], ["diario", "Diario"], ["sel", "Selección"]];
+  let main = CT.tab === "yo" ? jugProfile() : CT.tab === "plantilla" ? jugTeam() : CT.tab === "comps" ? carComps() : CT.tab === "fichajes" ? jugMarket() : CT.tab === "diario" ? carDiario() : CT.tab === "sel" ? jugNat() : jugHome();
+  B.innerHTML = `<div class="mkbar"><div class="tabs">${tabs.map(([k, l]) => `<button class="tab${CT.tab === k ? " on" : ""}" data-nav data-a="carTab" data-tab="${k}">${l}</button>`).join("")}</div></div><div class="panel scroll carmain">${main}</div>`;
+}
+function jugHome() {
+  const P = CAR.pending, s = jS(); let next;
+  if (CAR.press) next = `<div class="lbl">Rueda de prensa</div><div class="cq">«${esc(CAR.press.q)}»</div>${CAR.press.a.map((a, i) => `<button class="mbtn${i ? "" : " pri"}" data-nav data-a="carPress" data-i="${i}"${i ? "" : " data-first"}>${esc(a.txt)}</button>`).join("")}`;
+  else if (P) { if (!P.nat) jugOrder(); const role = jugRole(); next = `<div class="lbl">${esc(P.name)}</div><div class="vs"><div class="tm">${carCrest(P.h)}<b>${esc(cname(P.h))}</b></div><div class="mute vsx">VS</div><div class="tm">${carCrest(P.a)}<b>${esc(cname(P.a))}</b></div></div>
+      <div class="okb" style="text-align:center">Eres <b>${role.toUpperCase()}</b>${role === "titular" ? ` · ${FORMS[P.nat ? "4-3-3" : CAR.form][(CAR.ord || []).indexOf(jMe())] ? FORMS[CAR.form][CAR.ord.indexOf(jMe())][0] : pinfo(jMe()).pos}` : ""}</div>
+      <div class="stepper"><span class="lbl">Controlas</span>${[["jugador", "Solo a mi jugador"], ["equipo", "A todo el equipo"]].map(([k, l]) => `<button class="tab${CAR.ctl === k ? " on" : ""}" data-nav data-a="jugCtl" data-k="${k}">${l}</button>`).join("")}</div>
+      <button class="mbtn pri" data-nav data-a="carPlay" data-first>Jugar el partido</button><button class="mbtn" data-nav data-a="carSim">Simular</button>`; }
+  else next = `<div class="lbl">Semana ${CAR.week || 0}${CAR_WIN(CAR.week || 1) ? " · mercado abierto" : ""}</div><button class="mbtn gold" data-nav data-a="carGo" data-first>Avanzar hasta el próximo partido</button>`;
+  const avg = CAR.notas.length ? (CAR.notas.reduce((a, b) => a + b, 0) / CAR.notas.length).toFixed(2) : "—";
+  return `<div class="cgrid"><div class="panel next">${next}</div><div><div class="cbox">${meter("Confianza del míster", CAR.trust)}${meter("Fama", CAR.fame)}${meter("Moral", s[3])}${meter("Forma física", s[4])}
+      <div class="mute" style="margin-top:.6rem">Media <b>${s[1]}</b> · ${s[2]} años · Temporada: ${s[9]} PJ, ${s[7]} goles, ${s[8]} asist. · nota media ${avg}</div></div>
+    ${s[5] ? `<div class="warn">Lesionado: ${s[5]} semana(s) de baja.</div>` : ""}${CAR.inbox.length ? `<div class="warn">Tienes ${CAR.inbox.length} oferta(s): mira «Ofertas».</div>` : ""}
+    <div class="cbox"><div class="lbl">Última hora</div>${CAR.news.slice(0, 3).map(n => `<div class="cnews"><b>${esc(n.title)}</b><span>${esc(n.body)}</span></div>`).join("")}</div></div></div>`;
+}
+function jugProfile() {
+  const p = pinfo(jMe()), s = jS(), d = s[1] - p.ov, st = Object.entries(p.f).map(([k, v]) => [k, clamp(v + d, 20, 99)]), N = { pac: "Ritmo", sho: "Tiro", pas: "Pase", dri: "Regate", def: "Defensa", phy: "Físico" };
+  return `<div class="cgrid"><div class="cbox"><h3 style="margin:0">${esc(p.n)} <span class="mute">#${p.num}</span></h3><div class="mute">${JPOS_N[p.pos] || p.pos} · ${esc(p.nac)} · pie ${String(p.foot || "derecho").toLowerCase()} · ${s[2]} años</div>
+      <div style="font-family:BC;font-size:4rem;font-weight:900;color:var(--gold2,#f5c542)">${s[1]}</div>${st.map(([k, v]) => meter(N[k], v)).join("")}
+      <div class="mute" style="margin-top:.6rem">Club: <b>${esc(CL(CAR.club).nombre)}</b> · contrato ${CAR.contract.years} temporada(s) · ${money(CAR.contract.wage)}/año · valor ${money(pval(jMe()))}</div>
+      <div class="mute">Internacional: ${CAR.natApps || 0} partidos con ${esc(natOf(p.nac))}</div></div>
+    <div class="cbox"><div class="lbl">Trayectoria</div><table class="tb"><tr><th>Temp.</th><th class="l">Club</th><th>PJ</th><th>G</th><th>A</th><th>Nota</th><th>Media</th></tr>${CAR.jhist.map(h => `<tr><td>${h.s}-${String(h.s + 1).slice(2)}</td><td class="l">${esc(h.club)}</td><td>${h.pj}</td><td>${h.g}</td><td>${h.a}</td><td>${h.nota || "—"}</td><td>${h.ov}</td></tr>`).join("") || `<tr><td class="mute" colspan="7">Primera temporada en curso.</td></tr>`}</table>
+      <div class="lbl" style="margin-top:1rem">Títulos (${CAR.trophies.length})</div>${CAR.trophies.map(t => `<div>· ${esc(t.n)} ${t.s}-${String(t.s + 1).slice(2)}</div>`).join("") || `<div class="mute">Aún sin títulos.</div>`}
+      <button class="mbtn" data-nav data-a="carReset" style="margin-top:1rem">Retirarse (borrar carrera)</button></div></div>`;
+}
+function jugTeam() {
+  const o = CAR.ord || jugOrder(), F = FORMS[CAR.form];
+  const row = (k, i) => `<div class="lurow cr${k === jMe() ? " on" : ""}"><span class="lr">${i < 11 ? F[i][0] : i < 20 ? "SUP" : "—"}</span><span class="ln">${esc(shortName(pinfo(k).n))}${cps(k)[5] ? ' <em class="bad">LES</em>' : ""}</span><span class="lp">${pinfo(k).pos}</span><span class="lo">${cps(k)[1]}</span><span class="cx">${cps(k)[2]}a · ${cps(k)[7]}g</span></div>`;
+  return `<div class="mute" style="margin-bottom:.6rem">El once lo decide el entrenador según el nivel, la forma y la confianza que te tiene. Entrena bien (buenas notas) para ganarte el puesto.</div>
+    <div class="lu"><div><h4>ONCE (${CAR.form})</h4>${o.slice(0, 11).map(row).join("")}</div><div><h4>BANQUILLO</h4>${o.slice(11, 20).map((k, i) => row(k, i + 11)).join("")}</div></div>`;
+}
+function jugMarket() {
+  const open = CAR_WIN(CAR.week || 1);
+  return `${open ? `<div class="okb">Mercado abierto: los clubes pueden ficharte.</div>` : `<div class="warn">Mercado cerrado (abre en las semanas 1-3 y 21-24). Las ofertas que aceptes se cierran en el próximo mercado.</div>`}
+    <div class="cbox">Contrato con el ${esc(CL(CAR.club).nombre)}: ${CAR.contract.years} temporada(s), ${money(CAR.contract.wage)}/año. Valor de mercado: ${money(pval(jMe()))}.
+      <div style="margin-top:.6rem"><button class="mbtn${CAR.wantOut ? " gold" : ""}" data-nav data-a="jugOut">${CAR.wantOut ? "Has pedido salir ✓ (pulsa para quedarte)" : "Pedir el traspaso"}</button></div>
+      <div class="mute" style="margin-top:.4rem">Pedir salir atrae más ofertas, pero baja la confianza del míster.</div></div>
+    <h4>Ofertas recibidas</h4>${CAR.inbox.map(o => `<div class="cbox"><b>${esc(cname(o.club))}</b> (${esc(CAR.liga[o.club])}, nivel ${Math.round(cstr(o.club))}) quiere ficharte: traspaso ${money(o.amt)}, sueldo <b>${money(o.wage)}/año</b>.
+      <div style="display:flex;gap:.6rem;margin-top:.6rem"><button class="mbtn pri" data-nav data-a="jugAcc" data-id="${o.id}">Aceptar</button><button class="mbtn" data-nav data-a="jugRej" data-id="${o.id}">Rechazar</button></div></div>`).join("") || `<div class="mute">Sin ofertas por ahora. Las buenas notas y la fama atraen a clubes mejores.</div>`}`;
+}
+function jugNat() {
+  const n = natOf(pinfo(jMe()).nac), sq = NAT[n] ? natAuto(n) : [], inn = sq.includes(jMe());
+  return `<div class="cbox"><div class="lbl">${esc(n)}</div>${NAT[n] ? `<div>${inn ? "<b>Entras en la convocatoria</b> del seleccionador." : "Ahora mismo no entras en la lista. Sube tu media y tus notas para que te llame."}</div>
+    <div class="mute">Partidos internacionales: ${CAR.natApps || 0}. ${CAR.ntours && CAR.ntours.find(T => T.teams.includes("N:" + n)) ? "Este año tu selección juega el " + CAR.ntours.find(T => T.teams.includes("N:" + n)).name + "." : ""}</div>` : `<div class="mute">Tu país no tiene torneos en el juego.</div>`}</div>
+    <h4>Lista actual</h4>${sq.slice(0, 26).map(k => `<div class="lurow cs${k === jMe() ? " on" : ""}"><span class="lr">${pinfo(k).pos}</span><span class="ln">${esc(pinfo(k).n)}</span><span class="lp">${cps(k)[1]}</span></div>`).join("")}${natTourBox()}`;
+}
+function renderJugSetup() {
+  $("#carTitle").textContent = "NUEVO JUGADOR";
+  const ls = leagueOrder(); if (!JS.liga) JS.liga = "LaLiga Hypermotion";
+  const ids = CLUBS.map((c, i) => i).filter(i => CLUBS[i].liga === JS.liga).sort((a, b) => CLUBS[b].ov - CLUBS[a].ov);
+  const step = (lbl, k, val) => `<div class="stepper"><span class="lbl">${lbl}</span><button class="mbtn" data-nav data-a="jugSt" data-k="${k}" data-d="-1">◀</button><div class="val">${esc(val)}</div><button class="mbtn" data-nav data-a="jugSt" data-k="${k}" data-d="1">▶</button></div>`;
+  $("#carBody").innerHTML = `<div class="cgrid"><div class="panel next" style="overflow:auto">
+      <div class="lbl">Tu futbolista</div><input id="jName" maxlength="22" placeholder="Nombre y apellido" value="${esc(JS.name)}" style="font:inherit;font-size:1.8rem;padding:.7rem 1rem;border-radius:.6rem;border:2px solid #ffffff33;background:#0008;color:#fff">
+      ${step("País", "nac", JS.nac)}${step("Dorsal", "num", JS.num)}${step("Pie bueno", "foot", JS.foot)}${step("Posición", "pos", JPOS_N[JS.pos])}
+      ${step("En los partidos controlas", "ctl", JS.ctl === "jugador" ? "Solo a tu jugador" : "A todo el equipo")}${step("Dificultad", "diff", JS.diff)}${step("Minutos por parte", "dur", JS.dur)}
+      <button class="mbtn gold" data-nav data-a="jugStart" data-first>${JS.ci != null ? "Firmar con el " + esc(CLUBS[JS.ci].nombre) : "Elige club a la derecha"}</button></div>
+    <div class="panel scroll" style="padding:1rem"><div class="tabs" style="margin-bottom:.6rem">${ls.map(l => `<button class="tab${l === JS.liga ? " on" : ""}" data-nav data-a="jugL" data-l="${esc(l)}">${esc(l)}</button>`).join("")}</div>
+      <div class="mute" style="margin-bottom:.4rem">Empiezas con 18 años y media 64. En un club grande empezarás en el banquillo; en uno modesto jugarás antes.</div>
+      ${ids.map(i => `<button class="lurow cs${JS.ci === i ? " on" : ""}" data-nav data-a="jugC" data-i="${i}"><span class="lr">${CLUBS[i].ov}</span><span class="ln">${esc(CLUBS[i].nombre)}</span><span class="lp">${esc(CLUBS[i].liga.slice(0, 14))}</span></button>`).join("")}</div></div>`;
+  const inp = $("#jName"); if (inp) inp.addEventListener("input", () => JS.name = inp.value);
+}
+function renderCarModes() {
+  $("#carTitle").textContent = "ELIGE MODO";
+  const m = store.get("car", null), j = store.get("carj", null);
+  $("#carBody").innerHTML = `<div class="body grid-sub" style="padding:0">
+    <button class="tile t-card big" data-nav data-a="carMode" data-m="man" data-first><div class="shine"></div><img class="art" src="${IMG.trofeo}" alt=""><div class="txt"><span class="tag">MÁNAGER</span><h2>Carrera de<br>mánager</h2><p>${m && m.v ? `Continuar: ${esc((CLUBS[m.club] || {}).nombre || "")} · ${m.season}` : "Dirige un club: fichajes, directiva, títulos."}</p></div></button>
+    <button class="tile t-card big" data-nav data-a="carMode" data-m="jug"><div class="shine"></div><img class="art" src="${IMG.trofeo}" alt=""><div class="txt"><span class="tag blue">JUGADOR</span><h2>Carrera de<br>jugador</h2><p>${j && j.v ? `Continuar: ${esc((j.gen && j.me && j.gen[j.me] || {}).n || "")} · ${j.season}` : "Crea tu futbolista y llega a la élite."}</p></div></button></div>`;
+}
+
+/* acciones */
+ACT.carMode = el => { CT.mode = el.dataset.m; CT.tab = "inicio"; carLoadMode(); renderCar(); };
+ACT.jugSt = el => { const k = el.dataset.k, d = +el.dataset.d;
+  if (k === "nac") { const L = NATIONS.map(x => x[0]); JS.nac = L[(L.indexOf(JS.nac) + d + L.length) % L.length]; }
+  if (k === "num") JS.num = ((JS.num - 1 + d + 99) % 99) + 1; if (k === "foot") JS.foot = JS.foot === "Derecho" ? "Izquierdo" : "Derecho";
+  if (k === "pos") JS.pos = JPOS[(JPOS.indexOf(JS.pos) + d + JPOS.length) % JPOS.length]; if (k === "ctl") JS.ctl = JS.ctl === "jugador" ? "equipo" : "jugador";
+  if (k === "diff") { const L = Object.keys(DIFF); JS.diff = L[(L.indexOf(JS.diff) + d + L.length) % L.length]; } if (k === "dur") JS.dur = clamp(JS.dur + d, 1, 10);
+  renderJugSetup(); reFocus(`[data-a="jugSt"][data-k="${k}"][data-d="${d}"]`); };
+ACT.jugL = el => { JS.liga = el.dataset.l; JS.ci = null; renderJugSetup(); };
+ACT.jugC = el => { JS.ci = +el.dataset.i; renderJugSetup(); reFocus('[data-a="jugStart"]'); };
+ACT.jugStart = () => { const nm = (JS.name || "").trim(); if (nm.length < 3) return toast("Escribe el nombre de tu jugador"); if (JS.ci == null) return toast("Elige un club");
+  toast("Preparando el mundo: 12 ligas, copas y Europa…"); setTimeout(() => { carNewJug(JS.ci, { ...JS, name: nm }); CT.tab = "inicio"; renderCar(); }, 30); };
+ACT.jugCtl = el => { CAR.ctl = el.dataset.k; jugSave(); renderCar(); };
+ACT.jugOut = () => { CAR.wantOut = !CAR.wantOut; if (CAR.wantOut) { CAR.trust = clamp(CAR.trust - 8, 0, 100); carNews("rumor", `${pinfo(jMe()).n} pide salir del ${CL(CAR.club).nombre}`, "El míster no lo ha encajado bien."); } jugSave(); renderCar(); };
+ACT.jugAcc = el => { const o = CAR.inbox.find(x => x.id === +el.dataset.id); if (!o) return;
+  if (!CAR_WIN(CAR.week || 1)) { CAR.pendingMove = o; CAR.inbox = CAR.inbox.filter(x => x !== o); toast("Acuerdo cerrado: firmarás cuando abra el mercado"); jugSave(); renderCar(); return; }
+  jugTransfer(o.club, o.amt, o.wage); CT.tab = "inicio"; renderCar(); };
+ACT.jugRej = el => { CAR.inbox = CAR.inbox.filter(x => x.id !== +el.dataset.id); jugSave(); renderCar(); };
+ACT.jugJob = el => { jugTransfer(+el.dataset.i, 0, pwage(jMe()) * .9, true); CT.tab = "inicio"; renderCar(); };
+ACT.jugMore = () => { CAR.jobOff = jugJobOffers(); jugSave(); renderCar(); };
 
 </script>
 </body>

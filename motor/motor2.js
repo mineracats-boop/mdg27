@@ -830,7 +830,7 @@
     H.getWorldQuaternion(_q2); _q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.atan2(fw.x, fw.z)); cardMesh.quaternion.copy(_q2.invert().multiply(_q)); }
   function showCard(col, f, red) { play("grada_silba", red ? .5 : .3); if (!refA) return; if (!f.one && !f.gk) startOne(f, "StandingArguing", { t0: 1.5, ts: 1.1, end: 4.6, rootScale: 0, fadeIn: .2, h0: Math.atan2(refA.y - f.y, refA.x - f.x) }); cardMesh.material.color.setHex(col); refA.h = refA.mh = Math.atan2(f.y - refA.y, f.x - refA.x);
     refA.cardT = simT + 2.2; cardMesh.visible = true; later(2.2, () => { cardMesh.visible = false; });
-    if (red) { f.sent = true; if (M.human === f) { const c = team(f.t).find(q => !q.gk && q !== f); if (c) setHuman(c); } } }
+    if (red) { f.sent = true; if (M.lockP === f) { M.lockP = null; M.human = null; M.lockOut = true; } if (M.human === f) { const c = team(f.t).find(q => !q.gk && q !== f); if (c) setHuman(c); } } }
   function knockDown(p, a) { p.down = 2.4; p.dr.plan = null; const o = startOne(p, Math.random() < .5 ? "SoccerTrip" : "FallFlat", { ts: 1.1, h0: a, end: 2.2, fadeIn: .08 }); if (o) o.after = () => { startOne(p, "GettingUp", { ts: 1.5, t0: .4, end: 2.4, rootScale: 0 }); }; }
   function foul(f, v, hard, force) {
     if (DR) return;
@@ -860,7 +860,7 @@
   function callOffside(p) { if (M.phase !== "play") return; TEAMS[p.t].stats.off++; whistle(1); msg("FUERA DE JUEGO · " + p.name, 2); M.phase = "stop"; M.pass = null; later(1.3, () => startSet("fk", 1 - p.t, p.x, p.y, true)); }
 
   /* ---------- humano: control del jugador y cambio ---------- */
-  function setHuman(p) { if (M.human === p) return; M.human = p; p.req = null; }
+  function setHuman(p) { if (M.lockOut || (M.lockP && p !== M.lockP)) return; if (M.human === p) return; M.human = p; if (p) p.req = null; }   // modo carrera de jugador: solo controlas a tu futbolista
   function nearestTo(t, x, y, excl) { let b = null, bd = 1e9; for (const p of team(t)) { if (p.gk || p === excl) continue; const d = Math.hypot(p.x - x, p.y - y); if (d < bd) { bd = d; b = p; } } return b; }
   let charge = null, lastI = { dir: null };
   function humanControl(I, dt) {
@@ -1136,7 +1136,7 @@
       } else if (s.mode === "rush" && !(target && target.air)) s.mode = "idle";
     }
     if (M.phase === "play" && !ball.hold && !g.one && !g.req && !gkHandsOK(t) && ball.z < .6 && Math.hypot(ball.vx, ball.vy) < 9 && !(M.owner && M.owner.t !== t)) {   // balón suelto cerca sin poder usar las manos: va y lo juega con el pie
-      const ip = Math.hypot(ball.x - g.x, ball.y - g.y); if (STREET ? (ip < 4 && prog(t, ball.x) < .16 && Math.abs(ball.y - W / 2) < 5) : (ip < 9 && (ip < 2.5 || prog(t, ball.x) < .2))) gkFeet(t); }
+      const ip = Math.hypot(ball.x - g.x, ball.y - g.y); if (inArea(t, ball.x, ball.y, -.3) && (STREET ? (ip < 4 && Math.abs(ball.y - W / 2) < 5) : ip < 9)) gkFeet(t); }
     if (g.req && !g.one) { const a = Math.atan2(g.req.ty - ball.y, g.req.tx - ball.x), tx = ball.x - Math.cos(a) * .9, ty = ball.y - Math.sin(a) * .9, d = Math.hypot(tx - g.x, ty - g.y); if (d > .1) { const sp = Math.min(3.5, d * 4); g.x += (tx - g.x) / d * sp * dt; g.y += (ty - g.y) / d * sp * dt; g.v = sp; } g.h += angD(g.h, a) * Math.min(1, dt * 6); g.mh = g.h; }
     else if (s.mode === "idle" && !g.one && simT - (g.airT || -9) > .05) {   // colocación en la bisectriz
       const db = Math.hypot(gl - ball.x, W / 2 - ball.y), ty = W / 2 + clamp((ball.y - W / 2) * clamp(3.5 / Math.max(db, 1), .08, .45), -GW / 2 + .5, GW / 2 - .5), tx = gl + dirF * clamp(.6 + db * .045, .6, 3);
@@ -1147,7 +1147,9 @@
     if (s.mode === "throw" && g.one && g.one.hold) { gkHands(g); const o = g.one; g.hands[0].getWorldPosition(hv); const fa = (hv.x + L / 2 - g.x) * Math.cos(g.h) + (hv.z + W / 2 - g.y) * Math.sin(g.h);
       if (o.t > .6 && o.prevA != null && fa < o.prevA - .003 && o.prevA > .15 && !o.fired) { o.fired = true; o.on(); } o.prevA = fa; }
     stepOne(g, dt);
-    if (STREET) { g.x = clamp(g.x, .3, L - .3); g.y = clamp(g.y, .3, W - .3); }
+    // el portero nunca sale de su área (ni en fútbol 11 ni en la jaula)
+    if (g.req && !inArea(t, ball.x, ball.y, .6)) g.req = null;
+    if (!M.so) { const AD = (STREET ? 6.3 : 16.5) - .4, AW = (STREET ? 7.2 : 20.16) - .3; g.x = own(t) + dirF * clamp((g.x - own(t)) * dirF, .15, AD); g.y = clamp(g.y, W / 2 - AW, W / 2 + AW); }
     if (ball.hold === g || s.mode === "throw" || s.mode === "hold") { const AD = (STREET ? 6.3 : 16.5) - .8, AW = (STREET ? 7.2 : 20.16) - .6; g.x = own(t) + dirF * clamp((g.x - own(t)) * dirF, .3, AD); g.y = clamp(g.y, W / 2 - AW, W / 2 + AW); }
   }
   function handsBall(p) { flushPose(p); p.hands[0].getWorldPosition(hv); p.hands[1].getWorldPosition(hv2); hv.add(hv2).multiplyScalar(.5); ball.x = hv.x + L / 2 + Math.cos(p.h) * .06; ball.y = hv.z + W / 2 + Math.sin(p.h) * .06; ball.z = Math.max(0, hv.y - BR * .5); ball.vx = ball.vy = ball.vz = 0; }
@@ -1219,7 +1221,7 @@
   // ejecutar el balón parado: humano con los botones, IA tras una pausa
   function setPieceStep(I, dt) {
     const s = M.set; if (!s || M.phase !== "set") return;
-    const p = s.taker, human = p.t === M.humanTeam && !p.gk, wait = simT - s.at, humanGK = s.type === "goalkick" && p.t === M.humanTeam;
+    const p = s.taker, human = p.t === M.humanTeam && !p.gk && (!M.lockP || p === M.lockP), wait = simT - s.at, humanGK = s.type === "goalkick" && p.t === M.humanTeam && !M.lockP;
     if (s.type === "throw") { ball.hold = p; if (p.one && p.one.n === "ThrowIn" && p.one.t > .45) handsBall(p); }
     let go = null;
     if (human && wait > .4) {
@@ -1413,7 +1415,7 @@
       x: outP.t ? L / 2 + 2 : L / 2 - 2, y: -1.5, h: Math.PI / 2, mh: Math.PI / 2, yel: 0 });
     for (const n of WARM_L) { if (!META[n]) continue; const ac = a.act(n); if (ac) { ac.play(); ac.paused = true; ac.setEffectiveWeight(0); } }
     a.bones = []; a.inner.traverse(o => { if (o.isBone) a.bones.push(o); }); if (a.bones.length !== outP.bones.length) M.noReplay = true;
-    const k = P.indexOf(outP); P[k] = a; ACT[ACT.indexOf(outP)] = a; outP.wrap.removeFromParent(); if (M.human === outP) setHuman(a); if (M.owner === outP) M.owner = null;
+    const k = P.indexOf(outP); P[k] = a; ACT[ACT.indexOf(outP)] = a; outP.wrap.removeFromParent(); if (M.lockP === outP) { M.lockP = null; M.human = null; M.lockOut = true; } else if (EMB && EMB.lock && a.u === EMB.lock) { M.lockP = a; M.human = a; } if (M.human === outP) setHuman(a); if (M.owner === outP) M.owner = null;
     if (ball.hold === outP) ball.hold = a;
     msg("CAMBIO · entra " + b.n + " por " + outP.name, 2.2); return true; }
   function aiSubs() { if (DR || M.phase !== "set" || M.subBusy || M.so) return;
@@ -1740,7 +1742,8 @@
   function frame(now) { const dt = Math.min(.1, (now - last) / 1000); last = now; if (!window.STEP) { const n = Math.min(3, Math.max(1, Math.ceil(dt * 30 - 1e-6))), h = dt / n; for (let i = 0; i < n; i++) tick(h); draw(dt); } requestAnimationFrame(frame); }
   window.__run = (n = 1, h = 1 / 30, noDraw) => { for (let i = 0; i < n; i++) tick(h); if (!noDraw) draw(h); return { clock: M.clock, half: M.half, phase: M.phase, score: [TEAMS[0].score, TEAMS[1].score], owner: M.owner && (M.owner.t + ":" + M.owner.role), set: M.set && M.set.type }; };
   window.__test = { foul, OFF, P, M, ball, K, TEAMS, gkS, startSet, TIMERS, requestKick, GKP, passTo, startOne, pose, place, META, traj, headerPt, get simT() { return simT; } };
-  if (M.humanTeam >= 0) setHuman(team(M.humanTeam).find(q => q.cat === "fwd") || team(M.humanTeam)[10]); updHud(); startSet("kick", 0);
+  M.lockP = EMB && EMB.lock ? P.find(q => q.u === EMB.lock && q.t === M.humanTeam) || null : null; if (EMB && EMB.lock && !M.lockP) M.lockOut = true;
+  if (M.lockP) M.human = M.lockP; else if (M.humanTeam >= 0 && !M.lockOut) setHuman(team(M.humanTeam).find(q => q.cat === "fwd") || team(M.humanTeam)[10]); updHud(); startSet("kick", 0);
   /* ---------- ambiente de noche y clima (luces de estadio, lluvia y nieve) ---------- */
   const WXP = { pts: null };
   (function atmos() {
