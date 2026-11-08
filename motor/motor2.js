@@ -248,8 +248,9 @@
     const o = a.one || a.lastOne; if (o && (a.one || a.oneW > 0)) put(o.n, ow, Math.min(o.t, META[o.n].dur - 1e-3));
     // las acciones sin uso se quedan activas con peso 0 (no se recrean los enlaces de huesos: evita tirones)
     for (const n in a.acts) if (!used.has(n)) { const ac = a.acts[n]; if (ac.weight !== 0) ac.setEffectiveWeight(0); }
-    a.mixer.update(0);
+    a.pd = true;   // el esqueleto se calcula una sola vez por fotograma (o justo antes de leer un hueso)
   }
+  function flushPose(a) { if (a.pd) { a.pd = false; a.mixer.update(0); } }
   function rmAt(m, t) { const r = m.rm; if (!r) return [0, 0]; const f = clamp(t * 15, 0, r.length - 1), i = Math.floor(f), j = Math.min(r.length - 1, i + 1), u = f - i; return [lerp(r[i][0], r[j][0], u), lerp(r[i][1], r[j][1], u)]; }
   function yawAt(m, t) { const r = m.yawC; if (!r) return 0; const f = clamp(t * 15, 0, r.length - 1), i = Math.floor(f), j = Math.min(r.length - 1, i + 1); return lerp(r[i], r[j], f - i); }
   function startOne(a, n, o = {}) { const m = META[n]; if (!m) return null; a.one = Object.assign({ n, t: o.t0 || 0, ts: o.ts || 1, m, h0: a.h, rmPrev: rmAt(m, o.t0 || 0), yawPrev: yawAt(m, o.t0 || 0) }, o); return a.one; }
@@ -560,7 +561,7 @@
 
   /* ---------- conducción por jugador (toques planificados al pie, como en la fase 1) ---------- */
   const tv = new THREE.Vector3();
-  function footLocal(p, f) { p.toes[f].getWorldPosition(tv); const fxw = tv.x + L / 2 - p.x, fyw = tv.z + W / 2 - p.y, hx = Math.cos(p.h), hy = Math.sin(p.h); return { a: fxw * hx + fyw * hy, l: -fxw * hy + fyw * hx, x: tv.x + L / 2, y: tv.z + W / 2 }; }
+  function footLocal(p, f) { flushPose(p); p.toes[f].getWorldPosition(tv); const fxw = tv.x + L / 2 - p.x, fyw = tv.z + W / 2 - p.y, hx = Math.cos(p.h), hy = Math.sin(p.h); return { a: fxw * hx + fyw * hy, l: -fxw * hy + fyw * hx, x: tv.x + L / 2, y: tv.z + W / 2 }; }
   function contactPoint(p, T, dirH, f) {
     const h2 = p.h + clamp(angD(p.h, dirH), -2.2 * T, 2.2 * T), v = p.v, px = p.x + Math.cos(p.h) * v * T * .5 + Math.cos(h2) * v * T * .5, py = p.y + Math.sin(p.h) * v * T * .5 + Math.sin(h2) * v * T * .5;
     const ah = p.dr.fwd != null ? p.dr.fwd : .35, lt = f === "R" ? .1 : -.1;
@@ -701,7 +702,7 @@
     o.after = () => { p.kickLock = false; p.v = Math.min(p.v, 3.5); };
   }
   function strike(p, r, left) {
-    const toe = left ? p.toes.L : p.toes.R; toe.getWorldPosition(tv);
+    flushPose(p); const toe = left ? p.toes.L : p.toes.R; toe.getWorldPosition(tv);
     const miss = Math.hypot(tv.x + L / 2 - ball.x, tv.z + W / 2 - ball.y), q = clamp(1 - Math.max(0, miss - .35) * 1.4, .25, 1);
     const weak = left ? .86 : 1, run = p.v > 5.5 ? .1 : 0, st = r.k === "shot" ? p.st.sho : p.st.pas;
     const err = (1 - q) * .35 + (1 - weak) * .3 + run + (r.fin ? -.05 : 0) + (100 - st) * .004 + (r.press || 0) + (r.k === "shot" ? .15 + Math.max(0, Math.hypot(r.tx - ball.x, r.ty - ball.y) - 12) * .012 + (p === M.human ? 0 : .04) : 0) + (r.pow ? .07 : 0);
@@ -1069,7 +1070,7 @@
   /* ---------- porteros (uno por equipo) ---------- */
   const hv = new THREE.Vector3(), hv2 = new THREE.Vector3();
   const gkS = [{ mode: "idle" }, { mode: "idle" }];
-  function gkHands(g) { g.hands[0].getWorldPosition(hv); g.hands[1].getWorldPosition(hv2); hv.add(hv2).multiplyScalar(.5); hv.x += Math.cos(g.h) * .08; hv.z += Math.sin(g.h) * .08; ball.x = hv.x + L / 2; ball.y = hv.z + W / 2; ball.z = Math.max(0, hv.y - BR); ball.vx = ball.vy = ball.vz = 0; }
+  function gkHands(g) { flushPose(g); g.hands[0].getWorldPosition(hv); g.hands[1].getWorldPosition(hv2); hv.add(hv2).multiplyScalar(.5); hv.x += Math.cos(g.h) * .08; hv.z += Math.sin(g.h) * .08; ball.x = hv.x + L / 2; ball.y = hv.z + W / 2; ball.z = Math.max(0, hv.y - BR); ball.vx = ball.vy = ball.vz = 0; }
   function gkReact(t) {
     const g = GKP(t), gl = own(t), s = gkS[t]; if (s.mode === "diving" || (s.mode === "dive" && s.pen)) return;
     let atG = null; for (let tt = .03; tt < 2.5; tt += .03) { const b = predictBall(tt); if (!atG && (b.x - g.x) * -M.dirOf[t] >= -.2) atG = { b, tt }; if ((b.x - gl) * -M.dirOf[t] >= -.3) { const onT = Math.abs(b.y - W / 2) < GW / 2 + .1 && b.z < GH + .1;
@@ -1096,7 +1097,7 @@
     if ((s.mode === "diving" || s.mode === "idle" || s.mode === "rush") && !ball.hold && M.phase === "play") {
       const b = ball, sp = Math.hypot(b.vx, b.vy, b.vz);
       if (!b.inNet && sp > 3 && Math.hypot(b.x - g.x, b.y - g.y) < 3 && simT - (s.lastSave || -9) > .6 && !(M.last === g && simT - (s.relT || -9) < .8)) {
-        g.hands[0].getWorldPosition(hv); g.hands[1].getWorldPosition(hv2); const hm = hv.clone().add(hv2).multiplyScalar(.5), bw = P3(b.x, b.y, b.z + BR);
+        flushPose(g); g.hands[0].getWorldPosition(hv); g.hands[1].getWorldPosition(hv2); const hm = hv.clone().add(hv2).multiplyScalar(.5), bw = P3(b.x, b.y, b.z + BR);
         const dH = Math.min(hv.distanceTo(bw), hv2.distanceTo(bw), hm.distanceTo(bw)), bodyY = clamp(bw.y, .1, 1.75), dB = Math.hypot(b.x - g.x, b.y - g.y) + Math.abs(bw.y - bodyY) * .6;
         // con parada decidida, cualquier balón que llegue a su zona de estirada se para; sin ella, solo si le da en el cuerpo
         const forced = s.ws === true && s.mode === "diving" && Math.abs(b.x - g.x) < .7 && Math.abs(b.y - g.y) < 3.2 && b.z < 2.7;
@@ -1113,19 +1114,23 @@
     // salir a por balones sueltos en el área / 1 contra 1
     g.run = false;
     if ((s.mode === "idle" || s.mode === "rush") && !g.one && !ball.inNet && M.phase === "play" && !ball.hold) {
-      const inBox = prog(t, ball.x) < .157 && Math.abs(ball.y - W / 2) < 20.15, carrier = M.owner && M.owner.t !== t ? M.owner : null, bsp = Math.hypot(ball.vx, ball.vy);
+      const SC = STREET ? .45 : 1, inBox = inArea(t, ball.x, ball.y), carrier = M.owner && M.owner.t !== t ? M.owner : null, bsp = Math.hypot(ball.vx, ball.vy);
+      const dGoal = (x, y) => Math.hypot(x - gl, (y - W / 2) * 1.3);
       let target = null;
-      if (ball.z > 1 && M.pass && M.pass.t !== t && (M.pass.k === "cross" || M.pass.k === "lob")) { for (const b of traj()) { if (b.t < .15) continue; if (b.z > 1.3 && b.z < 2.5 && prog(t, b.x) < .07 && Math.abs(b.y - W / 2) < 10 && Math.hypot(b.x - g.x, b.y - g.y) / 5.5 + .2 <= b.t) { target = { x: b.x, y: b.y, air: true }; break; } } }
+      if (ball.z > 1 && M.pass && M.pass.t !== t && (M.pass.k === "cross" || M.pass.k === "lob")) { for (const b of traj()) { if (b.t < .15) continue; if (b.z > 1.3 && b.z < 2.5 && Math.abs(b.x - gl) < 9 * SC && Math.abs(b.y - W / 2) < 8 * SC && Math.hypot(b.x - g.x, b.y - g.y) / 5.5 + .2 <= b.t) { const at = nearestTo(1 - t, b.x, b.y); if (!at || Math.hypot(at.x - b.x, at.y - b.y) / 7 > b.t * .8 || Math.abs(b.x - gl) < 5.5 * SC) { target = { x: b.x, y: b.y, air: true }; } break; } } }
       if (target && target.air) { s.mode = "rush"; g.airT = simT; const dx = target.x - g.x, dy = target.y - g.y, d = Math.hypot(dx, dy); g.v = Math.min(6, d * 4); g.run = g.v > 1; if (d > .05) { g.h += angD(g.h, Math.atan2(dy, dx)) * Math.min(1, dt * 8); g.mh = g.h; g.x += Math.cos(g.h) * g.v * dt; g.y += Math.sin(g.h) * g.v * dt; }
         if (Math.hypot(ball.x - g.x, ball.y - g.y) < 1.3 && ball.z > .9 && ball.z < 2.8) { if (Math.random() < .82 + (g.st.gk - 80) * .01) { startOne(g, "GoalkeeperCatch", { ts: 1.6, t0: .3, end: 1.2, rootScale: 0, h0: g.h }); gkCatch(t); } else { ball.vx = M.dirOf[t] * 6; ball.vy = (Math.random() - .5) * 8; ball.vz = 3; M.last = g; msg("¡DESPEJE DE PUÑOS!", 1.2); } s.mode = "idle"; } }
-      else if (inBox && !carrier && bsp < 16 && ball.z < 2 && gkHandsOK(t)) { for (let tt = .1; tt < 3; tt += .1) { const pb = predictBall(tt), tg = Math.hypot(pb.x - g.x, pb.y - g.y) / 6.2 + .25; const att = nearestTo(1 - t, pb.x, pb.y); const ta = att ? Math.hypot(pb.x - att.x, pb.y - att.y) / 7 : 9; if (tg <= tt && tg < ta * .95) { if (inArea(t, pb.x, pb.y, -.8)) target = pb; break; } } }
+      else if (inBox && !carrier && bsp < 16 && ball.z < 2 && gkHandsOK(t)) { for (let tt = .1; tt < 3; tt += .1) { const pb = predictBall(tt), tg = Math.hypot(pb.x - g.x, pb.y - g.y) / 6.2 + .25; const att = nearestTo(1 - t, pb.x, pb.y); const ta = att ? Math.hypot(pb.x - att.x, pb.y - att.y) / 7 : 9; if (tg <= tt && tg < ta * .72) { if (inArea(t, pb.x, pb.y, -.8) && dGoal(pb.x, pb.y) < 14 * SC) target = pb; break; } } }
       else if (carrier && M.gkCall && simT - (M.gkCall[t] || -9) < .2 && dist(carrier, g) < (STREET ? 12 : 26) && inArea(t, carrier.x, carrier.y, STREET ? 4 : 9)) target = { x: ball.x + ball.vx * .2, y: ball.y + ball.vy * .2, one: true, called: true };
-      else if (carrier && inBox && dist(carrier, g) < 11) { const lb = Math.hypot(ball.x - carrier.x, ball.y - carrier.y); target = { x: lerp(ball.x + ball.vx * .25, g.x, lb > 1 ? .05 : .25), y: lerp(ball.y + ball.vy * .25, g.y, lb > 1 ? .05 : .25), one: true, heavy: lb > 1 }; }
+      else if (carrier && inBox) { const lb = Math.hypot(ball.x - carrier.x, ball.y - carrier.y), dc = dGoal(carrier.x, carrier.y), central = Math.abs(carrier.y - W / 2) < 9 * SC;
+        const free = !team(t).some(q => !q.gk && dist(q, carrier) < 2.2);
+        if (central && free && (dist(carrier, g) < 4.5 * SC || (lb > 1.1 && dist(carrier, g) < 8 * SC && dc < 12 * SC))) target = { x: lerp(ball.x + ball.vx * .25, g.x, lb > 1 ? .05 : .25), y: lerp(ball.y + ball.vy * .25, g.y, lb > 1 ? .05 : .25), one: true, heavy: lb > 1 };
+        else if (central && dc < 16 * SC) { const a = Math.atan2(carrier.y - W / 2, carrier.x - gl), st = Math.min(3.5 * SC, dc * .22); target = { x: gl + Math.cos(a) * st, y: W / 2 + Math.sin(a) * st, set: true }; } }
       if (target && !target.air) {
-        s.mode = "rush"; const dx = target.x - g.x, dy = target.y - g.y, d = Math.hypot(dx, dy); g.v = Math.min(target.called ? 6.4 : target.one ? 5.2 : 6.2, d * 4); g.run = g.v > 1;
+        s.mode = "rush"; const dx = target.x - g.x, dy = target.y - g.y, d = Math.hypot(dx, dy); g.v = Math.min(target.set ? 3 : target.called ? 6.4 : target.one ? 5.2 : 6.2, d * 4); g.run = g.v > 1;
         if (d > .05) { g.h += angD(g.h, Math.atan2(dy, dx)) * Math.min(1, dt * 8); g.mh = g.h; g.x += Math.cos(g.h) * g.v * dt; g.y += Math.sin(g.h) * g.v * dt; }
         const db = Math.hypot(ball.x - g.x, ball.y - g.y);
-        if (db < (target.one ? (target.heavy ? 3.4 : 2.6) : 1.4)) { const n = ball.z > .6 ? "GoalkeeperCatch" : target.one ? "GoalkeeperBodyBlock1" : "GoalkeeperScoop"; const o = startOne(g, n, { ts: 1.5, end: 1.3, fadeIn: .1, h0: g.h });
+        if (!target.set && db < (target.one ? (target.heavy ? 3.4 : 2.6) : 1.4)) { const n = ball.z > .6 ? "GoalkeeperCatch" : target.one ? "GoalkeeperBodyBlock1" : "GoalkeeperScoop"; const o = startOne(g, n, { ts: 1.5, end: 1.3, fadeIn: .1, h0: g.h });
           if (o) { o.rootScale = 0; o.warp = { x: ball.x - g.x - Math.cos(g.h) * .4, y: ball.y - g.y - Math.sin(g.h) * .4, t: .35 }; o.onT = .35; o.on = () => { if (Math.hypot(ball.x - g.x, ball.y - g.y) < 1.25 && ball.z < 1.6 && Math.random() < (target.one ? .8 + (g.st.gk - 80) * .01 + (target.heavy ? .1 : 0) : .97)) gkCatch(t); }; }
           s.mode = "idle"; }
       } else if (s.mode === "rush" && !(target && target.air)) s.mode = "idle";
@@ -1145,7 +1150,7 @@
     if (STREET) { g.x = clamp(g.x, .3, L - .3); g.y = clamp(g.y, .3, W - .3); }
     if (ball.hold === g || s.mode === "throw" || s.mode === "hold") { const AD = (STREET ? 6.3 : 16.5) - .8, AW = (STREET ? 7.2 : 20.16) - .6; g.x = own(t) + dirF * clamp((g.x - own(t)) * dirF, .3, AD); g.y = clamp(g.y, W / 2 - AW, W / 2 + AW); }
   }
-  function handsBall(p) { p.hands[0].getWorldPosition(hv); p.hands[1].getWorldPosition(hv2); hv.add(hv2).multiplyScalar(.5); ball.x = hv.x + L / 2 + Math.cos(p.h) * .06; ball.y = hv.z + W / 2 + Math.sin(p.h) * .06; ball.z = Math.max(0, hv.y - BR * .5); ball.vx = ball.vy = ball.vz = 0; }
+  function handsBall(p) { flushPose(p); p.hands[0].getWorldPosition(hv); p.hands[1].getWorldPosition(hv2); hv.add(hv2).multiplyScalar(.5); ball.x = hv.x + L / 2 + Math.cos(p.h) * .06; ball.y = hv.z + W / 2 + Math.sin(p.h) * .06; ball.z = Math.max(0, hv.y - BR * .5); ball.vx = ball.vy = ball.vz = 0; }
   // manos: solo dentro de su área y sin cesión con el pie de un compañero (si no, juega con el pie como uno más)
   function inArea(t, x, y, m = 0) { const AD = STREET ? 6.3 : 16.5, AW = STREET ? 7.2 : 20.16; return Math.abs(x - own(t)) < AD + m && Math.abs(y - W / 2) < AW + m; }
   function gkHandsOK(t) { const AD = STREET ? 6.3 : 16.5, AW = STREET ? 7.2 : 20.16, inA = Math.abs(ball.x - own(t)) < AD && Math.abs(ball.y - W / 2) < AW;
@@ -1179,8 +1184,9 @@
     const atk = t, def = 1 - t, gd = opp(atk);
     // colocación general de los dos equipos
     for (const p of P) { const h = homePos(p); p.x = h.x; p.y = h.y; }
+    for (let tt = 0; tt < 2; tt++) { const g = GKP(tt); if (g) { g.x = own(tt) + M.dirOf[tt] * (STREET ? .8 : 1.5); g.y = W / 2; } }   // los porteros, siempre en su portería
     let taker = null;
-    if (type === "kick") { ball.x = L / 2; ball.y = W / 2; placeTeam(0, p => ({ x: clamp(homePos(p).x, M.dirOf[0] > 0 ? 1 : L / 2 + 1, M.dirOf[0] > 0 ? L / 2 - 1 : L - 1), y: homePos(p).y })); placeTeam(1, p => ({ x: clamp(homePos(p).x, M.dirOf[1] > 0 ? 1 : L / 2 + 1, M.dirOf[1] > 0 ? L / 2 - 1 : L - 1), y: homePos(p).y }));
+    if (type === "kick") { ball.x = L / 2; ball.y = W / 2; placeTeam(0, p => p.gk ? null : ({ x: clamp(homePos(p).x, M.dirOf[0] > 0 ? 1 : L / 2 + 1, M.dirOf[0] > 0 ? L / 2 - 1 : L - 1), y: homePos(p).y })); placeTeam(1, p => p.gk ? null : ({ x: clamp(homePos(p).x, M.dirOf[1] > 0 ? 1 : L / 2 + 1, M.dirOf[1] > 0 ? L / 2 - 1 : L - 1), y: homePos(p).y }));
       taker = team(atk).find(q => q.cat === "fwd") || mid(atk); for (const p of team(def)) { const kr = STREET ? 3.4 : 9.6; if (Math.hypot(p.x - L / 2, p.y - W / 2) < kr - .1) { const a = Math.atan2(p.y - W / 2, p.x - L / 2); p.x = L / 2 + Math.cos(a) * kr; p.y = W / 2 + Math.sin(a) * kr; } } }
     else if (type === "corner") { taker = team(atk).filter(p => !p.gk).sort((a, b) => dist(a, ball) - dist(b, ball))[0];
       const spots = [[.955, -3], [.92, 0], [.94, 3], [.89, -6], [.88, 6], [.8, 0], [.975, 26.5]], dspots = [[.965, -2], [.955, 2], [.93, -1], [.93, 3], [.92, -4], [.9, 1], [.86, 0], [.75, -10]];
@@ -1664,7 +1670,7 @@
     outOfPlay();
     for (let t = 0; t < 2; t++) gkStep(t, dt);
     for (const p of P) { pose(p, dt, p.gk && !p.run ? GKT : p.inj && p.v < 2.6 ? INJ : p === M.human ? FWD : FWDS[p.i % 3]); place(p); }
-    for (const a of OFF) { offStep(a, dt); pose(a, dt, FWD); place(a); if (a.cardT > simT) { a.wrap.updateMatrixWorld(true); raiseArm(a); } }
+    for (const a of OFF) { offStep(a, dt); pose(a, dt, FWD); place(a); if (a.cardT > simT) { flushPose(a); a.wrap.updateMatrixWorld(true); raiseArm(a); } }
     if (ball.hold && !(M.set && M.set.type === "throw")) { const g = ball.hold; if (g.gk && gkS[g.t].mode !== "throw") gkHands(g); }
     ballMesh.position.copy(P3(ball.x, ball.y, ball.z + BR));
     const bs = Math.hypot(ball.vx, ball.vy); if (bs > .05) ballMesh.rotateOnWorldAxis(new THREE.Vector3(ball.vy, 0, -ball.vx).normalize(), -bs * dt / BR);
@@ -1672,7 +1678,7 @@
       for (let i = 0; i < ar.count; i++) { const dx = wp[i * 3] - hp.x, dy = wp[i * 3 + 1] - hp.y, dz = wp[i * 3 + 2] - hp.z, w = Math.exp(-(dx * dx + dy * dy + dz * dz) / .9); ar.array[i * 3 + 2] = n.base[i * 3 + 2] + w * amp; } ar.needsUpdate = true; }
     if (M.human) { ring.visible = true; ring.position.copy(P3(M.human.x, M.human.y, .03)); } else ring.visible = false;
     crowdSound(); if (M.phase === "play" && !window.STEP && Math.random() < dt / 40) chant();
-    recFrame();
+    recQ = true;
     if (CROWD) { CROWD.U.uT.value += dt; M.crowdEx = Math.max(0, (M.crowdEx || 0) - dt * .09); CROWD.U.uEx.value = M.crowdEx; }
     camera(dt);
     if (NET && NET.host && NET.peer) netSnap(dt);
@@ -1711,7 +1717,10 @@
     if (!PF.lite) { pass(PF.bright, PF.main, PF.a); PF.blur.uniforms.d.value.set(1.5 / PF.a.width, 0); pass(PF.blur, PF.a, PF.b); PF.blur.uniforms.d.value.set(0, 1.5 / PF.a.height); pass(PF.blur, PF.b, PF.a); }
     PF.comp.uniforms.bl.value = PF.lite ? PF.blk : PF.a.texture; Rn.toneMapping = THREE.NoToneMapping; pass(PF.comp, PF.main, null); Rn.toneMapping = tm;
   }
+  let recQ = false, lodF = 0;
   function draw(dt) {
+    lodF++; for (const a of ACT) { if (!a.pd) continue; const far = a.wrap.position.distanceToSquared(cam.position) > 2500 && a !== M.human; if (!far || (lodF + (a.i || 0)) % 2 === 0) flushPose(a); }   // lejos de la cámara: animación a medio ritmo
+    if (recQ && !M.replay) { recQ = false; recFrame(); }
     const w = cv.clientWidth, h = cv.clientHeight, dpr = Math.min(devicePixelRatio || 1, maxDpr);
     if (cv.width !== Math.round(w * dpr) || cv.height !== Math.round(h * dpr)) { Rn.setPixelRatio(dpr); Rn.setSize(w, h, false); cam.aspect = w / h; cam.updateProjectionMatrix(); }
     if (window.__camOv) { const o = window.__camOv(P); cam.position.copy(o.p); cam.lookAt(o.l); }
@@ -1728,7 +1737,7 @@
         else if (lowQ >= 2 && !draw.q6 && PF.on && PF.lite) { draw.q6 = 1; PF.on = false; lowQ = 0; } } }
   }
   // paso de simulación nunca mayor de 1/60 s: con pocos fps se hacen varios pasos (el balón no se queda atrás ni cambia el ritmo del juego)
-  function frame(now) { const dt = Math.min(.1, (now - last) / 1000); last = now; if (!window.STEP) { const n = Math.max(1, Math.ceil(dt * 60 - 1e-6)), h = dt / n; for (let i = 0; i < n; i++) tick(h); draw(dt); } requestAnimationFrame(frame); }
+  function frame(now) { const dt = Math.min(.1, (now - last) / 1000); last = now; if (!window.STEP) { const n = Math.min(3, Math.max(1, Math.ceil(dt * 30 - 1e-6))), h = dt / n; for (let i = 0; i < n; i++) tick(h); draw(dt); } requestAnimationFrame(frame); }
   window.__run = (n = 1, h = 1 / 30, noDraw) => { for (let i = 0; i < n; i++) tick(h); if (!noDraw) draw(h); return { clock: M.clock, half: M.half, phase: M.phase, score: [TEAMS[0].score, TEAMS[1].score], owner: M.owner && (M.owner.t + ":" + M.owner.role), set: M.set && M.set.type }; };
   window.__test = { foul, OFF, P, M, ball, K, TEAMS, gkS, startSet, TIMERS, requestKick, GKP, passTo, startOne, pose, place, META, traj, headerPt, get simT() { return simT; } };
   if (M.humanTeam >= 0) setHuman(team(M.humanTeam).find(q => q.cat === "fwd") || team(M.humanTeam)[10]); updHud(); startSet("kick", 0);
