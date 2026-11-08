@@ -630,6 +630,13 @@ body.touch #mnarr{bottom:auto;top:calc(max(.8rem,env(safe-area-inset-top)) + 6.5
 }
 @media (max-height:560px){ #pre [data-a="preGo"]{position:fixed;right:max(2.4rem,env(safe-area-inset-right));bottom:max(1rem,env(safe-area-inset-bottom));z-index:6;min-width:16rem!important;height:4rem!important;box-shadow:0 .4rem 1.6rem #000a} #pre .cbody{padding-bottom:5.5rem} }
 
+.luhead{display:flex;align-items:center;gap:1.4rem;flex-wrap:wrap;justify-content:center;margin-bottom:.6rem}.luhead>b{font-family:"BC";font-style:italic;font-size:2.6rem;text-transform:uppercase}
+.luhelp{text-align:center;margin:0 0 .8rem}
+.lu{display:grid;grid-template-columns:1fr 1fr;gap:1.6rem;max-width:110rem;margin:0 auto}.lu h4{font-family:"BC";letter-spacing:.1em;margin:.6rem 0 .4rem;opacity:.8}
+.lurow{display:grid;grid-template-columns:4.6rem minmax(0,1fr) 4.6rem 3.4rem;gap:.6rem;align-items:center;width:100%;padding:.55rem .9rem;margin:.25rem 0;border-radius:.6rem;background:rgba(255,255,255,.06);border:2px solid transparent;color:inherit;font:inherit;font-size:1.5rem;text-align:left;cursor:pointer}
+.lurow.on{border-color:#f5c542;background:rgba(245,197,66,.18)}.lurow.nc{opacity:.55}.lurow .ln{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.lurow .lr{font-weight:800;color:#8fb4ff}.lurow .lp{opacity:.8}.lurow .lp.bad{color:#ff6b6b;opacity:1}.lurow .lo{font-weight:800;text-align:right}
+@media (max-height:560px){.lurow{font-size:1.25rem;padding:.35rem .7rem;margin:.15rem 0}.luhead>b{font-size:2rem}.luhelp{font-size:1.1rem}}
+
 .fl-de{background-image:url(data:image/webp;base64,UklGRlQCAABXRUJQVlA4WAoAAAAgAAAAPwAALwAASUNDUMgBAAAAAAHIAAAAAAQwAABtbnRyUkdCIFhZWiAH4AABAAEAAAAAAABhY3NwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAA9tYAAQAAAADTLQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAlkZXNjAAAA8AAAACRyWFlaAAABFAAAABRnWFlaAAABKAAAABRiWFlaAAABPAAAABR3dHB0AAABUAAAABRyVFJDAAABZAAAAChnVFJDAAABZAAAAChiVFJDAAABZAAAAChjcHJ0AAABjAAAADxtbHVjAAAAAAAAAAEAAAAMZW5VUwAAAAgAAAAcAHMAUgBHAEJYWVogAAAAAAAAb6IAADj1AAADkFhZWiAAAAAAAABimQAAt4UAABjaWFlaIAAAAAAAACSgAAAPhAAAts9YWVogAAAAAAAA9tYAAQAAAADTLXBhcmEAAAAAAAQAAAACZmYAAPKnAAANWQAAE9AAAApbAAAAAAAAAABtbHVjAAAAAAAAAAEAAAAMZW5VUwAAACAAAAAcAEcAbwBvAGcAbABlACAASQBuAGMALgAgADIAMAAxADZWUDggZgAAAFAFAJ0BKkAAMAA+LRCGQqGhDf+OAAwBYliAHYA/AD9jv5zyAXYD9gAK6ns+8ORK/4TEUAD+/w3bEiVP97K2D2Zy93I///8mObEJfumZQUNa/z86W5lajnRWmIEQv4mSE6/yGwYAAA==)}
 .fl-fr{background-image:url(data:image/webp;base64,UklGRooCAABXRUJQVlA4WAoAAAAgAAAAPwAALwAASUNDUMgBAAAAAAHIAAAAAAQwAABtbnRyUkdCIFhZWiAH4AABAAEAAAAAAABhY3NwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAA9tYAAQAAAADTLQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAlkZXNjAAAA8AAAACRyWFlaAAABFAAAABRnWFlaAAABKAAAABRiWFlaAAABPAAAABR3dHB0AAABUAAAABRyVFJDAAABZAAAAChnVFJDAAABZAAAAChiVFJDAAABZAAAAChjcHJ0AAABjAAAADxtbHVjAAAAAAAAAAEAAAAMZW5VUwAAAAgAAAAcAHMAUgBHAEJYWVogAAAAAAAAb6IAADj1AAADkFhZWiAAAAAAAABimQAAt4UAABjaWFlaIAAAAAAAACSgAAAPhAAAts9YWVogAAAAAAAA9tYAAQAAAADTLXBhcmEAAAAAAAQAAAACZmYAAPKnAAANWQAAE9AAAApbAAAAAAAAAABtbHVjAAAAAAAAAAEAAAAMZW5VUwAAACAAAAAcAEcAbwBvAGcAbABlACAASQBuAGMALgAgADIAMAAxADZWUDggnAAAAHAGAJ0BKkAAMAA+MRKHQqIhDKoAEAGCWIAzMKm/SBTgP6B+Ku9/5yB/VcgABBpttKkelUK/Mrxtnv2J8AD+/fuL//kB/bUvWD//Jsv5wFPXz3/Sk/+Nrn/zv7Ee+3+G0UFj//HAfNJejrRZepdrP//tcQ/8iZBh3cZZO7WWc5rL8MPEz/zPKKBhsNg34C9myuf9nlInlTaH84QAAA==)}
 .fl-es{background-image:url(data:image/webp;base64,UklGRtIDAABXRUJQVlA4WAoAAAAgAAAAPwAALwAASUNDUMgBAAAAAAHIAAAAAAQwAABtbnRyUkdCIFhZWiAH4AABAAEAAAAAAABhY3NwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAA9tYAAQAAAADTLQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAlkZXNjAAAA8AAAACRyWFlaAAABFAAAABRnWFlaAAABKAAAABRiWFlaAAABPAAAABR3dHB0AAABUAAAABRyVFJDAAABZAAAAChnVFJDAAABZAAAAChiVFJDAAABZAAAAChjcHJ0AAABjAAAADxtbHVjAAAAAAAAAAEAAAAMZW5VUwAAAAgAAAAcAHMAUgBHAEJYWVogAAAAAAAAb6IAADj1AAADkFhZWiAAAAAAAABimQAAt4UAABjaWFlaIAAAAAAAACSgAAAPhAAAts9YWVogAAAAAAAA9tYAAQAAAADTLXBhcmEAAAAAAAQAAAACZmYAAPKnAAANWQAAE9AAAApbAAAAAAAAAABtbHVjAAAAAAAAAAEAAAAMZW5VUwAAACAAAAAcAEcAbwBvAGcAbABlACAASQBuAGMALgAgADIAMAAxADZWUDgg5AEAAPAKAJ0BKkAAMAA+MRaJQyIhIRFXRCADBLUAPL35n+AH7AcdP2YswD8gMcB52foA3gDnr/Yk/a8myT+f8V/0n7ABdIk3BXwelooaVLGv0TPPW9ZuakZWv9TnmV+dLbZLYAD+/p9NH9kZv//mBF2U+xDx5sv0Bt82jzZf//9hlZ/2rSmNfLWHowy7pE/ZdItPrjtu9ceiLmd5mwo8vE42ORNinDty/FXyXk9cTzkkqH8cfUgDZ4rp1fFbyt8W5i8Nfw8O0PEXibQPf9QOt1//lhgPa5C5b406G1Mf2Hy7MRu7zgJEFyFpXxK0UY9Tvcx6PmKkfY6//MV2lUdVnwMG7N875ioIZnUK6342C7XMWXhss+frsbdJgmkvIdHZI5VMMGnd1zPjE5SJtzjN9fGIY5dYRMJnsE+BnsTSbz8/+onI1vs+2KyHx6qBbwstmQ0ushkZi/4x73/65heCXQf67pZ3bhcaz8P/8+dB6uRA1NnyXDhMzQ98uPj+CVcf7154uK9BJkjGRfp8E6EOGe/8dp5uE0SVPyocNV/kJB3OlU/NTO68ndao9K2/6qd/4st0sys+z+5a5CBQBWKPQ2yVJaRXt0PffkgryDC74Ochwe43Yukb+t48ZjkqjQD4dftYgDcAUAA=)}
@@ -7452,6 +7459,7 @@ function show(id, push = true) {
 function back() {
   if ($("#open").classList.contains("on")) return ACT.openBack && ACT.openBack();
   if ($("#dlg").classList.contains("on")) return closeDlg();
+  if (current && current.id === "pre" && typeof PRE !== "undefined" && PRE.edit != null) return ACT.luOk();
   if (!stack.length || current.id === "home") return;
   const prev = stack.pop();
   if (prev === "title" || prev === "splash") { stack.push(prev); return; }
@@ -11228,24 +11236,61 @@ setInterval(() => {
 /* =====================================================================
    PANTALLA PREVIA (elegir equipos)
    ===================================================================== */
-const PRE = { mode: "cpu", diff: "Normal", sel: [0, 1], dur: 3, clima: "Auto", tod: "Auto", ko: "No" };
+const PRE = { mode: "cpu", diff: "Normal", sel: [0, 1], dur: 3, clima: "Auto", tod: "Auto", ko: "No", lu: [null, null], edit: null, pick: null };
+// ALINEACIÓN del partido rápido: formación + orden de jugadores (11 titulares, 9 de banquillo, resto no convocados)
+function luOf(s) {
+  const c = CLUBS[PRE.sel[s]];
+  if (!PRE.lu[s] || PRE.lu[s].club !== c.nombre) { const form = "4-3-3", xi = pickXI(c.pl, form), used = new Set(xi.map(p => p && p.k)), rest = c.pl.filter(p => !used.has(p.k)).sort((a, b) => b.ov - a.ov);
+    const bn = [rest.find(p => p.pos === "POR"), ...rest.filter(p => p.pos !== "POR")].filter(Boolean), more = rest.filter(p => !bn.includes(p));
+    PRE.lu[s] = { club: c.nombre, form, ord: [...xi, ...bn, ...more].filter(Boolean).map(p => p.k) }; }
+  return PRE.lu[s];
+}
+const luPen = (pos, role) => pos === role ? 0 : (pos === "POR") !== (role === "POR") ? -25 : GROUP[pos] === GROUP[role] ? -2 : -6;
+function teamFromLU(s) {
+  const c = CLUBS[PRE.sel[s]], lu = luOf(s), byK = k => c.pl.find(p => p.k === k), F = FORMS[lu.form];
+  const mk = (p, role, b) => ({ n: shortName(p.n), full: p.n, pos: p.pos, role, ov: Math.max(20, p.ov + b), st: Object.fromEntries(Object.entries(p.f).map(([k, v]) => [k, clamp(v + b, 20, 99)])) });
+  const pl = lu.ord.slice(0, 11).map(byK);
+  return { name: c.nombre, sh: c.sh, c1: c.c1, c2: c.c2, form: lu.form, pl: pl.map((p, i) => mk(p, F[i][0], luPen(p.pos, F[i][0]))), bench: lu.ord.slice(11, 20).map(byK).filter(Boolean).map(p => mk(p, p.pos, 0)) };
+}
+function renderLU() {
+  const s = PRE.edit, c = CLUBS[PRE.sel[s]], lu = luOf(s), F = FORMS[lu.form], byK = k => c.pl.find(p => p.k === k);
+  const row = (k, i) => { const p = byK(k), role = i < 11 ? F[i][0] : i < 20 ? "SUP" : "—", pen = i < 11 ? luPen(p.pos, role) : 0;
+    return `<button class="lurow${PRE.pick === i ? " on" : ""}${i >= 20 ? " nc" : ""}" data-nav data-a="luPick" data-i="${i}"><span class="lr">${role}</span><span class="ln">${esc(shortName(p.n))}</span><span class="lp${pen < 0 ? " bad" : ""}">${p.pos}</span><span class="lo">${p.ov + pen}</span></button>`; };
+  $("#preBody").innerHTML = `<div class="luhead"><b>${esc(c.nombre)}</b>
+      <div class="stepper"><span class="lbl">Formación</span><button class="mbtn" data-nav data-a="luForm" data-d="-1">◀</button><div class="val">${lu.form}</div><button class="mbtn" data-nav data-a="luForm" data-d="1">▶</button></div>
+      <button class="mbtn" data-nav data-a="luAuto">Automática</button><button class="mbtn gold" data-nav data-a="luOk" data-first>Listo</button></div>
+    <p class="mute luhelp">Toca un jugador y luego otro para intercambiarlos. En rojo: fuera de su posición (rinde menos).</p>
+    <div class="lu"><div><h4>TITULARES</h4>${lu.ord.slice(0, 11).map((k, i) => row(k, i)).join("")}</div>
+      <div><h4>BANQUILLO</h4>${lu.ord.slice(11, 20).map((k, i) => row(k, i + 11)).join("")}${lu.ord.length > 20 ? `<h4>NO CONVOCADOS</h4>${lu.ord.slice(20).map((k, i) => row(k, i + 20)).join("")}` : ""}</div></div>`;
+  $("#preTitle").textContent = "ALINEACIÓN";
+}
+ACT.preLu = el => { PRE.edit = +el.dataset.s; PRE.pick = null; renderLU(); reFocus('[data-a="luOk"]'); };
+ACT.luPick = el => { const i = +el.dataset.i, lu = luOf(PRE.edit);
+  if (PRE.pick == null) PRE.pick = i; else { const j = PRE.pick; [lu.ord[i], lu.ord[j]] = [lu.ord[j], lu.ord[i]]; PRE.pick = null; preSave(); }
+  renderLU(); reFocus(`[data-a="luPick"][data-i="${i}"]`); };
+ACT.luForm = el => { const lu = luOf(PRE.edit), ks = Object.keys(FORMS); lu.form = ks[(ks.indexOf(lu.form) + +el.dataset.d + ks.length) % ks.length]; preSave(); renderLU(); reFocus(`[data-a="luForm"][data-d="${el.dataset.d}"]`); };
+ACT.luAuto = () => { const lu = luOf(PRE.edit), c = CLUBS[PRE.sel[PRE.edit]], f = lu.form; PRE.lu[PRE.edit] = null; const n = luOf(PRE.edit), xi = pickXI(c.pl, f), used = new Set(xi.map(p => p && p.k));
+  n.form = f; n.ord = [...xi.filter(Boolean).map(p => p.k), ...n.ord.filter(k => !used.has(k))]; preSave(); renderLU(); reFocus('[data-a="luAuto"]'); };
+ACT.luOk = () => { const s = PRE.edit; PRE.edit = null; PRE.pick = null; renderPre(); reFocus(`[data-a="preLu"][data-s="${s}"]`); };
 const TODS = ["Auto", "Noche", "Día"];
 const CLIMAS = ["Auto", "Despejado", "Lluvia", "Nieve"];
 function initPre(mode, diff) {
   PRE.mode = mode; if (diff) PRE.diff = diff;
-  const saved = store.get("pre", null);
-  if (saved && saved.sel) PRE.sel = saved.sel.map(i => clamp(i, 0, CLUBS.length - 1)), PRE.dur = saved.dur || 3;
+  const saved = store.get("pre", null); PRE.edit = null; PRE.pick = null;
+  if (saved && saved.sel) PRE.sel = saved.sel.map(i => clamp(i, 0, CLUBS.length - 1)), PRE.dur = saved.dur || 3, PRE.lu = saved.lu || [null, null];
   else { const by = CLUBS.map((c, i) => [c.ov, i]).sort((a, b) => b[0] - a[0]); PRE.sel = [by[0][1], by[1][1]]; }
   if (PRE.sel[0] === PRE.sel[1]) PRE.sel[1] = (PRE.sel[0] + 1) % CLUBS.length;
 }
 function crest(c) { return `<div class="crest">${crestSVG(c.nombre, c.sh, c.c1, c.c2)}</div>`; }
 const LIGAS = () => [...new Set(CLUBS.map(c => c.liga))];
 function renderPre() {
+  if (PRE.edit != null) return renderLU();
   const L = PRE.mode === "local";
   const side = s => { const c = CLUBS[PRE.sel[s]]; return `<div class="tsel panel">
       <div class="lbl">${L ? "JUGADOR " + (s + 1) : s ? "RIVAL (MÁQUINA)" : "TU EQUIPO"}</div>
       <div class="tsrow"><button class="mbtn" data-nav data-a="preTeam" data-s="${s}" data-d="-1"${s === 0 ? " data-first" : ""}>◀</button>${crest(c)}<button class="mbtn" data-nav data-a="preTeam" data-s="${s}" data-d="1">▶</button></div>
-      <h3>${esc(c.nombre)}</h3><p class="mute">Media ${c.ov} · ${esc(teamStyle(teamFromPL(c, "4-3-3", pickXI(c.pl, "4-3-3"))).n)}</p>
+      <h3>${esc(c.nombre)}</h3><p class="mute">Media ${c.ov} · ${esc(teamStyle(teamFromLU(s)).n)} · ${luOf(s).form}</p>
+      <button class="mbtn gold" data-nav data-a="preLu" data-s="${s}">Alineación ▸</button>
       <button class="mbtn" data-nav data-a="preLiga" data-s="${s}">Liga: ${esc(c.liga)} ▸</button>
       <div class="kit" style="background:linear-gradient(90deg,${c.c1} 50%,${c.c2} 50%);color:#fff;text-shadow:0 0 .4rem #000">EQUIPACIÓN</div></div>`; };
   $("#preBody").innerHTML = `<div class="pre">${side(0)}<div class="vsbig">VS</div>${side(1)}</div>
@@ -11259,7 +11304,7 @@ function renderPre() {
   $("#preTitle").textContent = PRE.mode === "local" ? "LOCAL · 2 JUGADORES" : "CONTRA LA MÁQUINA";
 }
 ONSHOW.pre = renderPre;
-const preSave = () => store.set("pre", { sel: PRE.sel, dur: PRE.dur });
+const preSave = () => store.set("pre", { sel: PRE.sel, dur: PRE.dur, lu: PRE.lu });
 const reFocus = sel => { const b = $(sel); if (navMode() && b) setFocus(b); };
 ACT.preTeam = el => {
   const s = +el.dataset.s, liga = CLUBS[PRE.sel[s]].liga, idx = CLUBS.map((c, i) => i).filter(i => CLUBS[i].liga === liga && i !== PRE.sel[1 - s]);
@@ -11285,7 +11330,7 @@ function localSources() {
 }
 ACT.preGo = () => offerTutorial(preGoReal);
 function preGoReal() {
-  const teams = PRE.sel.map(i => { const c = CLUBS[i]; return teamFromPL(c, "4-3-3", pickXI(c.pl, "4-3-3")); });
+  const teams = [0, 1].map(teamFromLU);
   let humans;
   if (PRE.mode === "local") { const src = localSources(); if (!src) return info("Multijugador local", "Hacen falta 2 mandos conectados (o 1 mando y el teclado en ordenador)."); humans = [{ t: 0, src: src[0] }, { t: 1, src: src[1] }]; }
   else humans = [{ t: 0, src: "any" }];
