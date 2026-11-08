@@ -22,7 +22,7 @@ canvas{display:block}
 </style></head><body>
 <div id="load">Cargando el barrio…</div>
 <div id="hud"></div><div id="msg"></div><div id="tip"></div><div id="power"><i></i></div><div id="panel"></div>
-<div id="help"><b>Street Football</b><br>Mover: WASD / flechas · Correr: Shift<br>Girar cámara: Z / X o arrastrar<br><b>En el barrio</b> Entrar / usar: E<br><b>Partido</b> los mismos controles que el fútbol 11 (botón Controles dentro del partido)</div>
+<div id="help"><b>Street Football</b><br>Mover: WASD / flechas · Correr: Shift<br>Girar cámara: Z / X o arrastrar<br><b>En el barrio</b> Entrar / usar: E<br><b>Partido</b> los mismos controles que el fútbol 11 (botón Controles dentro del partido)<br><span style="opacity:.6;font-size:10px">Modelos 3D (CC BY, sketchfab.com): «Street Props» de syedraza · «Plant Series – Palm Tree» de UPWARD · «Beach Umbrella» de stealth86 · «Sun lounger 3D» de rodestrela</span></div>
 <a id="back" href="index.html">← MDG 27</a><button id="onl" onclick="goOnline()">Online con amigos</button>
 <div class="tc" id="joy"><i></i></div><div class="tc tb" id="bA">PASE</div><div class="tc tb" id="bB">TIRO</div><div class="tc tb" id="bC">CORRER</div><div class="tc tb" id="bD">REGATE</div>
 <script src="three.js"></script>
@@ -234,6 +234,47 @@ function shopPanel(k) {
   P.innerHTML = h; P.style.display = "block";
 }
 function setKit(k, c) { kit[k] = c; store.set("kit", kit); me.a.mats.forEach(m => m.userData.U[k === "c1" ? "k1" : "k2"].value.set(c)); }
+/* ---------- mobiliario urbano y playa (modelos de Sketchfab, CC BY: ver créditos) ---------- */
+function mergeGeoms(gs) {
+  const has = n => gs.every(g => g.attributes[n]), names = ["position", "normal", "uv"].filter(has), out = new THREE.BufferGeometry();
+  for (const n of names) { const sz = gs[0].attributes[n].itemSize, tot = gs.reduce((a, g) => a + g.attributes[n].count, 0), arr = new Float32Array(tot * sz); let o = 0;
+    const G = ["getX", "getY", "getZ", "getW"]; for (const g of gs) { const a = g.attributes[n]; for (let i = 0; i < a.count; i++) for (let k = 0; k < sz; k++) arr[o++] = a[G[k]](i); }
+    out.setAttribute(n, new THREE.BufferAttribute(arr, sz)); }
+  if (!names.includes("normal")) out.computeVertexNormals(); return out;
+}
+// convierte un nodo del modelo en piezas fusionadas por material, escaladas a su tamaño real y apoyadas en el suelo
+function bakeProp(node, size, mode = "h") {
+  node.updateWorldMatrix(true, true); const by = new Map();
+  node.traverse(o => { if (!o.isMesh) return; let g = o.geometry.clone(); g.applyMatrix4(o.matrixWorld); if (g.index) g = g.toNonIndexed(); (by.get(o.material) || by.set(o.material, []).get(o.material)).push(g); });
+  const parts = [...by].map(([m, gs]) => ({ m, g: mergeGeoms(gs) })), bb = new THREE.Box3(); parts.forEach(p => { p.g.computeBoundingBox(); bb.union(p.g.boundingBox); });
+  const sz = bb.getSize(new THREE.Vector3()), rot = sz.z > sz.x * 1.15 && mode === "len" ? Math.PI / 2 : 0, k = mode === "len" ? size / Math.max(sz.x, sz.z) : size / sz.y, c = bb.getCenter(new THREE.Vector3());
+  const M = new THREE.Matrix4().makeRotationY(rot).multiply(new THREE.Matrix4().makeScale(k, k, k)).multiply(new THREE.Matrix4().makeTranslation(-c.x, -bb.min.y, -c.z));
+  parts.forEach(p => { p.g.applyMatrix4(M); p.m = p.m.clone(); p.m.side = THREE.DoubleSide; if (p.m.map) p.m.map.anisotropy = 4; if (p.m.transparent || p.m.alphaTest) { p.m.alphaTest = Math.max(p.m.alphaTest || 0, .4); p.m.transparent = false; } }); return parts;
+}
+function instance(parts, list, shadow = true) {   // una llamada de dibujo por material para todas las copias
+  for (const p of parts) { const im = new THREE.InstancedMesh(p.g, p.m, list.length), q = new THREE.Object3D();
+    list.forEach(([x, z, ry, s = 1], i) => { q.position.set(x, list.y || 0, z); q.rotation.set(0, ry || 0, 0); q.scale.setScalar(s); q.updateMatrix(); im.setMatrixAt(i, q.matrix); });
+    im.castShadow = shadow; im.receiveShadow = true; S.add(im); }
+}
+async function addProps() {
+  const load = n => (window.SA && SA["prop_" + n + ".glb"] ? Promise.resolve(SA["prop_" + n + ".glb"]) : fetch("street/prop_" + n + ".txt").then(r => r.text())).then(t => loader.parseAsync(b64buf(t), ""));
+  const inBeach = x => x > BEACH.x0 - 6 && x < BEACH.x1 + 6;
+  try {
+    const [pk, palm, umb, lng] = await Promise.all(["props", "palmera", "sombrilla", "tumbona"].map(load));
+    const bench = bakeProp(pk.scene.getObjectByName("bench"), 1.9, "len"), bin = bakeProp(pk.scene.getObjectByName("bin"), .95), palmP = bakeProp(palm.scene, 7.2);
+    const palms = [], benches = [], bins = [];
+    for (let x = X0 + 12; x < X1 + 36; x += 16) { if (inBeach(x)) continue; palms.push([x, SEA_Z - 2.7, rnd() * 6.28, .85 + rnd() * .35]); if ((x / 16 | 0) % 2 === 0) benches.push([x + 3.4, SEA_Z - 1.9, 0]); bins.push([x - 6.6, SEA_Z - 1.7, 0]); }
+    for (let x = X0 + 20; x < X1 - 4; x += 32) bins.push([x, -5.75, 0]);
+    for (const x of [BEACH.x0 - 4, BEACH.x1 + 4]) for (const z of [BEACH.z0 - .2, BEACH.z1]) palms.push([x, z, rnd() * 6.28, .9 + rnd() * .3]);
+    instance(palmP, palms); instance(bench, benches); instance(bin, bins);
+    // playa: arena alrededor de la cancha con sombrillas y tumbonas
+    const sand = new THREE.Mesh(new THREE.PlaneGeometry(BEACH.x1 - BEACH.x0 + 12, BEACH.z1 - BEACH.z0 + 2), new THREE.MeshStandardMaterial({ color: 0xd8c08c, roughness: 1 })); sand.rotation.x = -Math.PI / 2; sand.position.set((BEACH.x0 + BEACH.x1) / 2, .195, (BEACH.z0 + BEACH.z1) / 2); sand.receiveShadow = true; S.add(sand);
+    const um = bakeProp(umb.scene, 2.5), lg = bakeProp(lng.scene, 1.9, "len"), U = [], Lg = [];
+    for (const x of [BEACH.x0 - 3.4, BEACH.x1 + 3.4]) for (const z of [BEACH.z0 + 1.6, (BEACH.z0 + BEACH.z1) / 2 + 1, BEACH.z1 - 1]) { U.push([x, z, rnd() * 6.28]); Lg.push([x + (x < BEACH.x0 ? -1.2 : 1.2), z - .6, Math.PI / 2]); }
+    U.y = .2; Lg.y = .2; instance(um, U); instance(lg, Lg);
+  } catch (e) { console.warn("props", e); }
+}
+
 /* ---------- gente del barrio (modelos del juego con sus animaciones) ---------- */
 const NPCS = [];
 const NPC_KIT = [["#e8e2d0", "#2c3e50"], ["#c0392b", "#222222"], ["#2e86c1", "#f0f0f0"], ["#f4d03f", "#34495e"], ["#7d3c98", "#dddddd"], ["#16a085", "#111111"], ["#ffffff", "#5d6d7e"], ["#e67e22", "#1b2631"], ["#5d6d7e", "#f8f9f9"], ["#1abc9c", "#2c2c2c"]];
@@ -243,7 +284,7 @@ async function spawnNPCs() {
   try {
     // paseantes por el paseo marítimo y la acera
     for (let i = 0; i < 9; i++) { const prom = i < 6, z = prom ? 6 + rnd() * (SEA_Z - 9) : -6.4 + rnd() * .8, x = X0 + 12 + rnd() * (X1 - X0 - 30);
-      NPCS.push(await mk(n++, { x, z, zone: prom ? [5.5, SEA_Z - 2.2] : [-7.2, -5.4], walk: true, tx: x, tz: z, wait: rnd() * 3 })); }
+      NPCS.push(await mk(n++, { x, z, zone: prom ? [5.5, SEA_Z - 4.2] : [-7.2, -5.4], walk: true, tx: x, tz: z, wait: rnd() * 3 })); }
     // mirando el mar apoyados en la barandilla
     for (let i = 0; i < 3; i++) { const x = X0 + 30 + i * 47; NPCS.push(await mk(n++, { x, z: SEA_Z - 1.1, dir: Math.PI / 2, walk: false })); }
     // dependientes detrás del mostrador de cada tienda
@@ -394,7 +435,7 @@ let ballM, ring;
   let hb = null; an.scene.traverse(o => { if (o.name) animRest[o.name] = o.quaternion.clone(); if (!hb && o.name === "Hips") hb = o; }); hipsRestY = hb ? hb.position.y : 1;
   for (const c of an.animations) { c.tracks = c.tracks.filter(t => !t.name.endsWith(".scale") && (!t.name.endsWith(".position") || t.name === "Hips.position")); baseClips[c.name] = c; }
   const g = await loadModel("pj18"); me = { a: actor(g, kit.c1, kit.c2), x: -40, z: 3, dir: 0, spd: 0 };
-  spawnNPCs();
+  spawnNPCs(); addProps();
   $("#load").remove(); tip("Bienvenido al barrio. Entra en las tiendas o ve a la jaula del fondo para jugar.");
   { const rs = new URLSearchParams(location.search).get("res"); if (rs && /^\d+-\d+$/.test(rs)) { const [a, b] = rs.split("-").map(Number); me.x = CX - CW / 2 - 4; me.z = 0; me.dir = Math.PI; SNAP = 1; setTimeout(() => say(a > b ? "¡Ganaste " + a + "-" + b + "!" : a === b ? "Empate " + a + "-" + b : "Has perdido " + a + "-" + b, 2800), 300); history.replaceState(null, "", location.pathname); } }
   let last = performance.now(), fpsA = 60, lowQ = false;
