@@ -115,7 +115,21 @@
   setLoad("estadio (focos y banquillos)");
   if (!STREET) for (const [x, y] of [[-22, -26], [L + 22, -26], [-22, W + 24], [L + 22, W + 24]]) await prop("est_foco", 42, "y", x, y, 0, Math.atan2(W / 2 - y, L / 2 - x));
   if (!STREET) for (const bx of [L / 2 - 11, L / 2 + 11]) await prop("est_banquillo", 7, "x", bx, -3.4, 0, 0);
-  if (!STREET) await prop("est_marcador", 18, "x", L + 15, W / 2, 19, -Math.PI / 2); if (!STREET) await prop("est_marcador", 18, "x", -15, W / 2, 19, Math.PI / 2);
+  if (!STREET) { // videomarcadores (imagen de Guille) con el resultado en directo
+    const vim = await new Promise(res => { asset("videomarcador").then(u => { const im = new Image(); im.onload = () => res(im); im.onerror = () => res(null); im.src = u; }); });
+    const vc = document.createElement("canvas"); vc.width = 831; vc.height = 518; const vg = vc.getContext("2d"), vt = new THREE.CanvasTexture(vc); vt.colorSpace = THREE.SRGBColorSpace; vt.anisotropy = 4;
+    window.__vb = (a, b, s0, s1, ck, h, c0, c1) => { vg.clearRect(0, 0, 831, 518); if (vim) vg.drawImage(vim, 0, 0); else { vg.fillStyle = "#111"; vg.fillRect(0, 0, 831, 518); }
+      const X = 68, Y = 57, Wd = 697, Hd = 405; vg.fillStyle = "#06101f"; vg.fillRect(X, Y, Wd, Hd); vg.textAlign = "center"; vg.textBaseline = "middle";
+      vg.fillStyle = c0 || "#1e6bff"; vg.fillRect(X + 40, Y + 70, 16, 90); vg.fillStyle = c1 || "#e11d2e"; vg.fillRect(X + Wd - 56, Y + 70, 16, 90);
+      vg.fillStyle = "#fff"; vg.font = "900 64px system-ui,sans-serif"; vg.fillText(String(a || "").slice(0, 4), X + 160, Y + 115); vg.fillText(String(b || "").slice(0, 4), X + Wd - 160, Y + 115);
+      vg.font = "900 150px system-ui,sans-serif"; vg.fillText(s0 + " - " + s1, X + Wd / 2, Y + 235); vg.fillStyle = "#ffd23a"; vg.font = "800 54px system-ui,sans-serif"; vg.fillText(ck || "00'", X + Wd / 2, Y + 345);
+      vg.fillStyle = "#9fb3d9"; vg.font = "700 30px system-ui,sans-serif"; vg.fillText(h || "", X + Wd / 2, Y + 30 + 0); vt.needsUpdate = true; };
+    window.__vb("", "", 0, 0, "00'", "", null, null);
+    const vm = new THREE.MeshBasicMaterial({ map: vt, toneMapped: false, transparent: true, alphaTest: .05, side: THREE.DoubleSide }), vw = 20, vh = vw * 518 / 831;
+    const legM = new THREE.MeshStandardMaterial({ color: 0x1b1d22, roughness: .6, metalness: .5 });
+    for (const [x, sd] of [[L + 15, 1], [-15, -1]]) { const m = new THREE.Mesh(new THREE.PlaneGeometry(vw, vh), vm); m.position.copy(P3(x, W / 2, 19 + vh / 2)); m.lookAt(P3(L / 2, W / 2, 19 + vh / 2)); S.add(m);
+      for (const dy of [-vw * .38, vw * .38]) { const leg = new THREE.Mesh(new THREE.BoxGeometry(.8, 19, .8), legM); leg.position.copy(P3(x + sd * .5, W / 2 + dy, 9.5)); S.add(leg); } }
+  }
   // estadio barato de pintar: lejos de la sombra del sol, sin recibir ni proyectar sombras y con material Lambert (mucho menos trabajo por píxel)
   { const lam = new Map(); S.traverse(o => { if (!o.isMesh || o === ground) return; const far = o.getWorldPosition(new THREE.Vector3()); if (Math.abs(far.x) < L / 2 + 2 && Math.abs(far.z) < W / 2 + 2) return;
       o.castShadow = false; o.receiveShadow = false; const m = o.material; if (m && m.isMeshStandardMaterial && !m.alphaMap) { let n = lam.get(m); if (!n) { n = new THREE.MeshLambertMaterial({ map: m.map, color: m.color, emissive: m.emissive, emissiveMap: m.emissiveMap, emissiveIntensity: m.emissiveIntensity, transparent: m.transparent, alphaTest: m.alphaTest, side: m.side }); lam.set(m, n); } o.material = n; } }); }

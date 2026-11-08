@@ -112,7 +112,21 @@
   setLoad("estadio (focos y banquillos)");
   if (!STREET) for (const [x, y] of [[-22, -26], [L + 22, -26], [-22, W + 24], [L + 22, W + 24]]) await prop("est_foco", 42, "y", x, y, 0, Math.atan2(W / 2 - y, L / 2 - x));
   if (!STREET) for (const bx of [L / 2 - 11, L / 2 + 11]) await prop("est_banquillo", 7, "x", bx, -3.4, 0, 0);
-  if (!STREET) await prop("est_marcador", 18, "x", L + 15, W / 2, 19, -Math.PI / 2); if (!STREET) await prop("est_marcador", 18, "x", -15, W / 2, 19, Math.PI / 2);
+  if (!STREET) { // videomarcadores (imagen de Guille) con el resultado en directo
+    const vim = await new Promise(res => { asset("videomarcador").then(u => { const im = new Image(); im.onload = () => res(im); im.onerror = () => res(null); im.src = u; }); });
+    const vc = document.createElement("canvas"); vc.width = 831; vc.height = 518; const vg = vc.getContext("2d"), vt = new THREE.CanvasTexture(vc); vt.colorSpace = THREE.SRGBColorSpace; vt.anisotropy = 4;
+    window.__vb = (a, b, s0, s1, ck, h, c0, c1) => { vg.clearRect(0, 0, 831, 518); if (vim) vg.drawImage(vim, 0, 0); else { vg.fillStyle = "#111"; vg.fillRect(0, 0, 831, 518); }
+      const X = 68, Y = 57, Wd = 697, Hd = 405; vg.fillStyle = "#06101f"; vg.fillRect(X, Y, Wd, Hd); vg.textAlign = "center"; vg.textBaseline = "middle";
+      vg.fillStyle = c0 || "#1e6bff"; vg.fillRect(X + 40, Y + 70, 16, 90); vg.fillStyle = c1 || "#e11d2e"; vg.fillRect(X + Wd - 56, Y + 70, 16, 90);
+      vg.fillStyle = "#fff"; vg.font = "900 64px system-ui,sans-serif"; vg.fillText(String(a || "").slice(0, 4), X + 160, Y + 115); vg.fillText(String(b || "").slice(0, 4), X + Wd - 160, Y + 115);
+      vg.font = "900 150px system-ui,sans-serif"; vg.fillText(s0 + " - " + s1, X + Wd / 2, Y + 235); vg.fillStyle = "#ffd23a"; vg.font = "800 54px system-ui,sans-serif"; vg.fillText(ck || "00'", X + Wd / 2, Y + 345);
+      vg.fillStyle = "#9fb3d9"; vg.font = "700 30px system-ui,sans-serif"; vg.fillText(h || "", X + Wd / 2, Y + 30 + 0); vt.needsUpdate = true; };
+    window.__vb("", "", 0, 0, "00'", "", null, null);
+    const vm = new THREE.MeshBasicMaterial({ map: vt, toneMapped: false, transparent: true, alphaTest: .05, side: THREE.DoubleSide }), vw = 20, vh = vw * 518 / 831;
+    const legM = new THREE.MeshStandardMaterial({ color: 0x1b1d22, roughness: .6, metalness: .5 });
+    for (const [x, sd] of [[L + 15, 1], [-15, -1]]) { const m = new THREE.Mesh(new THREE.PlaneGeometry(vw, vh), vm); m.position.copy(P3(x, W / 2, 19 + vh / 2)); m.lookAt(P3(L / 2, W / 2, 19 + vh / 2)); S.add(m);
+      for (const dy of [-vw * .38, vw * .38]) { const leg = new THREE.Mesh(new THREE.BoxGeometry(.8, 19, .8), legM); leg.position.copy(P3(x + sd * .5, W / 2 + dy, 9.5)); S.add(leg); } }
+  }
   // estadio barato de pintar: lejos de la sombra del sol, sin recibir ni proyectar sombras y con material Lambert (mucho menos trabajo por píxel)
   { const lam = new Map(); S.traverse(o => { if (!o.isMesh || o === ground) return; const far = o.getWorldPosition(new THREE.Vector3()); if (Math.abs(far.x) < L / 2 + 2 && Math.abs(far.z) < W / 2 + 2) return;
       o.castShadow = false; o.receiveShadow = false; const m = o.material; if (m && m.isMeshStandardMaterial && !m.alphaMap) { let n = lam.get(m); if (!n) { n = new THREE.MeshLambertMaterial({ map: m.map, color: m.color, emissive: m.emissive, emissiveMap: m.emissiveMap, emissiveIntensity: m.emissiveIntensity, transparent: m.transparent, alphaTest: m.alphaTest, side: m.side }); lam.set(m, n); } o.material = n; } }); }
@@ -304,7 +318,7 @@
   function netGone() { if (!NET || NET.ended) return; NET.ended = true; try { msg("El rival se ha desconectado", 4); } catch (e) {} if (window.__netEnd) window.__netEnd(); }
   const EMB = NET ? await netLobby() : await new Promise(res => { if (!/embed/.test(location.search)) return res(null); addEventListener("message", e => { if (e.data && e.data.type === "mdg27cfg") res(e.data.cfg); }); parent.postMessage({ type: "mdg27ready" }, "*"); });
   // ciudad deportiva: ejercicio de entrenamiento (si viene)
-  const DRK = EMB && EMB.drill ? EMB.drill : new URLSearchParams(location.search).get("ejercicio");
+  const DRK = EMB && EMB.drill ? EMB.drill : new URLSearchParams(location.search).get("ejercicio"); if (DRK && window.__ldBg) window.__ldBg("carga_ciudad");
   const DR = DRK ? { k: DRK, cnt: 0, tries: 0, t: 0, state: "play", props: [], spots: new Map() } : null; window.DR = DR;
   const hex = c => { const m = /^#?([0-9a-f]{6})$/i.exec(c || ""); return m ? "#" + m[1] : null; };
   const lum = c => { const n = parseInt(c.slice(1), 16); return ((n >> 16) * .3 + ((n >> 8) & 255) * .59 + (n & 255) * .11) / 255; };
@@ -1239,7 +1253,10 @@
     M.goalAt = simT; later(4.6, () => { M.celeb = null; startReplay(side, () => startSet("kick", 1 - t)); });
   }
   function updHud() { const rc = t => (M.cards || []).filter(c => c.s === t && c.c === "R").length, chip = t => `<i style="display:inline-block;width:5px;height:18px;vertical-align:-4px;margin:0 6px;background:${TEAMS[t].kit[0]};border-radius:2px"></i>`, red = t => rc(t) ? `<i style="display:inline-block;width:8px;height:11px;margin:0 3px;background:#e11d2e;border-radius:1px;vertical-align:0"></i>`.repeat(rc(t)) : "";
-    $("#score").innerHTML = `${chip(0)}${TEAMS[0].short}${red(0)} <b style="margin:0 8px;font-size:18px">${TEAMS[0].score} - ${TEAMS[1].score}</b> ${red(1)}${TEAMS[1].short}${chip(1)}`; }
+    $("#score").innerHTML = `${chip(0)}${TEAMS[0].short}${red(0)} <b style="margin:0 8px;font-size:18px">${TEAMS[0].score} - ${TEAMS[1].score}</b> ${red(1)}${TEAMS[1].short}${chip(1)}`;
+    const kc = t => `<i class="kc" style="background:${TEAMS[t].kit[0]}"></i>`, rcs = t => '<i class="rc"></i>'.repeat(rc(t));
+    $("#sbn0").innerHTML = kc(0) + TEAMS[0].short + rcs(0); $("#sbn1").innerHTML = kc(1) + TEAMS[1].short + rcs(1); $("#sbs0").textContent = TEAMS[0].score; $("#sbs1").textContent = TEAMS[1].score; vbUpd(); }
+  let vbK = ""; function vbUpd() { if (!window.__vb) return; const h = M.half > 2 ? "PRÓRROGA" : M.half + "ª PARTE", k = [TEAMS[0].short, TEAMS[1].short, TEAMS[0].score, TEAMS[1].score, $("#clock").textContent, h].join("|"); if (k !== vbK) { vbK = k; window.__vb(TEAMS[0].short, TEAMS[1].short, TEAMS[0].score, TEAMS[1].score, $("#clock").textContent, h, TEAMS[0].kit[0], TEAMS[1].kit[0]); } }
   /* ---------- radar y jugador controlado (nombre + energía) ---------- */
   const radar = document.createElement("canvas"); radar.width = 230; radar.height = 150; Object.assign(radar.style, { position: "fixed", left: "50%", bottom: "12px", transform: "translateX(-50%)", width: "230px", height: "150px", opacity: .92, pointerEvents: "none" }); document.body.appendChild(radar); if (TS.on) Object.assign(radar.style, { bottom: "auto", top: "10px", width: "170px", height: "111px" });
   const tag = document.createElement("div"); Object.assign(tag.style, { position: "fixed", left: 0, top: 0, pointerEvents: "none", textAlign: "center", fontWeight: 800, fontSize: "12px", textShadow: "0 1px 3px #000", whiteSpace: "nowrap", transform: "translate(-50%,-100%)" }); document.body.appendChild(tag);
@@ -1271,13 +1288,13 @@
     tvShow(`<div style="background:#0b1220ee;border-radius:8px;padding:10px 6px 8px;box-shadow:0 4px 18px #0009"><div style="text-align:center;font-weight:900;letter-spacing:.06em;margin-bottom:6px">${title}</div><table style="border-collapse:collapse;margin:0 auto">
       <tr><td style="text-align:right;padding:3px 14px"><span style="display:inline-block;width:10px;height:10px;background:${tvCol(0)};margin-right:6px"></span>${TEAMS[0].short} ${TEAMS[0].score}</td><td></td><td style="padding:3px 14px">${TEAMS[1].score} ${TEAMS[1].short}<span style="display:inline-block;width:10px;height:10px;background:${tvCol(1)};margin-left:6px"></span></td></tr>
       ${row(Math.round(A.pos / tp * 100) + "%", "Posesión", Math.round(B.pos / tp * 100) + "%")}${row(A.sh, "Tiros", B.sh)}${row(A.co, "Córners", B.co)}${row(A.fo, "Faltas", B.fo)}${row(pc(A), "Pases buenos", pc(B))}</table></div>`, 5.6, true); }
-  function clockStep(dt) { tvFrame(dt); if (DR) { drStep(dt); $("#clock").textContent = "ENTRENO"; return; }
+  function clockStep(dt) { tvFrame(dt); if (DR) { drStep(dt); $("#clock").textContent = "—"; $("#sbh").textContent = "ENTRENO"; return; }
     if (M.phase === "end" || M.so) return;
     if (M.phase === "play") M.clock += dt;
     const len = perLen(M.half), over = M.clock - len;
     if (over >= 0 && !M.addShown) { M.addShown = true; M.addMin = clamp(Math.round((M.half <= 2 ? 1 : 0) + M.evH * .5 + Math.random() * 1.6), M.half <= 2 ? 1 : 0, M.half <= 2 ? 6 : 3); if (M.addMin) msg("+" + M.addMin + "  minutos de descuento", 2); }
     const mins = Math.min(len, M.clock) / len * perMin(M.half) + perBase(M.half), extra = over > 0 ? Math.floor(over / (len / perMin(M.half))) + 1 : 0;
-    $("#clock").textContent = String(Math.floor(mins)).padStart(2, "0") + (extra ? "+" + Math.min(extra, M.addMin || 1) : "") + "'";
+    $("#clock").textContent = String(Math.floor(mins)).padStart(2, "0") + (extra ? "+" + Math.min(extra, M.addMin || 1) : "") + "'"; { const hh = DR ? "ENTRENO" : M.half > 2 ? "PRÓRROGA" : M.half + "ª PARTE", he = $("#sbh"); if (he && he.textContent !== hh) he.textContent = hh; } vbUpd();
     if (over >= M.addMin * len / perMin(M.half) && M.phase === "play" && !(M.owner && prog(M.owner.t, M.owner.x) > .75 && over < (M.addMin + .5) * len / perMin(M.half))) {
       whistle(3); M.phase = "stop"; const draw = TEAMS[0].score === TEAMS[1].score, KO = EMB ? !!EMB.knockout : QS.get("ko") === "1";
       const next = (h, dir, kt, txt) => { msg(txt, 3); later(3.2, () => { M.half = h; M.clock = 0; M.addShown = false; M.addMin = 0; M.evH = 0; M.dirOf = dir; startSet("kick", kt); }); };
