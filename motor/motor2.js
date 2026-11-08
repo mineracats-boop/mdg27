@@ -662,7 +662,7 @@
   // pelea por la espalda: el defensor pegado detrás empuja o agarra; cubriendo bien (C / LT) y con más físico se aguanta
   // la IA cambia de actitud según el marcador y el minuto (si el usuario no la ha fijado)
   function aiMent() { if (DR) return; if ((aiMent.t = (aiMent.t || 0) + 1) % 60) return; const mn = curMin();
-    TEAMS.forEach((T, t) => { if (t === M.humanTeam || T.mentLock) return; const df = T.score - TEAMS[1 - t].score;
+    TEAMS.forEach((T, t) => { if ((t === M.humanTeam && !M.lockP) || T.mentLock) return; const df = T.score - TEAMS[1 - t].score;
       T.ment = df < 0 ? (mn > 80 ? 2 : mn > 60 ? 1 : 0) : df > 0 ? (mn > 75 ? -1 : 0) : (mn > 85 ? 1 : 0); }); }
   function backBattle(dt) { if (DR) return; const o = M.owner; if (!o || M.phase !== "play" || o.one || o.gk || o.down > 0) return;
     for (const d of team(1 - o.t)) { if (d.gk || d.one || d.down > 0 || d === M.human) continue; const dx = d.x - o.x, dy = d.y - o.y, dd = Math.hypot(dx, dy); if (dd > 1 || dd < .25) continue;
@@ -876,6 +876,7 @@
       else { if (I.fin) charge.fin = true; charge.p = Math.min(1, charge.p + dt / (charge.k === "pass" ? .9 : 1.05)); if (!keys[charge.k]) { humanKick(p, charge, I); charge = null; } }
     } else {
       charge = null;
+      if (M.owner && M.owner.t === p.t && M.owner !== p && (I.passD || I.thruD || I.lobD)) { M.call = { k: I.thruD ? "thru" : I.lobD ? "lob" : "pass", at: simT, p }; msg(I.thruD ? "¡AL HUECO!" : "¡DÁMELA!", .7); }
       // balón por alto: pulsar antes de que llegue deja preparado el cabezazo (tiro o pase), como en FIFA
       if (ball.z > .5 && !ball.hold && (I.shootD || I.passD || I.lobD)) p.hdrBuf = { cmd: I.shootD ? "shot" : "pass", at: simT };
       // defensa: J/A = presionar, Espacio/B = entrada, L/X = segada
@@ -891,10 +892,18 @@
     return { dir: I.dir, m: I.m, spr: I.spr };
   }
   // pase asistido como en FIFA: elige al compañero en la dirección del stick
+  function assistTarget(p, dirH, k, stick) {
+    const maxD = k === "lob" ? 65 : k === "thru" ? 50 : 42;
+    const pickIn = cone => { let b = null, bs = -1e9; for (const q of team(p.t)) { if (q === p || q.down > 0 || q.sent) continue; const dx = q.x - p.x, dy = q.y - p.y, d = Math.hypot(dx, dy); if (d < 2.5 || d > maxD) continue;
+        const ang = Math.abs(angD(dirH, Math.atan2(dy, dx))); if (ang > cone) continue; const risk = k === "lob" ? 0 : passRisk(p, q.x + Math.cos(q.mh) * q.v * .4, q.y + Math.sin(q.mh) * q.v * .4), op = Math.min(6, openness(q, p.t));
+        const sc = -ang * (stick ? 9 : 4) - risk * 3.2 + op * .5 - Math.abs(d - (k === "lob" ? 28 : 15)) * .06 + (prog(p.t, q.x) - prog(p.t, p.x)) * (stick ? 2 : 8) - (q.gk ? 3 : 0);
+        if (sc > bs) { bs = sc; b = q; } } return b; };
+    return pickIn(stick ? .7 : 1.1) || pickIn(1.25) || (stick ? null : pickIn(3.2));
+  }
   function humanKick(p, c, I) {
     const dirH = I.dir != null ? I.dir : p.h, t = p.t;
     if (c.k === "shot") { const side = I.dir != null && Math.abs(I.my) > .25 ? Math.sign(I.my) : (ball.y < W / 2 ? 1 : -1); const pow = !!I.spr && !c.fin && c.p >= .5; requestKick(p, { k: "shot", p: Math.max(.12, c.p), fin: c.fin, pow, tx: opp(t) + M.dirOf[t] * .2, ty: W / 2 + side * (GW / 2 - (c.fin ? .4 : pow ? .7 : .5)), tz: pow ? .35 + c.p * .9 : undefined }); return; }
-    const mate = mateInDir(p, dirH, c.k === "lob" ? 60 : 45);
+    const mate = assistTarget(p, dirH, c.k, I.dir != null);
     if (!mate) { const D = c.k === "lob" ? 15 + c.p * 30 : 8 + c.p * 30; requestKick(p, { k: c.k === "lob" ? "lob" : "pass", p: c.p, tx: p.x + Math.cos(dirH) * D, ty: p.y + Math.sin(dirH) * D }); return; }
     passTo(p, mate, c.k, c.p);
   }
@@ -1040,6 +1049,9 @@
       const k = ["feint", "step", "spin", "nut"][Math.floor(Math.random() * 4)]; skillMove(p, k, { dir: prog(p.t, p.x) > .5 ? Math.atan2(W / 2 - p.y, opp(p.t) - p.x) : p.h }); return C; } }
     const t = p.t, gx = opp(t), dG = Math.hypot(gx - p.x, W / 2 - p.y), ang = Math.abs(Math.atan2(W / 2 - p.y, gx - p.x) - (M.dirOf[t] > 0 ? 0 : Math.PI));
     const press = openness(p, t);
+    // el compañero humano pide el balón: se la da en cuanto la línea de pase está limpia
+    if (M.call && simT - M.call.at < 1.8 && M.call.p.t === t && M.call.p !== p && !p.req && !p.one) { const q = M.call.p, d = dist(p, q), lx = q.x + Math.cos(q.mh) * q.v * .5, ly = q.y + Math.sin(q.mh) * q.v * .5;
+      if (d > 3 && d < 50 && (M.call.k === "lob" || passRisk(p, lx, ly) < 1.4)) { passTo(p, q, M.call.k === "thru" ? "thru" : M.call.k === "lob" || d > 32 ? "lob" : "pass", .55); M.call = null; return C; } }
     p.ai.t -= dt;
     if (p.ai.t <= 0 && !p.req && !p.one) {
       p.ai.t = .25 + Math.random() * .35;
@@ -1057,6 +1069,7 @@
         let s = gain * 15 + Math.min(4, op) * .6 - risk * 2.6 - d * .04 - (q.gk ? 2.5 : 0) - (off ? 9 : 0) - (op < 2.5 ? 2 : 0) + (Math.random() - .5) * .8;
         let k = "pass"; if (d > 30 || risk > 1.2) { if (op > 4.5 && d > 14) { k = "lob"; s -= 1; } else s -= 4; }
         if (q.ai.run && !off && q.cat === "fwd" && thruSpot(p, q)) { s += 2.2; k = "thru"; }
+        if (q === M.lockP && risk < 1) s += 1.1;
         if (s > bs) { bs = s; best = [q, k]; } }
       if (best && (press < 3 || bs > 1.8 || Math.random() < .12)) { passTo(p, best[0], best[1], .5 + Math.random() * .2); return C; }
     }
@@ -1419,8 +1432,8 @@
     if (ball.hold === outP) ball.hold = a;
     msg("CAMBIO · entra " + b.n + " por " + outP.name, 2.2); return true; }
   function aiSubs() { if (DR || M.phase !== "set" || M.subBusy || M.so) return;
-    for (let t = 0; t < 2; t++) { if (t === M.humanTeam) continue; const T = TEAMS[t]; const inj = team(t).find(q => q.inj && !q.gk); if (!inj && (M.half < 2 || M.clock < M.halfLen * .25 || T.subs >= 3)) continue; if (T.subs >= 5) continue;
-      const tired = inj || team(t).filter(q => !q.gk && (q.sta == null ? 1 : q.sta) < .5).sort((a, b) => a.sta - b.sta)[0]; const bi = T.bench.findIndex(b => !b.used && b.role !== "POR");
+    for (let t = 0; t < 2; t++) { if (t === M.humanTeam && !M.lockP) continue; const T = TEAMS[t]; const inj = team(t).find(q => q.inj && !q.gk && q !== M.lockP); if (!inj && (M.half < 2 || M.clock < M.halfLen * .25 || T.subs >= 3)) continue; if (T.subs >= 5) continue;
+      const tired = inj || team(t).filter(q => !q.gk && q !== M.lockP && (q.sta == null ? 1 : q.sta) < .5).sort((a, b) => a.sta - b.sta)[0]; const bi = T.bench.findIndex(b => !b.used && b.role !== "POR");
       if (tired && bi >= 0) { M.subBusy = true; doSub(tired, bi).finally(() => { M.subBusy = false; }); return; } } }
   const RS = ACT.reduce((n, a) => n + 6 + a.bones.length * 4 + 3, 0) + 8, RN = 540, RB = new Float32Array(RS * RN), RT = new Float64Array(RN); let rI = 0, rC = 0;
   function recFrame() { let o = rI * RS; RT[rI] = simT;
