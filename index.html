@@ -12356,6 +12356,7 @@ function bestXI(ci) {
   const xi = pickXI(r, "4-3-3").filter(Boolean); return CXI[ci] = xi;
 }
 function cstr(id) {
+  if (isNat(id)) return natStr(natName(id));
   if (typeof id === "string") return (CAR.fill && CAR.fill[id]) || 72;
   if (STR[id] != null) return STR[id];
   const xi = bestXI(id); let s = xi.length ? xi.reduce((a, p) => a + p.ov, 0) / xi.length : 60;
@@ -12382,21 +12383,22 @@ const sortT = (T, ids) => ids.slice().sort((a, b) => { const x = T[a] || tbl0(),
 
 /* ---------------- simulación de partidos ---------------- */
 function scorerOf(id) {
-  if (typeof id === "string") return null;
-  const xi = bestXI(id); if (!xi.length) return null; return wpick(xi, p => W_SC[p.pos] || .5).k;
+  if (typeof id === "string" && !isNat(id)) return null;
+  const xi = isNat(id) ? natXI(natName(id)) : bestXI(id); if (!xi.length) return null; return wpick(xi, p => W_SC[p.pos] || .5).k;
 }
 function simGame(h, a, o = {}) {
   const sh = cstr(h), sa = cstr(a), adv = o.neutral ? 0 : 1.2;
   const lh = clamp(1.3 * Math.exp((sh + adv - sa) * .085), .12, 4.5), la = clamp(1.3 * Math.exp((sa - sh - adv) * .085), .12, 4.5);
   const hg = poisson(lh), ag = poisson(la), ev = [];
   [[h, hg, 0], [a, ag, 1]].forEach(([id, g, s]) => { for (let i = 0; i < g; i++) { const k = scorerOf(id); let as = null;
-    if (k && rnd() < .7) { const xi = bestXI(id).filter(p => p.k !== k); if (xi.length) as = wpick(xi, p => W_AS[p.pos] || .5).k; }
+    if (k && rnd() < .7) { const xi = (isNat(id) ? natXI(natName(id)) : bestXI(id)).filter(p => p.k !== k); if (xi.length) as = wpick(xi, p => W_AS[p.pos] || .5).k; }
     ev.push({ m: 1 + Math.floor(rnd() * 90), s, k, as }); } });
   ev.sort((x, y) => x.m - y.m);
   let pens = null; if (o.ko && hg === ag) { let p0 = 0, p1 = 0; for (let i = 0; i < 5; i++) { p0 += rnd() < .76; p1 += rnd() < .76; } while (p0 === p1) { p0 += rnd() < .76; p1 += rnd() < .76; } pens = [p0, p1]; }
   return { h, a, hg, ag, ev, pens };
 }
 function applyStats(r) {
+  if (r.nat) return;
   r.ev.forEach(e => { if (e.k && cps(e.k)) cps(e.k)[7]++; if (e.as && cps(e.as)) cps(e.as)[8]++; });
   [r.h, r.a].forEach(id => { if (typeof id === "number" && id !== CAR.club) bestXI(id).forEach(p => cps(p.k)[9]++); });
 }
@@ -12448,6 +12450,7 @@ function buildSeason(first) {
   }
   // competiciones continentales
   for (const E of carContinental(first)) comps.push(E);
+  natDirty(); natSetupSeason();
   CAR.comps = comps; CAR.week = 0; CAR.pending = null; CAR.done = false;
 }
 function carContinental(first) {
@@ -12477,7 +12480,7 @@ function carNew(ci, opt) {
     const age = p.edad || 26, pot = age <= 21 ? p.ov + 4 + Math.floor(rnd() * 14) : age <= 24 ? p.ov + Math.floor(rnd() * 6) : p.ov;
     CAR.p[p.k] = [c, p.ov, age, 65, 100, 0, 0, 0, 0, 0, 0, Math.min(94, pot)]; }
   CLUBS.forEach((c, i) => { const d = clubData(i); CAR.bud[i] = d.tb; CAR.wage[i] = d.wb; });
-  carIndex(); CAR.obj = carObjective(ci);
+  carIndex(); natFill(); CAR.obj = carObjective(ci);
   buildSeason(true);
   carNews("presentacion", `${CAR.name} es presentado como nuevo entrenador del ${CL(ci).nombre}`, `La directiva le pide: ${OBJ_TXT[CAR.obj]}. Presupuesto para fichajes: ${money(CAR.bud[ci])}.`);
   CAR.press = pressFor("presentacion"); carSave();
@@ -12504,7 +12507,7 @@ function weekEvents(w) {
     }
     if (C.type === "liga" && C.r < C.rounds.length && leagueWeek(C, C.r) <= w) ev.push({ C, kind: "liga" });
   }
-  return ev.sort((a, b) => (a.kind === "liga") - (b.kind === "liga"));
+  return natEvents(w).concat(ev.sort((a, b) => (a.kind === "liga") - (b.kind === "liga")));
 }
 function fixturesOf(e) {
   const C = e.C;
@@ -12513,25 +12516,32 @@ function fixturesOf(e) {
   if (e.kind === "super") return [[C.a, C.b]];
   if (e.kind === "copa") { const a = C.alive, f = []; for (let i = 0; i + 1 < a.length; i += 2) f.push([a[i], a[i + 1]]); return f; }
   if (e.kind === "ko") return C.ko.ties.map(([x, y]) => C.ko.leg ? [y, x] : [x, y]);
+  if (e.kind === "nat_md" || e.kind === "nat_ko") return natFixtures(e);
+  if (e.kind === "win") { const w = CAR.week; if (!CAR.winFx || CAR.winFx.w !== w) CAR.winFx = { w, fx: natWindowFixtures() }; return CAR.winFx.fx; }
   return [];
 }
 const isKO = e => e.kind === "copa" || e.kind === "super" || (e.kind === "ko" && (C => C.ko.name === "Final" || C.ko.leg === 1)(e.C));
 // juega un evento; si incluye al usuario se detiene y devuelve el partido pendiente
 function runEvent(e, userRes) {
   const fx = fixturesOf(e), out = [];
-  if (!userRes) { const u = fx.find(([h, a]) => h === CAR.club || a === CAR.club); if (u) return { h: u[0], a: u[1], e }; }
+  if (!userRes) { const u = fx.find(([h, a]) => isMe(h) || isMe(a)); if (u) return { h: u[0], a: u[1], e }; }
+  const nat = e.kind === "nat_md" || e.kind === "nat_ko" || e.kind === "win";
   for (const [h, a] of fx) {
     let r;
-    if ((h === CAR.club || a === CAR.club) && userRes) r = userRes;
-    else if (h === CAR.club || a === CAR.club) return { h, a, e };
-    else { r = simGame(h, a, { ko: e.kind !== "ko" && isKO(e), neutral: e.kind === "super" || (e.kind === "ko" && e.C.ko.name === "Final") }); applyStats(r); }
+    if ((isMe(h) || isMe(a)) && userRes) r = userRes;
+    else if (isMe(h) || isMe(a)) return { h, a, e };
+    else { r = simGame(h, a, nat ? { ko: e.kind === "nat_ko", neutral: e.kind !== "win" } : { ko: e.kind !== "ko" && isKO(e), neutral: e.kind === "super" || (e.kind === "ko" && e.C.ko.name === "Final") }); r.nat = nat; applyStats(r); }
     out.push(r);
   }
   closeEvent(e, out); return null;
 }
 function closeEvent(e, out) {
-  const C = e.C; C.res.push({ w: CAR.week, kind: e.kind, name: evName(e), r: out.map(x => ({ h: x.h, a: x.a, hg: x.hg, ag: x.ag, pens: x.pens })) });
-  if (C.res.length > 60) C.res.shift();
+  const C = e.C;
+  if (e.kind === "nat_md" || e.kind === "nat_ko" || e.kind === "win") {
+    out.forEach(r => { if (isMe(r.h) || isMe(r.a)) CAR.wk.res.push({ comp: e.kind === "win" ? "Ventana internacional" : C.name, ...r, ev: undefined }); });
+    if (e.kind === "win") natWindowClose(CAR.week, out); else natClose(e, out); return; }
+  C.res.push({ w: CAR.week, kind: e.kind, name: evName(e), r: out.map(x => ({ h: x.h, a: x.a, hg: x.hg, ag: x.ag, pens: x.pens })) });
+  const cap = C.type === "liga" ? (C.teams.includes(CAR.club) ? 6 : 2) : C.type === "cont" ? 12 : 30; while (C.res.length > cap) C.res.shift();
   out.forEach(r => { if (r.h === CAR.club || r.a === CAR.club) CAR.wk.res.push({ comp: C.name, ...r, ev: undefined }); });
   if (e.kind === "liga") { out.forEach(r => addRes(C.T, r.h, r.a, r.hg, r.ag)); C.r++; }
   else if (e.kind === "md") { out.forEach(r => addRes(C.T, r.h, r.a, r.hg, r.ag)); C.m++; if (C.m >= C.md.length) { contKOStart(C); C.kw = CAR_KO_W[KO_STAGE[C.ko.name]]; } }
@@ -12563,16 +12573,17 @@ function carStep() {
     const evs = weekEvents(CAR.week);
     if (!evs.length) { endWeek(); if (CAR.week === 0 || CAR.fired) { carSave(); return; } continue; }
     const e = evs[0], p = runEvent(e);
-    if (p) { const fin = e.kind === "ko" && e.C.ko.name === "Final";
-      CAR.pending = { cid: e.C.id, kind: e.kind, h: p.h, a: p.a, name: e.C.name + " · " + evName(e), ko: e.kind === "copa" || e.kind === "super" || fin, neutral: e.kind === "super" || fin, agg: e.kind === "ko" && e.C.ko.leg ? aggFor(e.C) : null };
+    if (p) { const fin = e.kind === "ko" && e.C.ko.name === "Final", nat = e.kind === "nat_md" || e.kind === "nat_ko" || e.kind === "win";
+      CAR.pending = nat ? { cid: e.C.id, kind: e.kind, h: p.h, a: p.a, nat: true, name: e.kind === "win" ? `${natName(myNat())} · Partido internacional` : e.C.name + " · " + natEvName(e), ko: e.kind === "nat_ko", neutral: e.kind !== "win" }
+        : { cid: e.C.id, kind: e.kind, h: p.h, a: p.a, name: e.C.name + " · " + evName(e), ko: e.kind === "copa" || e.kind === "super" || fin, neutral: e.kind === "super" || fin, agg: e.kind === "ko" && e.C.ko.leg ? aggFor(e.C) : null };
       if (rnd() < .45) CAR.press = pressFor("previa"); carSave(); return; }
   }
 }
 function aggFor(C) { const i = C.ko.ties.findIndex(t => t.includes(CAR.club)); return i >= 0 ? C.ko.agg[i] : null; }
 function finishUser(r) {
   const P = CAR.pending; CAR.pending = null;
-  const C = CAR.comps.find(c => c.id === P.cid), e = { C, kind: P.kind };
-  applyStats(r); userAfterMatch(r);
+  const C = CAR.comps.find(c => c.id === P.cid) || (CAR.ntours || []).find(c => c.id === P.cid) || { id: P.cid, name: "Ventana internacional", type: "win" }, e = { C, kind: P.kind };
+  if (P.nat) { r.nat = true; natAfterMatch(r); } else { applyStats(r); userAfterMatch(r); }
   runEvent(e, r); carSave();
 }
 
@@ -12598,6 +12609,10 @@ function fixUnavailable() {
   return changed;
 }
 function teamFor(id, user) {
+  if (isNat(id)) { const n = natName(id), N = NAT[n] || { c1: "#455a8a", c2: "#fff" }, xi = natXI(n), ks = xi.map(p => p.k), sq = (user && CAR.natSq) || natAuto(n);
+    const mk = (k, role) => { const p = pinfo(k), s = cps(k), d = s[1] - p.ov, pen = role === p.pos ? 0 : luPen(p.pos, role);
+      return { n: shortName(p.n), full: p.n, pos: p.pos, role, u: k, ov: Math.max(20, s[1] + pen), st: Object.fromEntries(Object.entries(p.f).map(([x, v]) => [x, clamp(v + d + pen, 20, 99)])) }; };
+    const F = FORMS["4-3-3"]; return { name: n, sh: n.slice(0, 3).toUpperCase(), c1: N.c1, c2: N.c2, pl: ks.map((k, i) => mk(k, F[i][0])), bench: sq.filter(k => !ks.includes(k)).slice(0, 9).map(k => mk(k, pinfo(k).pos)) }; }
   if (typeof id === "string") { const s = cstr(id), n = cname(id);
     const pl = FORMS["4-3-3"].map((f, i) => ({ n: n.split(" ")[0].slice(0, 3) + " " + (i + 1), role: f[0], ov: Math.round(s), st: { pac: s, sho: s, pas: s, dri: s, def: s, phy: s } }));
     return { name: n, sh: cshort(id), c1: "#455a8a", c2: "#ffffff", pl, bench: [] }; }
@@ -12609,8 +12624,8 @@ function teamFor(id, user) {
 }
 function carPlay() {
   const P = CAR.pending; if (!P) return; fixUnavailable();
-  const home = P.h === CAR.club, opp = home ? P.a : P.h;
-  const teams = [teamFor(CAR.club, true), teamFor(opp, false)];
+  const home = isMe(P.h), me = home ? P.h : P.a, opp = home ? P.a : P.h;
+  const teams = [teamFor(me, true), teamFor(opp, false)];
   startMatch({ teams, humans: [{ t: 0, src: "any" }], cpuTeams: [1], diff: CAR.diff, halfLen: CAR.dur * 60, knockout: !!P.ko && !P.agg, tod: "Auto",
     onEnd: x => { const gU = x.score[0], gO = x.score[1], pens = x.pens ? (home ? x.pens : [x.pens[1], x.pens[0]]) : null;
       const byName = (s, n) => { const T = teams[s]; const p = T.pl.concat(T.bench).find(q => q.n === n); return p && p.u; };
@@ -12621,6 +12636,7 @@ function carPlay() {
 function carSim() {
   const P = CAR.pending; if (!P) return; fixUnavailable(); dirty(CAR.club);
   const r = simGame(P.h, P.a, { ko: !!P.ko && !P.agg, neutral: P.neutral });
+  if (P.nat) { finishUser(r); afterUserUI(r); return; }
   r.cards = rnd() < .5 ? [{ c: "A", k: pick(userSquad().slice(0, 11)) }] : []; if (rnd() < .04) r.cards.push({ c: "R", k: pick(userSquad().slice(1, 11)) });
   finishUser(r); afterUserUI(r);
 }
@@ -12644,11 +12660,11 @@ function endWeek() {
   const w = CAR.week;
   for (const k of ROST[CAR.club]) { const s = cps(k); s[4] = clamp(s[4] + 12, 30, 100); if (s[5] > 0) s[5]--; s[3] = clamp(s[3] + (60 - s[3]) * .05, 10, 100); }
   if (CAR_WIN(w)) { aiTransfers(w); offersForMine(); }
-  if (w % 4 === 0 || w === 1) boardCheck();
+  if ((w % 4 === 0 || w === 1) && w <= CAR_W) boardCheck();
   diarioEdition(w);
   CAR.wk = { res: [], deals: [] }; dirty(CAR.club);
   CAR.week++;
-  if (CAR.week > CAR_W) seasonEnd();
+  if (CAR.week > CAR_W && !natSummerLeft()) seasonEnd();
   carSave();
 }
 function boardCheck() {
@@ -12768,7 +12784,7 @@ function seasonEnd() {
   const big = retired.filter(k => cps(k)[1] >= 78).sort((a, b) => cps(b)[1] - cps(a)[1]);
   if (big.length) carNews("retiro", `Se retiran ${big.slice(0, 4).map(k => pinfo(k).n).join(", ")}${big.length > 4 ? ` y ${big.length - 4} más` : ""}`, "Cuelgan las botas tras grandes carreras.");
   if (retired.some(k => CAR.p[k] && ROST[CAR.club].includes(k))) carNews("retiro", "Bajas por retirada en tu plantilla", retired.filter(k => ROST[CAR.club].includes(k)).map(k => pinfo(k).n).join(", "));
-  carIndex(); youth();
+  carIndex(); youth(); natFill(); natDirty(); natOffers();
   // presupuestos nuevos
   CLUBS.forEach((c, i) => { const d = clubData(i), lg = CAR.liga[i], f = isLower(lg) ? .35 : 1; CAR.bud[i] = Math.round(Math.max(1, d.tb * f + Math.max(0, (CAR.bud[i] || 0)) * .25) * 10) / 10; });
   CAR.season++; CAR.inbox = []; CAR.listed = []; CAR.ord = null; CAR.trophiesSeason = null;
@@ -12818,18 +12834,21 @@ function tryBuy(k, amt) {
 }
 
 /* ---------------- interfaz ---------------- */
-function carLoad() { if (CAR) return CAR; const c = store.get("car", null); if (c && c.v === 1) { CAR = c; carIndex(); } return CAR; }
+function carLoad() { if (CAR) return CAR; const c = store.get("car", null); if (c && c.v === 1) { CAR = c; carIndex(); NPOOL = null; natDirty(); if (!CAR.ntours) { natFill(); natSetupSeason(); } } return CAR; }
 ONSHOW.car = () => { carLoad(); renderCar(); };
 const meter = (lbl, v) => `<div class="cmeter"><span>${lbl}</span><i><b style="width:${v}%;background:${v >= 60 ? "#3ddc84" : v >= 35 ? "#ffd23a" : "#ff4d5e"}"></b></i><em>${Math.round(v)}</em></div>`;
 function renderCar() {
   const B = $("#carBody");
   if (!CAR) return renderCarSetup();
-  if (CAR.fired) { B.innerHTML = `<div class="panel" style="max-width:70rem;margin:4rem auto;padding:3rem;text-align:center"><h2 class="ctit">DESPEDIDO</h2><p>${esc(CAR.news.find(n => n.type === "despido").body)}</p>
-      <p class="mute">Temporadas: ${CAR.hist.length} · Títulos: ${CAR.trophies.length}</p><button class="mbtn gold" data-nav data-a="carReset" data-first>Empezar otra carrera</button></div>`; return; }
+  if (CAR.fired) { if (!CAR.jobOff) { const my = cstr(CAR.club); CAR.jobOff = shuffle(CLUBS.map((c, i) => i).filter(i => i !== CAR.club && cstr(i) < my - 1 && cstr(i) > my - 9)).slice(0, 3); carSave(); }
+    B.innerHTML = `<div class="panel" style="max-width:76rem;margin:2rem auto;padding:2.4rem;text-align:center;overflow:auto"><h2 class="ctit">DESPEDIDO</h2><p>${esc((CAR.news.find(n => n.type === "despido") || {}).body || "")}</p>
+      <p class="mute">Temporadas: ${CAR.hist.length} · Títulos: ${CAR.trophies.length}</p><div class="lbl">Ofertas de otros clubes</div>
+      ${CAR.jobOff.map(i => `<div class="lrow"><span>${esc(CLUBS[i].nombre)}</span><span class="sc">${esc(CAR.liga[i])}</span><span class="r"><button class="mbtn sm pri" data-nav data-a="carJob" data-i="${i}">Aceptar</button></span></div>`).join("") || `<div class="mute">Nadie te llama.</div>`}
+      <button class="mbtn" data-nav data-a="carReset" style="margin-top:1rem">Empezar otra carrera</button></div>`; return; }
   $("#carTitle").textContent = `${CL(CAR.club).nombre.toUpperCase()} · ${CAR.season}-${String(CAR.season + 1).slice(2)} · SEMANA ${CAR.week}`;
-  const tabs = [["inicio", "Inicio"], ["plantilla", "Plantilla"], ["comps", "Competiciones"], ["fichajes", "Fichajes" + (CAR.inbox.length ? ` (${CAR.inbox.length})` : "")], ["diario", "Diario"], ["club", "Club"]];
+  const tabs = [["inicio", "Inicio"], ["plantilla", "Plantilla"], ["comps", "Competiciones"], ["fichajes", "Fichajes" + (CAR.inbox.length ? ` (${CAR.inbox.length})` : "")], ["diario", "Diario"], ["sel", CAR.nat ? "Selección" : "Selecciones"], ["club", "Club"]];
   let main = "";
-  if (CT.tab === "inicio") main = carHome(); else if (CT.tab === "plantilla") main = carSquad(); else if (CT.tab === "comps") main = carComps(); else if (CT.tab === "fichajes") main = carMarket(); else if (CT.tab === "diario") main = carDiario(); else main = carClub();
+  if (CT.tab === "inicio") main = carHome(); else if (CT.tab === "plantilla") main = carSquad(); else if (CT.tab === "comps") main = carComps(); else if (CT.tab === "fichajes") main = carMarket(); else if (CT.tab === "diario") main = carDiario(); else if (CT.tab === "sel") main = carNatTab(); else main = carClub();
   B.innerHTML = `<div class="mkbar"><div class="tabs">${tabs.map(([k, l]) => `<button class="tab${CT.tab === k ? " on" : ""}" data-nav data-a="carTab" data-tab="${k}">${l}</button>`).join("")}</div></div><div class="panel scroll carmain">${main}</div>`;
 }
 function carHome() {
@@ -12849,7 +12868,7 @@ function carHome() {
     <div class="cbox"><div class="lbl">${esc(L.name)}</div><table class="tb">${mini}</table></div>${alerts}
     <div class="cbox"><div class="lbl">Última hora</div>${CAR.news.slice(0, 3).map(n => `<div class="cnews"><b>${esc(n.title)}</b><span>${esc(n.body)}</span></div>`).join("")}</div></div></div>`;
 }
-const carCrest = id => typeof id === "number" ? `<div class="crest sm">${crestSVG(CL(id).nombre, CL(id).sh, CL(id).c1, CL(id).c2)}</div>` : `<div class="crest sm">${crestSVG(cname(id), cshort(id), "#455a8a", "#fff")}</div>`;
+const carCrest = id => isNat(id) ? `<div class="crest sm">${crestSVG(natName(id), natName(id).slice(0, 3).toUpperCase(), (NAT[natName(id)] || {}).c1 || "#455a8a", (NAT[natName(id)] || {}).c2 || "#fff")}</div>` : typeof id === "number" ? `<div class="crest sm">${crestSVG(CL(id).nombre, CL(id).sh, CL(id).c1, CL(id).c2)}</div>` : `<div class="crest sm">${crestSVG(cname(id), cshort(id), "#455a8a", "#fff")}</div>`;
 function carSquad() {
   const o = userSquad(), F = FORMS[CAR.form];
   const row = (k, i) => { const p = pinfo(k), s = cps(k), role = i < 11 ? F[i][0] : i < 20 ? "SUP" : "—", pen = i < 11 ? luPen(p.pos, role) : 0, st = s[5] ? `<em class="bad">LES ${s[5]}s</em>` : s[6] ? `<em class="bad">SANC</em>` : "";
@@ -12860,9 +12879,10 @@ function carSquad() {
 }
 function carComps() {
   const mine = CAR.comps.filter(c => (c.teams || c.alive || [c.a, c.b]).includes(CAR.club) || (c.type === "copa" && c.res.some(r => r.r.some(x => x.h === CAR.club || x.a === CAR.club))));
-  const others = CAR.comps.filter(c => !mine.includes(c));
-  if (!CT.comp || !CAR.comps.find(c => c.id === CT.comp)) CT.comp = mine[0].id;
-  const C = CAR.comps.find(c => c.id === CT.comp);
+  (CAR.ntours || []).forEach(T => { if (T.teams.includes(myNat())) mine.push(T); });
+  const ALL = CAR.comps.concat(CAR.ntours || []), others = ALL.filter(c => !mine.includes(c));
+  if (!CT.comp || !ALL.find(c => c.id === CT.comp)) CT.comp = mine[0].id;
+  const C = ALL.find(c => c.id === CT.comp);
   const sel = `<div class="tabs" style="margin-bottom:1rem">${mine.map(c => `<button class="tab${c.id === CT.comp ? " on" : ""}" data-nav data-a="carComp" data-c="${esc(c.id)}">${esc(c.name)}</button>`).join("")}
     <button class="tab" data-nav data-a="carCompMore">Otras ▾</button></div>${CT.more ? `<div class="tabs" style="margin-bottom:1rem">${others.map(c => `<button class="tab${c.id === CT.comp ? " on" : ""}" data-nav data-a="carComp" data-c="${esc(c.id)}">${esc(c.name)}</button>`).join("")}</div>` : ""}`;
   let body = "";
@@ -12872,6 +12892,11 @@ function carComps() {
     if (C.type === "cont" && C.ko) body = `<div class="lbl">${C.champ != null ? "Campeón: " + esc(cname(C.champ)) : esc(C.ko.name)}</div>${C.ko.ties.map(([a, b]) => `<div class="lrow"><span>${esc(cname(a))}</span><span class="sc">vs</span><span class="r">${esc(cname(b))}</span></div>`).join("")}<h4>Fase de liga</h4>` + body;
     if (C.type === "liga") { const sc = Object.keys(CAR.p).filter(k => cps(k)[0] >= 0 && C.teams.includes(cps(k)[0]) && cps(k)[7]).sort((a, b) => cps(b)[7] - cps(a)[7]).slice(0, 10);
       body += `<h4>Goleadores</h4><table class="tb">${sc.map((k, i) => `<tr><td class="pos">${i + 1}</td><td class="l">${esc(pinfo(k).n)}</td><td class="l">${esc(cname(cps(k)[0]))}</td><td class="pts">${cps(k)[7]}</td></tr>`).join("")}</table>`; }
+  } else if (C.type === "nat") {
+    body = `<div class="lbl">${C.champ ? "Campeón: " + esc(natName(C.champ)) : C.ko ? esc(C.ko.name) : C.w0 > CAR_W ? "Se juega en verano, al acabar la temporada" : "Semana " + C.w0}</div>`;
+    if (C.ko && !C.champ) body += C.ko.ties.map(([a, b]) => `<div class="lrow${a === myNat() || b === myNat() ? " me" : ""}"><span>${esc(natName(a))}</span><span class="sc">vs</span><span class="r">${esc(natName(b))}</span></div>`).join("");
+    body += C.res.filter(R => !/Grupos/.test(R.name)).reverse().map(R => `<h4>${esc(R.name)}</h4>${R.r.map(x => `<div class="lrow"><span>${esc(natName(x.h))}</span><span class="sc">${x.hg}-${x.ag}${x.pens ? ` (${x.pens[0]}-${x.pens[1]} p)` : ""}</span><span class="r">${esc(natName(x.a))}</span></div>`).join("")}`).join("");
+    body += C.groups.map((g, i) => `<h4>Grupo ${String.fromCharCode(65 + i)}</h4><table class="tb">${sortT(C.T, g).map(id => { const t = C.T[id] || tbl0(); return `<tr class="${id === myNat() ? "me" : ""}"><td class="l">${esc(natName(id))}</td><td>${t.pj}</td><td>${t.gf}-${t.gc}</td><td class="pts">${t.pts}</td></tr>`; }).join("")}</table>`).join("");
   } else if (C.type === "copa") body = `<div class="lbl">${C.champ != null ? "Campeón: " + esc(cname(C.champ)) : `${CUP_RN(C.alive.length)} · semana ${C.weeks[C.rd]}`} · quedan ${C.alive.length}</div>${C.res.slice().reverse().map(R => `<h4>${esc(R.name)}</h4>${R.r.map(x => `<div class="lrow${x.h === CAR.club || x.a === CAR.club ? " me" : ""}"><span>${esc(cname(x.h))}</span><span class="sc">${x.hg}-${x.ag}${x.pens ? ` (${x.pens[0]}-${x.pens[1]} p)` : ""}</span><span class="r">${esc(cname(x.a))}</span></div>`).join("")}`).join("")}`;
   else body = `<div class="lbl">${esc(C.name)} · semana ${C.w}</div><div class="lrow"><span>${esc(cname(C.a))}</span><span class="sc">${C.res[0] ? `${C.res[0].r[0].hg}-${C.res[0].r[0].ag}` : "vs"}</span><span class="r">${esc(cname(C.b))}</span></div>${C.champ != null ? `<div class="okb">Campeón: ${esc(cname(C.champ))}</div>` : ""}`;
   return sel + body;
@@ -12950,6 +12975,236 @@ ACT.carSD = el => { CT.setup.diff = el.dataset.d; renderCarSetup(); };
 ACT.carSM = el => { CT.setup.dur = clamp((CT.setup.dur || 4) + +el.dataset.d, 1, 10); renderCarSetup(); };
 ACT.carStart = () => { toast("Preparando el mundo: 12 ligas, copas y Europa…"); setTimeout(() => { carNew(CT.setup.ci, { diff: CT.setup.diff, dur: CT.setup.dur }); CT.tab = "inicio"; renderCar(); }, 30); };
 ACT.carReset = () => dlg("Abandonar carrera", "Se borrará la partida del modo carrera. ¿Seguro?", [["Sí, borrar", () => { CAR = null; store.set("car", null); closeDlg(); renderCar(); }, true], ["Cancelar", closeDlg]]);
+
+function natAfterMatch(r) {
+  const me = myNat(), home = r.h === me, gf = home ? r.hg : r.ag, ga = home ? r.ag : r.hg, win = gf > ga || (gf === ga && r.pens && (home ? r.pens[0] > r.pens[1] : r.pens[1] > r.pens[0]));
+  CAR.fed = clamp((CAR.fed || 60) + (win ? 4 : gf === ga ? 0 : -5), 0, 100);
+  const sq = CAR.natSq || []; ROST[CAR.club].forEach(k => { if (sq.includes(k)) cps(k)[4] = clamp(cps(k)[4] - 10, 30, 100); });
+}
+ACT.carJob = el => { const i = +el.dataset.i; CAR.club = i; CAR.fired = false; CAR.jobOff = null; CAR.junta = 55; CAR.afi = 50; CAR.ord = null; CAR.inbox = []; CAR.listed = []; CAR.form = "4-3-3";
+  CAR.obj = carObjective(i); dirty(); carNews("presentacion", `${CAR.name} firma por el ${CL(i).nombre}`, `Nuevo reto: ${OBJ_TXT[CAR.obj]}.`); CAR.press = pressFor("presentacion"); carSave(); renderCar(); };
+
+/* =====================================================================
+   SELECCIONES (dentro del modo carrera): ventanas FIFA, convocatorias,
+   Mundial, Eurocopa, Copa América, Copa África, Copa Asia, Copa Oro,
+   Final Four de la Nations League; ofertas y despidos de federación.
+   Calendario real: Copa Asia ene-2027 (Arabia Saudí), Copa África jun-2027
+   (Kenia/Uganda/Tanzania) y 2028, Euro 2028 (Reino Unido e Irlanda),
+   Copa América 2028, Mundial 2030 (España/Portugal/Marruecos), luego ciclo.
+   ===================================================================== */
+// [nombre (como en la base de datos), confederación, nivel, color1, color2, país "parecido" para nombres]
+const NATIONS = [
+  ["España", "UEFA", 87, "#c60b1e", "#ffc400"], ["Francia", "UEFA", 87, "#1d3f8f", "#ffffff"], ["Inglaterra", "UEFA", 86, "#ffffff", "#1d2a6b"], ["Portugal", "UEFA", 85, "#a50021", "#006233"],
+  ["Alemania", "UEFA", 84, "#ffffff", "#111111"], ["P. Bajos", "UEFA", 84, "#f36c21", "#ffffff"], ["Italia", "UEFA", 83, "#0b4fa8", "#ffffff"], ["Bélgica", "UEFA", 82, "#c8102e", "#111111"],
+  ["Croacia", "UEFA", 81, "#ffffff", "#c8102e"], ["Dinamarca", "UEFA", 79, "#c8102e", "#ffffff"], ["Suiza", "UEFA", 79, "#d52b1e", "#ffffff"], ["Noruega", "UEFA", 79, "#ba0c2f", "#00205b"],
+  ["Austria", "UEFA", 78, "#ed2939", "#ffffff"], ["Turquía", "UEFA", 78, "#e30a17", "#ffffff"], ["Suecia", "UEFA", 77, "#fecc00", "#006aa7"], ["Serbia", "UEFA", 77, "#c6363c", "#0c4076"],
+  ["Ucrania", "UEFA", 76, "#ffd700", "#0057b7"], ["Polonia", "UEFA", 76, "#ffffff", "#dc143c"], ["Escocia", "UEFA", 75, "#0b2a5b", "#ffffff"], ["R. Checa", "UEFA", 75, "#d7141a", "#11457e"],
+  ["Hungría", "UEFA", 75, "#cd2a3e", "#436f4d"], ["Grecia", "UEFA", 75, "#0d5eaf", "#ffffff"], ["Georgia", "UEFA", 74, "#ffffff", "#e8112d"], ["Eslovaquia", "UEFA", 73, "#ffffff", "#0b4ea2"],
+  ["Irlanda", "UEFA", 73, "#169b62", "#ffffff"], ["Gales", "UEFA", 73, "#c8102e", "#00b140"], ["Eslovenia", "UEFA", 73, "#ffffff", "#005ce6"], ["Rumanía", "UEFA", 73, "#fcd116", "#002b7f"],
+  ["Albania", "UEFA", 72, "#e41e20", "#111111"], ["Bosnia", "UEFA", 72, "#002395", "#fecb00"], ["Islandia", "UEFA", 71, "#02529c", "#ffffff"], ["Israel", "UEFA", 70, "#ffffff", "#0038b8"],
+  ["Irlanda del Norte", "UEFA", 70, "#00843d", "#ffffff"], ["Finlandia", "UEFA", 70, "#ffffff", "#002f6c"], ["Kosovo", "UEFA", 69, "#244aa5", "#d0a650"], ["Montenegro", "UEFA", 69, "#c40308", "#d4af37"],
+  ["Macedonia del Norte", "UEFA", 68, "#d20000", "#ffe600"], ["Bulgaria", "UEFA", 68, "#ffffff", "#00966e"],
+  ["Argentina", "CONMEBOL", 86, "#75aadb", "#ffffff"], ["Brasil", "CONMEBOL", 85, "#ffdf00", "#009c3b"], ["Uruguay", "CONMEBOL", 81, "#5cbfeb", "#ffffff"], ["Colombia", "CONMEBOL", 81, "#fcd116", "#003893"],
+  ["Ecuador", "CONMEBOL", 78, "#ffdd00", "#034ea2"], ["Paraguay", "CONMEBOL", 76, "#d52b1e", "#ffffff"], ["Chile", "CONMEBOL", 74, "#d52b1e", "#ffffff"], ["Perú", "CONMEBOL", 73, "#ffffff", "#d91023"],
+  ["Venezuela", "CONMEBOL", 73, "#7b1e3c", "#ffffff"], ["Bolivia", "CONMEBOL", 68, "#00a651", "#ffffff"],
+  ["Marruecos", "CAF", 81, "#c1272d", "#006233"], ["Senegal", "CAF", 79, "#ffffff", "#00853f"], ["Nigeria", "CAF", 77, "#008751", "#ffffff"], ["Costa de Marfil", "CAF", 77, "#f77f00", "#ffffff"],
+  ["Egipto", "CAF", 76, "#ce1126", "#ffffff"], ["Argelia", "CAF", 76, "#ffffff", "#006633"], ["Túnez", "CAF", 73, "#e70013", "#ffffff"], ["Camerún", "CAF", 74, "#007a5e", "#ce1126"],
+  ["Malí", "CAF", 74, "#fcd116", "#14b53a"], ["Ghana", "CAF", 73, "#ffffff", "#000000"], ["Sudáfrica", "CAF", 72, "#ffb612", "#007a4d"], ["RD Congo", "CAF", 73, "#007fff", "#f7d618"],
+  ["Burkina Faso", "CAF", 72, "#009e49", "#ef2b2d"], ["Cabo Verde", "CAF", 71, "#003893", "#ffffff"], ["Guinea", "CAF", 70, "#ce1126", "#fcd116"], ["Gabón", "CAF", 69, "#fcd116", "#009e60"],
+  ["Angola", "CAF", 69, "#cc092f", "#000000"], ["Zambia", "CAF", 68, "#198a00", "#ffffff"], ["Guinea Ecuatorial", "CAF", 68, "#e32118", "#3e9a00"], ["Benín", "CAF", 68, "#fcd116", "#008751"],
+  ["Gambia", "CAF", 67, "#ce1126", "#0c1c8c"], ["Mozambique", "CAF", 66, "#d21034", "#007168"], ["Uganda", "CAF", 66, "#fcdc04", "#000000"], ["Kenia", "CAF", 65, "#bb0000", "#006600"],
+  ["Tanzania", "CAF", 64, "#1eb53a", "#00a3dd"], ["Mauritania", "CAF", 66, "#00a95c", "#ffd700"], ["Comoras", "CAF", 65, "#3a75c4", "#ffffff"], ["Guinea-Bisáu", "CAF", 65, "#ce1126", "#009e49"],
+  ["Japón", "AFC", 80, "#000c7c", "#ffffff"], ["Corea del Sur", "AFC", 78, "#cd2e3a", "#0047a0"], ["Irán", "AFC", 77, "#ffffff", "#239f40", "Irak"], ["Australia", "AFC", 75, "#ffcd00", "#00843d"],
+  ["Arabia Saudí", "AFC", 72, "#ffffff", "#006c35"], ["Catar", "AFC", 71, "#8a1538", "#ffffff", "Arabia Saudí"], ["Irak", "AFC", 71, "#ffffff", "#007a3d", "Arabia Saudí"], ["Uzbekistán", "AFC", 72, "#1eb53a", "#ffffff", "Kazajistán"],
+  ["Emiratos Árabes", "AFC", 70, "#ffffff", "#00732f", "Arabia Saudí"], ["Jordania", "AFC", 70, "#ffffff", "#ce1126", "Arabia Saudí"], ["Omán", "AFC", 68, "#db161b", "#ffffff", "Arabia Saudí"], ["China", "AFC", 66, "#de2910", "#ffde00", "Japón"],
+  ["Baréin", "AFC", 66, "#ce1126", "#ffffff", "Arabia Saudí"], ["Siria", "AFC", 66, "#ffffff", "#ce1126", "Arabia Saudí"], ["Palestina", "AFC", 66, "#000000", "#009736", "Arabia Saudí"], ["Kirguistán", "AFC", 64, "#e8112d", "#ffef00", "Kazajistán"],
+  ["Tailandia", "AFC", 64, "#241d4f", "#ffffff", "Filipinas"], ["Vietnam", "AFC", 64, "#da251d", "#ffff00", "Filipinas"], ["Indonesia", "AFC", 66, "#ce1126", "#ffffff"], ["Malasia", "AFC", 63, "#ffcc00", "#010066", "Indonesia"],
+  ["India", "AFC", 62, "#0047ab", "#ff9933", "Bangladés"], ["Líbano", "AFC", 63, "#ffffff", "#ed1c24", "Arabia Saudí"], ["Tayikistán", "AFC", 64, "#cc0000", "#006600", "Kazajistán"], ["Kuwait", "AFC", 62, "#007a3d", "#ffffff", "Arabia Saudí"],
+  ["México", "CONCACAF", 77, "#006847", "#ffffff"], ["EE.UU.", "CONCACAF", 77, "#ffffff", "#0a3161"], ["Canadá", "CONCACAF", 75, "#d80621", "#ffffff"], ["Panamá", "CONCACAF", 71, "#da121a", "#ffffff"],
+  ["Costa Rica", "CONCACAF", 69, "#ce1126", "#002b7f"], ["Jamaica", "CONCACAF", 69, "#ffd100", "#007a33"], ["Honduras", "CONCACAF", 67, "#ffffff", "#0073cf", "México"], ["Curazao", "CONCACAF", 67, "#002b7f", "#f9e814", "Surinam"],
+  ["Haití", "CONCACAF", 66, "#00209f", "#d21034"], ["El Salvador", "CONCACAF", 64, "#0f47af", "#ffffff", "México"], ["Guatemala", "CONCACAF", 64, "#4997d0", "#ffffff", "México"], ["Surinam", "CONCACAF", 65, "#377e3f", "#ffffff"],
+  ["Trinidad y Tobago", "CONCACAF", 63, "#ce1126", "#000000"], ["R. Dominicana", "CONCACAF", 62, "#002d62", "#ce1126"], ["Nicaragua", "CONCACAF", 61, "#0067c6", "#ffffff", "México"], ["Cuba", "CONCACAF", 60, "#002a8f", "#cf142b", "R. Dominicana"],
+  ["Nueva Zelanda", "OFC", 68, "#ffffff", "#000000"]
+];
+const NAT = {}; NATIONS.forEach(([n, c, s, c1, c2, like]) => NAT[n] = { n, conf: c, s, c1, c2, like: like || n });
+const NAT_ALIAS = { "Mali": "Malí", "G. Ecuatorial": "Guinea Ecuatorial", "Rep. Centroafricana": "R. Centroafricana" };
+const natOf = nac => NAT_ALIAS[nac] || nac;
+const isNat = id => typeof id === "string" && id.startsWith("N:");
+const natName = id => id.slice(2);
+const myNat = () => CAR.nat ? "N:" + CAR.nat.n : null;
+const isMe = id => id === CAR.club || (CAR.nat && id === myNat());
+
+/* ---------------- jugadores por selección (y relleno si faltan) ---------------- */
+let NPOOL = null;
+function natPool(n) {
+  if (!NPOOL) { NPOOL = {}; for (const k in CAR.p) { const s = CAR.p[k]; if (s[0] === -1) continue; const nc = natOf(pinfo(k).nac); (NPOOL[nc] = NPOOL[nc] || []).push(k); } }
+  return NPOOL[n] || [];
+}
+function natFill() {   // completa cada selección hasta 23 con jugadores de su liga local
+  NPOOL = null; youthNames();
+  for (const N of NATIONS) { const n = N[0], have = natPool(n).length, base = NAT[n].s; if (have >= 23) continue;
+    const src = NAMES_BY_NAC[n] || NAMES_BY_NAC[NAT[n].like] || NAMES_BY_NAC[{ AFC: "Japón", CAF: "Senegal", CONCACAF: "México", UEFA: "Serbia", CONMEBOL: "Uruguay", OFC: "Australia" }[NAT[n].conf]];
+    const pos = ["POR", "POR", "POR", "DFC", "DFC", "DFC", "DFC", "LD", "LD", "LI", "LI", "MCD", "MCD", "MC", "MC", "MC", "MP", "ED", "ED", "EI", "EI", "DC", "DC"];
+    for (let i = have; i < 23; i++) { const ov = clamp(Math.round(base - 3 - rnd() * 9 + (i < 11 ? 4 : 0)), 50, 86), p = pos[i % pos.length], k = "nat." + n + "." + CAR.season + "." + i;
+      const fb = { pac: ov, sho: ov, pas: ov, dri: ov, def: ov, phy: ov }; if (/DC|EI|ED/.test(p)) { fb.sho += 6; fb.def -= 18; } if (/DFC|LD|LI/.test(p)) { fb.def += 6; fb.sho -= 15; } if (p === "POR") { fb.sho -= 30; }
+      Object.keys(fb).forEach(x => fb[x] = clamp(fb[x], 25, 95));
+      CAR.gen[k] = { k, n: pick(src.f) + " " + pick(src.l), pos: p, nac: n, edad: 26, ov, f: fb, local: 1 };
+      CAR.p[k] = [-3, ov, 22 + Math.floor(rnd() * 11), 65, 100, 0, 0, 0, 0, 0, 0, ov]; } }
+  NPOOL = null;
+}
+function youthNames() { if (Object.keys(NAMES_BY_NAC).length) return; PL.forEach(p => { const w = p.n.split(" "); if (w.length < 2) return; const o = NAMES_BY_NAC[p.nac] = NAMES_BY_NAC[p.nac] || { f: [], l: [] }; o.f.push(w[0]); o.l.push(w[w.length - 1]); }); }
+const NXI = {};
+function natXI(n) {
+  if (NXI[n]) return NXI[n];
+  const sq = CAR.nat && CAR.nat.n === n && CAR.natSq && CAR.natSq.length ? CAR.natSq : natAuto(n);
+  const r = sq.filter(k => CAR.p[k] && !cps(k)[5]).map(k => ({ k, pos: pinfo(k).pos, ov: cps(k)[1] }));
+  return NXI[n] = pickXI(r, "4-3-3").filter(Boolean);
+}
+function natAuto(n) {
+  const all = natPool(n).filter(k => cps(k)[0] !== -1).sort((a, b) => cps(b)[1] - cps(a)[1]);
+  const gk = all.filter(k => pinfo(k).pos === "POR").slice(0, 3), out = all.filter(k => pinfo(k).pos !== "POR").slice(0, 23);
+  return gk.concat(out);
+}
+function natStr(n) { const xi = natXI(n); return xi.length >= 11 ? xi.reduce((a, p) => a + p.ov, 0) / xi.length : (NAT[n] ? NAT[n].s : 65); }
+const natDirty = () => { for (const k in NXI) delete NXI[k]; };
+
+/* ---------------- calendario de torneos ---------------- */
+// torneos del verano que cierra la temporada S (año S+1) y de enero (Copa Asia)
+function natTournaments(year) {
+  const t = [];
+  if (year % 4 === 2) t.push(["MUNDIAL", "Mundial " + year, "ALL", 48, year === 2030 ? ["España", "Portugal", "Marruecos", "Argentina", "Uruguay", "Paraguay"] : []]);
+  if (year % 4 === 0) { t.push(["EURO", "Eurocopa " + year, "UEFA", 24, year === 2028 ? ["Inglaterra", "Escocia", "Gales", "Irlanda"] : []]); t.push(["AMERICA", "Copa América " + year, "CONMEBOL+", 16, []]); }
+  if (year === 2027 || year % 4 === 0) t.push(["AFRICA", "Copa África " + year, "CAF", 24, year === 2027 ? ["Kenia", "Uganda", "Tanzania"] : []]);
+  if (year % 2 === 1) { t.push(["ORO", "Copa Oro " + year, "CONCACAF", 16, []]); t.push(["NATIONS", "Final Four Nations League " + year, "UEFA", 4, []]); }
+  return t;
+}
+const asiaYear = y => y % 4 === 3;   // Copa Asia: enero de 2027, 2031…
+const NAT_WIN = [6, 10, 18, 30];      // ventanas FIFA (sep, oct, nov, mar)
+function natField(conf, size, hosts) {
+  const QUOTA = { ALL: { UEFA: 16, CAF: 10, AFC: 8, CONMEBOL: 7, CONCACAF: 6, OFC: 1 } };
+  const rank = c => NATIONS.filter(x => x[1] === c).map(x => x[0]).sort((a, b) => (natStr(b) + rnd() * 6) - (natStr(a) + rnd() * 6));
+  let ids = hosts.slice();
+  if (conf === "ALL") for (const [c, q] of Object.entries(QUOTA.ALL)) { const r = rank(c).filter(n => !ids.includes(n)); ids = ids.concat(r.slice(0, q - hosts.filter(h => NAT[h].conf === c).length)); }
+  else if (conf === "CONMEBOL+") ids = ids.concat(rank("CONMEBOL"), rank("CONCACAF").slice(0, 6));
+  else ids = ids.concat(rank(conf).filter(n => !ids.includes(n)));
+  const me = CAR.nat && CAR.nat.n, q = CAR.nat && CAR.natQ;
+  if (me && q != null && NAT[me] && (conf === "ALL" || conf === NAT[me].conf || (conf === "CONMEBOL+" && ["CONMEBOL", "CONCACAF"].includes(NAT[me].conf)))) {
+    const inF = [...new Set(ids)].slice(0, size).includes(me);
+    if (q >= 1.4 && !inF) ids.splice(Math.max(hosts.length, size - 1), 0, me); else if (q < .9 && inF && !hosts.includes(me) && size < 40) ids = ids.filter(n => n !== me);
+  }
+  return [...new Set(ids)].slice(0, size).map(n => "N:" + n);
+}
+function makeNatTour(key, name, conf, size, hosts, w0) {
+  const ids = natField(conf, size, hosts); if (ids.length < 4) return null;
+  const T = { id: "T:" + name, type: "nat", key, name, teams: ids, w0, T: {}, res: [], champ: null };
+  if (ids.length === 4) { T.groups = []; T.gmd = 3; T.ko = { name: "Semifinales", ties: [[ids[0], ids[3]], [ids[1], ids[2]]] }; T.kwk = w0; return T; }
+  const pots = ids.slice().sort((a, b) => natStr(natName(b)) - natStr(natName(a))), G = Math.floor(ids.length / 4), groups = Array.from({ length: G }, () => []);
+  pots.forEach((id, i) => { const row = Math.floor(i / G); const g = row % 2 ? G - 1 - (i % G) : i % G; groups[g].push(id); });
+  T.groups = groups; T.gmd = 0; T.fx = groups.map(g => rr(g, false)); T.kwk = w0 + 3; return T;
+}
+function natKOStart(T) {
+  const G = T.groups, firsts = [], seconds = [], thirds = [];
+  G.forEach(g => { const o = sortT(T.T, g); firsts.push(o[0]); seconds.push(o[1]); thirds.push(o[2]); });
+  let q = firsts.concat(seconds); const target = Math.pow(2, Math.floor(Math.log2(q.length)) + (q.length & (q.length - 1) ? 1 : 0));
+  if (q.length < target) q = q.concat(sortT(T.T, thirds).slice(0, target - q.length));
+  const seeded = sortT(T.T, q), ties = []; for (let i = 0; i < seeded.length / 2; i++) ties.push([seeded[i], seeded[seeded.length - 1 - i]]);
+  T.ko = { name: CUP_RN(seeded.length).replace("Ronda previa", "Dieciseisavos"), ties };
+}
+function natFixtures(e) {
+  const T = e.C; if (e.kind === "nat_md") return T.fx.flatMap(rds => rds[T.gmd] || []);
+  return T.ko.ties;
+}
+function natClose(e, out) {
+  const T = e.C; T.res.push({ name: natEvName(e), r: out.map(x => ({ h: x.h, a: x.a, hg: x.hg, ag: x.ag, pens: x.pens })) });
+  if (e.kind === "nat_md") { out.forEach(r => addRes(T.T, r.h, r.a, r.hg, r.ag)); T.gmd++; if (T.gmd >= 3) natKOStart(T); return; }
+  const win = out.map(winnerOf);
+  if (win.length === 1) { T.champ = win[0]; T.done = true; carNews("titulo", `¡${natName(T.champ)} gana el ${T.name}!`, `Final: ${natName(out[0].h)} ${out[0].hg}-${out[0].ag} ${natName(out[0].a)}${out[0].pens ? ` (pen. ${out[0].pens[0]}-${out[0].pens[1]})` : ""}.`);
+    if (T.champ === myNat()) { CAR.trophies.push({ s: CAR.season, n: T.name }); CAR.fed = clamp((CAR.fed || 60) + 30, 0, 100); } natJudge(T); return; }
+  const ties = []; for (let i = 0; i + 1 < win.length; i += 2) ties.push([win[i], win[i + 1]]);
+  T.ko = { name: CUP_RN(win.length), ties }; T.kwk++;
+}
+const natEvName = e => e.kind === "nat_md" ? `Grupos · J${e.C.gmd + 1}` : e.C.ko.name;
+function natEvents(w) {
+  const ev = [];
+  for (const T of (CAR.ntours || [])) { if (T.done) continue;
+    if (T.gmd < 3 && T.groups.length && T.w0 + T.gmd === w) ev.push({ C: T, kind: "nat_md" });
+    else if (T.ko && T.kwk === w) ev.push({ C: T, kind: "nat_ko" }); }
+  if (NAT_WIN.includes(w) && !(CAR.winDone || []).includes(w)) ev.push({ C: { id: "W:" + w, name: "Ventana internacional", type: "win" }, kind: "win" });
+  return ev;
+}
+// ventana FIFA: amistosos/clasificación; convocados de tu club; partido de tu selección
+function natWindowFixtures() {
+  const ids = NATIONS.map(x => "N:" + x[0]), t = shuffle(ids.slice()), fx = [];
+  for (let i = 0; i + 1 < t.length; i += 2) fx.push([t[i], t[i + 1]]);
+  const me = myNat(); if (me) { const i = fx.findIndex(f => f.includes(me)); if (i > 0) fx.unshift(fx.splice(i, 1)[0]); }
+  return fx;
+}
+function natWindowClose(w, out) {
+  (CAR.winDone = CAR.winDone || []).push(w);
+  const mine = ROST[CAR.club].filter(k => { const n = natOf(pinfo(k).nac); return NAT[n] && natXI(n).some(p => p.k === k); });
+  if (mine.length) { carNews("seleccion", `${mine.length} jugador${mine.length > 1 ? "es" : ""} de tu club, convocado${mine.length > 1 ? "s" : ""} con su selección`, mine.slice(0, 8).map(k => `${shortName(pinfo(k).n)} (${natOf(pinfo(k).nac)})`).join(", ") + ".");
+    mine.forEach(k => { const s = cps(k); s[4] = clamp(s[4] - 10, 30, 100); if (rnd() < .03) { s[5] = 1 + Math.floor(rnd() * 4); carNews("lesion", `${pinfo(k).n} vuelve lesionado de la selección`, `Baja de ${s[5]} semana(s).`); } }); }
+  const r = out.find(x => x.h === myNat() || x.a === myNat());
+  if (r) { const home = r.h === myNat(), gf = home ? r.hg : r.ag, ga = home ? r.ag : r.hg, pts = gf > ga ? 3 : gf === ga ? 1 : 0;
+    CAR.natPts = (CAR.natPts || []).concat(pts).slice(-6); CAR.natQ = CAR.natPts.reduce((a, b) => a + b, 0) / CAR.natPts.length;
+    CAR.fed = clamp((CAR.fed || 60) + (pts === 3 ? 4 : pts ? 0 : -6), 0, 100);
+    if (CAR.fed < 15) natFire("Malos resultados en la clasificación."); }
+}
+function natSetupSeason() {
+  const y = CAR.season + 1; CAR.ntours = []; CAR.winDone = [];
+  if (asiaYear(y)) { const T = makeNatTour("ASIA", "Copa Asia " + y, "AFC", 24, y === 2027 ? ["Arabia Saudí"] : [], 21); if (T) CAR.ntours.push(T); }
+  let w0 = CAR_W + 1; for (const [key, name, conf, size, hosts] of natTournaments(y)) { const T = makeNatTour(key, name, conf, size, hosts, w0); if (T) CAR.ntours.push(T); }
+  if (CAR.nat) { const t = CAR.ntours.find(T => T.teams.includes(myNat())); CAR.nat.obj = t ? natObjective(t) : null; CAR.nat.tour = t ? t.name : null; }
+}
+const natSummerLeft = () => (CAR.ntours || []).some(T => !T.done && T.w0 > CAR_W);
+function natObjective(T) { const r = T.teams.slice().sort((a, b) => natStr(natName(b)) - natStr(natName(a))).indexOf(myNat()); return r === 0 ? "campeón" : r < 4 ? "semis" : r < 8 ? "cuartos" : r < T.teams.length / 2 ? "octavos" : "grupos"; }
+const NOBJ = { "campeón": "ganar el torneo", semis: "llegar a semifinales", cuartos: "llegar a cuartos", octavos: "pasar la fase de grupos", grupos: "competir con dignidad" };
+function natJudge(T) {
+  if (!CAR.nat || !T.teams.includes(myNat())) return; const ko = T.res.filter(r => r.r.some(x => x.h === myNat() || x.a === myNat())).map(r => r.name);
+  const reached = T.champ === myNat() ? 5 : ko.includes("Final") ? 4 : ko.includes("Semifinales") ? 3 : ko.includes("Cuartos") ? 2 : ko.some(n => /Octavos|Dieciseisavos/.test(n)) ? 1 : 0;
+  const need = { "campeón": 5, semis: 3, cuartos: 2, octavos: 1, grupos: 0 }[CAR.nat.obj || "grupos"];
+  CAR.nat.hist = (CAR.nat.hist || []).concat({ t: T.name, r: reached });
+  CAR.fed = clamp((CAR.fed || 60) + (reached - need) * 12, 0, 100);
+  if (reached < need - 2 || (reached < need && CAR.fed < 35)) natFire(`No se cumplió el objetivo en el ${T.name} (${NOBJ[CAR.nat.obj]}).`);
+  else carNews("seleccion", `${CAR.nat.n} cierra el ${T.name}`, reached >= need ? "La federación, satisfecha con el seleccionador." : "Por debajo de lo esperado, pero sigues en el cargo.");
+}
+function natFire(why) { if (!CAR.nat) return; carNews("despido", `La federación de ${CAR.nat.n} destituye a ${CAR.name}`, why + " Sigues en tu club."); CAR.nat = null; CAR.natSq = null; CAR.fed = 60; natDirty(); }
+function natOffers() {
+  const rep = cstr(CAR.club) + Math.min(6, CAR.trophies.length) + (CAR.junta - 60) / 15;
+  const pool = NATIONS.filter(x => natStr(x[0]) <= rep + 1 && natStr(x[0]) >= rep - 12 && (!CAR.nat || CAR.nat.n !== x[0])).map(x => x[0]);
+  CAR.natOff = shuffle(pool).slice(0, 3);
+}
+function natAccept(n) {
+  CAR.nat = { n, since: CAR.season, obj: null, hist: [] }; CAR.fed = 60; CAR.natPts = []; CAR.natQ = null; CAR.natSq = natAuto(n); CAR.natOff = []; natDirty();
+  const t = (CAR.ntours || []).find(T => T.teams.includes(myNat())); if (t) { CAR.nat.obj = natObjective(t); CAR.nat.tour = t.name; }
+  carNews("seleccion", `${CAR.name}, nuevo seleccionador de ${n}`, `Compaginará el cargo con su club.${t ? ` Objetivo: ${NOBJ[CAR.nat.obj]} en el ${t.name}.` : ""}`); carSave();
+}
+
+/* ---------------- interfaz ---------------- */
+function carNatTab() {
+  if (!CAR.nat) {
+    if (!CAR.natOff) natOffers();
+    return `<div class="cbox"><div class="lbl">Selecciones</div><p class="mute">Puedes compaginar tu club con una selección. Las federaciones te ofrecen el cargo según tu prestigio (nivel del club, títulos y confianza de tu directiva). Cada temporada llegan ofertas nuevas.</p>
+      ${CAR.natOff.length ? CAR.natOff.map(n => `<div class="lrow"><span>${esc(n)}</span><span class="sc">nivel ${Math.round(natStr(n))}</span><span class="r"><button class="mbtn sm pri" data-nav data-a="natAcc" data-n="${esc(n)}">Aceptar</button></span></div>`).join("") : `<div class="mute">Ahora mismo no hay ofertas. Gana partidos y títulos.</div>`}</div>${natTourBox()}`;
+  }
+  const n = CAR.nat.n, sq = CAR.natSq || natAuto(n), pool = natPool(n).filter(k => cps(k)[0] !== -1).sort((a, b) => cps(b)[1] - cps(a)[1]).slice(0, 45);
+  return `<div class="cgrid"><div class="cbox"><div class="lbl">Seleccionador de ${esc(n)}</div>${meter("Federación", CAR.fed || 60)}
+      <div class="mute">${CAR.nat.tour ? `Próximo torneo: <b>${esc(CAR.nat.tour)}</b> · objetivo: <b>${NOBJ[CAR.nat.obj]}</b>` : "Este año no hay torneo para tu selección: ventanas de clasificación y amistosos."}</div>
+      <div class="mute">Convocados: <b>${sq.length}/26</b> · nivel ${Math.round(natStr(n))}</div>
+      <div style="display:flex;gap:.6rem;margin-top:.6rem;flex-wrap:wrap"><button class="mbtn" data-nav data-a="natAuto">Convocatoria automática</button><button class="mbtn" data-nav data-a="natQuit">Dimitir</button></div></div>${natTourBox()}</div>
+    <h4>Convocatoria (toca para convocar o desconvocar)</h4>${pool.map(k => { const p = pinfo(k), s = cps(k), on = sq.includes(k);
+      return `<button class="lurow cs${on ? " on" : ""}" data-nav data-a="natPick" data-k="${esc(k)}"><span class="lr">${p.pos}</span><span class="ln">${esc(p.n)} <span class="mute">· ${s[0] >= 0 ? esc(cname(s[0])) : "liga local"}${s[5] ? " · lesionado" : ""}</span></span><span class="lp">${s[1]}</span></button>`; }).join("")}`;
+}
+function natTourBox() {
+  const T = (CAR.ntours || []); if (!T.length) return "";
+  return `<div class="cbox"><div class="lbl">Torneos de esta temporada</div>${T.map(t => `<div class="lrow"><span>${esc(t.name)}</span><span class="sc">${t.teams.length} sel.</span><span class="r">${t.champ ? "Campeón: " + esc(natName(t.champ)) : t.w0 > CAR_W ? "en verano" : "semana " + t.w0}</span></div>`).join("")}</div>`;
+}
+ACT.natAcc = el => { natAccept(el.dataset.n); renderCar(); };
+ACT.natAuto = () => { CAR.natSq = natAuto(CAR.nat.n); natDirty(); carSave(); renderCar(); };
+ACT.natQuit = () => dlg("Dimitir", `¿Dejar la selección de ${CAR.nat.n}?`, [["Sí", () => { carNews("seleccion", `${CAR.name} dimite como seleccionador de ${CAR.nat.n}`, ""); CAR.nat = null; CAR.natSq = null; natDirty(); closeDlg(); carSave(); renderCar(); }, true], ["No", closeDlg]]);
+ACT.natPick = el => { const k = el.dataset.k, sq = CAR.natSq = CAR.natSq || natAuto(CAR.nat.n);
+  if (sq.includes(k)) CAR.natSq = sq.filter(x => x !== k); else if (sq.length >= 26) return toast("Máximo 26 convocados"); else sq.push(k);
+  natDirty(); carSave(); renderCar(); reFocus(`[data-a="natPick"][data-k="${k}"]`); };
 
 </script>
 </body>
