@@ -1,29 +1,47 @@
 <!DOCTYPE html>
 <html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
 <title>MDG 27 · Street Football</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,600;0,700;0,800;1,800;1,900&display=swap" rel="stylesheet">
 <style>
-:root{--acc:#c8ff3c;--bg:#07090f}
+:root{--acc:#c8ff3c;--bg:#07090f;--gold:#f5c542;--gold2:#ffd86b;--glass:rgba(8,14,28,.82);--line:rgba(255,255,255,.14);--bc:"Barlow Condensed",system-ui,sans-serif}
 *{box-sizing:border-box}html,body{margin:0;height:100%;overflow:hidden;background:var(--bg);color:#fff;font:15px/1.4 system-ui,-apple-system,Segoe UI,sans-serif;touch-action:none;user-select:none}
 canvas{display:block}
 #hud{position:fixed;top:10px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.55);padding:6px 16px;border-radius:10px;font-weight:800;font-size:20px;letter-spacing:.04em;display:none}
-#tip{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.6);padding:8px 14px;border-radius:10px;font-weight:600;opacity:0;transition:opacity .3s;text-align:center;max-width:90vw}
-#msg{position:fixed;top:38%;left:0;right:0;text-align:center;font-size:56px;font-weight:900;font-style:italic;text-shadow:0 4px 18px #000;opacity:0;transition:opacity .4s;pointer-events:none}
-#help{position:fixed;left:10px;top:10px;background:rgba(0,0,0,.5);padding:8px 10px;border-radius:8px;font-size:12px;line-height:1.5;max-width:300px}
-#help b{color:var(--acc)}#onl{position:fixed;right:10px;top:48px;background:#ffd23a;color:#111;border:0;border-radius:8px;padding:7px 12px;font:800 13px system-ui;cursor:pointer}#back{position:fixed;right:10px;top:10px;background:rgba(0,0,0,.55);color:#fff;border:1px solid #fff4;border-radius:8px;padding:6px 12px;font:600 13px system-ui;text-decoration:none}
+#tip{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:rgba(8,14,28,.85);border:1px solid rgba(255,255,255,.14);border-left:4px solid var(--gold);padding:9px 16px;border-radius:10px;font:600 16px var(--bc);letter-spacing:.02em;opacity:0;transition:opacity .3s;text-align:center;max-width:90vw;backdrop-filter:blur(6px)}#tip b{color:var(--gold2)}
+#msg{position:fixed;top:36%;left:0;right:0;text-align:center;font:italic 900 64px var(--bc);letter-spacing:.03em;text-transform:uppercase;text-shadow:0 4px 18px #000;opacity:0;transition:opacity .4s;pointer-events:none}
 #load{position:fixed;inset:0;display:grid;place-items:center;background:var(--bg);font-size:18px;font-weight:700;z-index:9}
-#panel{position:fixed;inset:auto 0 70px 0;margin:auto;width:min(560px,92vw);background:rgba(10,14,24,.92);border:1px solid #fff3;border-radius:14px;padding:16px;display:none;z-index:5}
-#panel h3{margin:0 0 6px}#panel .row{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}#panel button,#panel a{background:#1f2937;color:#fff;border:1px solid #fff3;border-radius:9px;padding:8px 12px;font:600 14px system-ui;cursor:pointer;text-decoration:none}
+#panel{position:fixed;inset:auto 0 76px 0;margin:auto;width:min(560px,92vw);background:linear-gradient(160deg,#121c33f2,#0a1222f2);border:1px solid rgba(255,255,255,.14);border-top:3px solid var(--gold);border-radius:16px;padding:18px 20px;display:none;z-index:5;box-shadow:0 18px 50px #000a}
+#panel h3{margin:0 0 6px;font:italic 900 30px var(--bc);text-transform:uppercase}#panel .row{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}#panel button,#panel a{background:#1d2a48;color:#fff;border:1px solid rgba(255,255,255,.14);border-radius:10px;padding:9px 16px;font:800 15px var(--bc);letter-spacing:.06em;text-transform:uppercase;cursor:pointer;text-decoration:none}#panel a:first-child,#panel .row>a{background:linear-gradient(180deg,var(--gold2),var(--gold));color:#141414;border:0}
 #panel .sw{width:34px;height:34px;border-radius:50%;padding:0}
 #power{position:fixed;bottom:84px;left:50%;width:180px;height:10px;transform:translateX(-50%);background:#0007;border-radius:6px;opacity:0}#power i{display:block;height:100%;width:0;background:linear-gradient(90deg,#c8ff3c,#ff4d4d);border-radius:6px}
 .tc{display:none;position:fixed;z-index:4}@media (pointer:coarse){.tc{display:block}#help{display:none}}
-#joy{left:24px;bottom:24px;width:130px;height:130px;border-radius:50%;background:#ffffff18;border:2px solid #ffffff40}#joy i{position:absolute;left:40px;top:40px;width:50px;height:50px;border-radius:50%;background:#ffffff70}
-.tb{width:72px;height:72px;border-radius:50%;background:#ffffff26;border:2px solid #ffffff55;display:grid!important;place-items:center;font-weight:800;font-size:12px}
+#joy{left:24px;bottom:24px;width:140px;height:140px;border-radius:50%;background:radial-gradient(circle,rgba(8,14,28,.25),rgba(8,14,28,.6));border:2px solid rgba(245,197,66,.55)}#joy i{position:absolute;left:43px;top:43px;width:54px;height:54px;border-radius:50%;background:linear-gradient(180deg,var(--gold2),var(--gold));box-shadow:0 3px 10px #0008}
+.tb{width:74px;height:74px;border-radius:50%;background:rgba(8,14,28,.62);border:3px solid var(--gold);display:grid!important;place-items:center;font:800 14px var(--bc);letter-spacing:.06em;box-shadow:0 4px 12px #0008}#bB{border-color:#e11d48}#bA{border-color:#16a34a}#bC{border-color:#f59e0b}#bD{border-color:#0ea5e9}
 #bA{right:110px;bottom:30px}#bB{right:24px;bottom:96px}#bC{right:24px;bottom:12px;width:60px;height:60px}#bD{right:190px;bottom:24px;width:62px;height:62px}
+#tb{position:fixed;right:12px;top:10px;display:flex;gap:8px;z-index:8}
+#tb button{font:800 15px var(--bc);letter-spacing:.08em;text-transform:uppercase;color:#fff;background:var(--glass);border:1px solid var(--line);border-radius:999px;padding:8px 16px;cursor:pointer;backdrop-filter:blur(6px);box-shadow:0 4px 14px #0006}
+#tb button:hover{border-color:var(--gold);color:var(--gold2)}
+.modal{position:fixed;inset:0;z-index:30;display:grid;place-items:center;background:rgba(3,6,14,.72);backdrop-filter:blur(4px);padding:16px}
+.card{background:linear-gradient(160deg,#121c33,#0a1222);border:1px solid var(--line);border-top:3px solid var(--gold);border-radius:16px;padding:22px 26px;width:min(460px,94vw);max-height:90vh;overflow:auto;box-shadow:0 20px 60px #000a;text-align:center}
+.card.wide{width:min(820px,96vw);text-align:left}
+.card h3{margin:0 0 12px;font:italic 900 36px var(--bc);text-transform:uppercase}
+.card .col{display:flex;flex-direction:column;gap:10px}
+.card button{font:800 18px var(--bc);letter-spacing:.06em;text-transform:uppercase;padding:12px 22px;border-radius:10px;border:1px solid var(--line);background:#1d2a48;color:#fff;cursor:pointer}
+.card button.pri{background:linear-gradient(180deg,var(--gold2),var(--gold));color:#141414;border:0}
+.card button:hover{filter:brightness(1.15)}
+.kl{display:grid;grid-template-columns:auto 1fr;gap:6px 12px;font-size:15px;align-items:center}.kl kbd{font:800 14px var(--bc);background:#ffffff14;border:1px solid var(--line);border-bottom-width:3px;border-radius:6px;padding:2px 8px;text-align:center;white-space:nowrap}
+.cr{opacity:.55;font-size:11px;margin-top:14px;line-height:1.4}
 </style></head><body>
 <div id="load">Cargando el barrio…</div>
 <div id="hud"></div><div id="msg"></div><div id="tip"></div><div id="power"><i></i></div><div id="panel"></div>
-<div id="help"><b>Street Football</b><br>Mover: WASD / flechas · Correr: Shift<br>Girar cámara: Z / X o arrastrar<br><b>En el barrio</b> Entrar / usar: E<br><b>Partido</b> los mismos controles que el fútbol 11 (botón Controles dentro del partido)<br><span style="opacity:.6;font-size:10px">Modelos 3D (CC BY, sketchfab.com): «Street Props» de syedraza · «Plant Series – Palm Tree» de UPWARD · «Beach Umbrella» de stealth86 · «Sun lounger 3D» de rodestrela · «Ice Cream Cart» de tylerlherring</span></div>
-<a id="back" href="index.html">← MDG 27</a><button id="onl" onclick="goOnline()">Online con amigos</button>
+<div id="tb"><button id="bMenu" onclick="hubMenu(true)">Menú</button></div>
+<div id="hmenu" class="modal" style="display:none" onclick="if(event.target===this)hubMenu(false)"><div class="card"><h3>Street Football</h3><div class="col">
+<button class="pri" onclick="hubMenu(false)">Seguir jugando</button><button onclick="goOnline()">Online con amigos</button><button onclick="hubHelp(true)">Controles</button><button onclick="location.href='index.html'">Volver a MDG 27</button></div></div></div>
+<div id="hhelp" class="modal" style="display:none" onclick="if(event.target===this)hubHelp(false)"><div class="card wide"><h3>Controles</h3><div class="kl">
+<kbd>WASD / flechas</kbd><span>Moverte</span><kbd>Shift</kbd><span>Correr</span><kbd>Z / X · arrastrar</kbd><span>Girar la cámara</span><kbd>E</kbd><span>Entrar en tiendas, usar, jugar en la cancha de la playa o los toques</span><kbd>Esc</kbd><span>Menú</span><kbd>Móvil</kbd><span>Joystick a la izquierda; botones a la derecha</span></div>
+<div style="margin-top:10px;opacity:.85">En los partidos de la jaula se usan los mismos controles que en el fútbol 11 (menú de pausa &gt; Controles).</div>
+<div class="cr">Modelos 3D (CC BY, sketchfab.com): «Street Props» de syedraza · «Plant Series – Palm Tree» de UPWARD · «Beach Umbrella» de stealth86 · «Sun lounger 3D» de rodestrela · «Ice Cream Cart» de tylerlherring</div>
+<div style="text-align:center;margin-top:14px"><button class="pri" onclick="hubHelp(false)">Cerrar</button></div></div></div>
 <div class="tc" id="joy"><i></i></div><div class="tc tb" id="bA">PASE</div><div class="tc tb" id="bB">TIRO</div><div class="tc tb" id="bC">CORRER</div><div class="tc tb" id="bD">REGATE</div>
 <script src="three.js"></script>
 <script>
@@ -179,7 +197,9 @@ function loco(a, sp, own) { if (a.lock > 0) return; if (sp < .45) play(a, a.gk ?
 function once(a, n, t, ts = 1.4) { play(a, n, .08, true, ts); a.lock = t; }
 // ---------- entrada ----------
 const keys = {}; let joy = { x: 0, y: 0, id: null }, touchRun = 0, charge = -1;
-addEventListener("keydown", e => { if (keys[e.code]) return; keys[e.code] = 1; onBtn(e.code); });
+addEventListener("keydown", e => { if (e.code === "Escape") { hubMenu($("#hmenu").style.display === "none"); return; } if (keys[e.code]) return; keys[e.code] = 1; onBtn(e.code); });
+function hubMenu(on) { $("#hmenu").style.display = on ? "" : "none"; if (!on) $("#hhelp").style.display = "none"; }
+function hubHelp(on) { $("#hhelp").style.display = on ? "" : "none"; }
 addEventListener("keyup", e => { keys[e.code] = 0; if (e.code === "KeyK") release(); });
 const jEl = $("#joy"), jK = $("#joy i");
 jEl.addEventListener("pointerdown", e => { joy.id = e.pointerId; jEl.setPointerCapture(e.pointerId); jm(e); }); jEl.addEventListener("pointermove", e => e.pointerId === joy.id && jm(e)); jEl.addEventListener("pointerup", () => { joy.id = null; joy.x = joy.y = 0; jK.style.transform = ""; });
@@ -191,7 +211,7 @@ function input() { let x = (keys.KeyD || keys.ArrowRight ? 1 : 0) - (keys.KeyA |
   if (g) { const dz = v => Math.abs(v) < .15 ? 0 : v; if (dz(g.axes[0]) || dz(g.axes[1])) { x = dz(g.axes[0]); y = dz(g.axes[1]); } padBtns(g); }
   const m = Math.hypot(x, y); if (m > 1) { x /= m; y /= m; } return { x, y, run: keys.ShiftLeft || keys.ShiftRight || touchRun || (g && g.buttons[7] && g.buttons[7].value > .3) }; }
 let padPrev = [];
-function padBtns(g) { const b = i => g.buttons[i] && g.buttons[i].pressed; [[0, mode === "hub" ? "KeyE" : "KeyJ"], [1, "KeyK"], [2, "KeyL"], [4, "KeyQ"]].forEach(([i, c]) => { if (b(i) && !padPrev[i]) onBtn(c); if (!b(i) && padPrev[i] && c === "KeyK") release(); padPrev[i] = b(i); }); }
+function padBtns(g) { const b = i => g.buttons[i] && g.buttons[i].pressed; if (b(9) && !padPrev[9]) hubMenu($("#hmenu").style.display === "none"); padPrev[9] = b(9); [[0, mode === "hub" ? "KeyE" : "KeyJ"], [1, "KeyK"], [2, "KeyL"], [4, "KeyQ"]].forEach(([i, c]) => { if (b(i) && !padPrev[i]) onBtn(c); if (!b(i) && padPrev[i] && c === "KeyK") release(); padPrev[i] = b(i); }); }
 // cámara relativa: arriba en el mando = hacia el fondo de la pantalla
 function camDir(ix, iy) { const f = new THREE.Vector3(); cam.getWorldDirection(f); f.y = 0; f.normalize(); const r = new THREE.Vector3(-f.z, 0, f.x); return { x: r.x * ix - f.x * iy, z: r.z * ix - f.z * iy }; }
 // ---------- girar la cámara ----------

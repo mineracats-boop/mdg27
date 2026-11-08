@@ -500,15 +500,15 @@
     const touch = window.TOUCHUI || ("ontouchstart" in window && matchMedia("(pointer: coarse)").matches); if (!touch) return; TS.on = true;
     const ui = document.createElement("div"); ui.id = "tui"; Object.assign(ui.style, { position: "fixed", inset: 0, pointerEvents: "none", zIndex: 5, userSelect: "none", webkitUserSelect: "none" }); document.body.appendChild(ui);
     const base = document.createElement("div"), knob = document.createElement("div");
-    Object.assign(base.style, { position: "absolute", left: "28px", bottom: "28px", width: "150px", height: "150px", borderRadius: "50%", background: "rgba(255,255,255,.10)", border: "2px solid rgba(255,255,255,.35)", pointerEvents: "auto", touchAction: "none" });
-    Object.assign(knob.style, { position: "absolute", left: "45px", top: "45px", width: "60px", height: "60px", borderRadius: "50%", background: "rgba(255,255,255,.45)" }); base.appendChild(knob); ui.appendChild(base);
+    Object.assign(base.style, { position: "absolute", left: "28px", bottom: "28px", width: "150px", height: "150px", borderRadius: "50%", background: "radial-gradient(circle,rgba(8,14,28,.25),rgba(8,14,28,.6))", border: "2px solid rgba(245,197,66,.55)", pointerEvents: "auto", touchAction: "none", boxShadow: "0 6px 18px #0007" });
+    Object.assign(knob.style, { position: "absolute", left: "45px", top: "45px", width: "60px", height: "60px", borderRadius: "50%", background: "linear-gradient(180deg,#ffd86b,#f5c542)", boxShadow: "0 3px 10px #0008" }); base.appendChild(knob); ui.appendChild(base);
     let sid = null; const setK = (e) => { const r = base.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2; let dx = (e.clientX - cx) / 60, dy = (e.clientY - cy) / 60; const l = Math.hypot(dx, dy); if (l > 1) { dx /= l; dy /= l; } TS.x = dx; TS.y = dy; knob.style.transform = `translate(${dx * 45}px,${dy * 45}px)`; };
     base.addEventListener("pointerdown", e => { sid = e.pointerId; base.setPointerCapture(sid); setK(e); e.preventDefault(); });
     base.addEventListener("pointermove", e => { if (e.pointerId === sid) setK(e); });
     const end = e => { if (e.pointerId !== sid) return; sid = null; TS.x = TS.y = 0; knob.style.transform = ""; }; base.addEventListener("pointerup", end); base.addEventListener("pointercancel", end);
     const B = [["TIRO", "Space", 0, 0, 84, "#e11d48"], ["PASE", "KeyJ", 98, 4, 70, "#16a34a"], ["HUECO", "KeyI", 12, 100, 62, "#2563eb"], ["CENTRO", "KeyL", 102, 88, 60, "#9333ea"], ["ESPRINT", "ShiftLeft", 184, 4, 58, "#f59e0b"], ["CAMBIAR", "KeyQ", 186, 76, 52, "#64748b"], ["RULETA", "KeyR", 60, 172, 50, "#0ea5e9"]];
     for (const [lb, code, rx, by, sz, col] of B) { const b = document.createElement("div"); b.textContent = lb;
-      Object.assign(b.style, { position: "absolute", right: (24 + rx) + "px", bottom: (24 + by) + "px", width: sz + "px", height: sz + "px", borderRadius: "50%", background: col + "cc", border: "2px solid rgba(255,255,255,.6)", color: "#fff", font: "800 11px system-ui", display: "grid", placeItems: "center", pointerEvents: "auto", touchAction: "none", boxShadow: "0 3px 10px #0007" });
+      Object.assign(b.style, { position: "absolute", right: (24 + rx) + "px", bottom: (24 + by) + "px", width: sz + "px", height: sz + "px", borderRadius: "50%", background: "rgba(8,14,28,.62)", border: "3px solid " + col, color: "#fff", font: "800 " + (sz > 70 ? 15 : 12) + "px 'Barlow Condensed',system-ui", letterSpacing: ".06em", display: "grid", placeItems: "center", pointerEvents: "auto", touchAction: "none", boxShadow: "0 4px 12px #0008, inset 0 0 12px " + col + "55", backdropFilter: "blur(3px)" });
       const dn = e => { K[code] = true; b.style.filter = "brightness(1.35)"; e.preventDefault(); }, up = () => { K[code] = false; b.style.filter = ""; };
       b.addEventListener("pointerdown", dn); b.addEventListener("pointerup", up); b.addEventListener("pointercancel", up); b.addEventListener("pointerleave", up); ui.appendChild(b); }
     const hp = document.getElementById("help"); if (hp) hp.style.display = "none"; const hb = document.getElementById("hb"); if (hb) hb.style.display = "none"; const en = document.querySelector('a[href="entrenamiento.html"]'); if (en) en.style.display = "none";
@@ -1470,10 +1470,10 @@
     M.crowdEx = Math.max(M.crowdEx || 0, .35); if (CROWD) { CROWD.U.uT.value += dt; CROWD.U.uEx.value = M.crowdEx; } crowdSound();
     for (const p of P) { pose(p, dt, p.gk ? GKT : FWD); place(p); } for (const a of OFF) { pose(a, dt, FWD); place(a); } }
   /* ---------- pausa (Esc / Start): reanudar, cámara, controles, salir ---------- */
-  const pz = document.createElement("div"); Object.assign(pz.style, { position: "fixed", inset: 0, display: "none", placeItems: "center", alignContent: "center", gap: "12px", background: "#050a14d9", zIndex: 20, textAlign: "center" });
+  const pz = document.createElement("div"); Object.assign(pz.style, { position: "fixed", inset: 0, display: "none", placeItems: "center", alignContent: "center", gap: "10px", background: "radial-gradient(ellipse at center,#14213de6,#050a14f2)", zIndex: 20, textAlign: "center", backdropFilter: "blur(4px)", overflowY: "auto", padding: "16px 0" }); if (innerHeight < 560) pz.style.gridTemplateColumns = "repeat(2,auto)";
   const camNames = ["Tele", "Tele alta", "Cercana"]; M.camMode = +(localStorage.getItem && (() => { try { return localStorage.getItem("mdg27cam"); } catch (e) { return 0; } })()) || 0;
-  const pzBtn = (t, f) => { const b = document.createElement("button"); b.textContent = t; Object.assign(b.style, { font: "800 18px system-ui", padding: "12px 28px", minWidth: "260px", borderRadius: "10px", border: "0", background: "#ffd23a", color: "#111", cursor: "pointer" }); b.onclick = f; pz.appendChild(b); return b; };
-  const pzT = document.createElement("h2"); pzT.textContent = "PAUSA"; Object.assign(pzT.style, { margin: "0 0 8px", fontStyle: "italic", fontSize: "40px" }); pz.appendChild(pzT);
+  const pzBtn = (t, f) => { const b = document.createElement("button"); b.textContent = t; Object.assign(b.style, { font: "800 18px 'Barlow Condensed',system-ui", letterSpacing: ".06em", textTransform: "uppercase", padding: "11px 28px", minWidth: "280px", borderRadius: "10px", border: "1px solid rgba(255,255,255,.14)", background: pz.children.length <= 1 ? "linear-gradient(180deg,#ffd86b,#f5c542)" : "rgba(20,32,58,.9)", color: pz.children.length <= 1 ? "#141414" : "#fff", cursor: "pointer" }); b.onclick = f; pz.appendChild(b); return b; };
+  const pzT = document.createElement("h2"); pzT.textContent = "PAUSA"; Object.assign(pzT.style, { gridColumn: "1 / -1", margin: "0 0 10px", font: "italic 900 54px 'Barlow Condensed',system-ui", letterSpacing: ".04em" }); pz.appendChild(pzT);
   pzBtn("Reanudar", () => setPause(false)); const camB = pzBtn("", () => { M.camMode = (M.camMode + 1) % camNames.length; try { localStorage.setItem("mdg27cam", M.camMode); } catch (e) {} camB.textContent = "Cámara: " + camNames[M.camMode]; }); camB.textContent = "Cámara: " + camNames[M.camMode];
   const MN = ["Defensiva", "Equilibrada", "Ofensiva", "Presión alta"], HT = () => M.humanTeam >= 0 ? M.humanTeam : 0;
   const tacB = pzBtn("", () => { const T = TEAMS[HT()]; T.ment = ((T.ment || 0) + 2) % 4 - 1; tacB.textContent = "Táctica: " + MN[(T.ment || 0) + 1]; }); tacB.textContent = "Táctica: Equilibrada";
@@ -1481,7 +1481,7 @@
   const QN = { alta: "Alta", media: "Media", baja: "Baja" }; let qNext = QUAL;
   const qB = pzBtn("Calidad: " + QN[QUAL], () => { qNext = qNext === "alta" ? "media" : qNext === "media" ? "baja" : "alta"; try { localStorage.setItem("mdg27q", qNext); } catch (e) {} qB.textContent = "Calidad: " + QN[qNext] + (qNext !== QUAL ? " (en el próximo partido)" : ""); });
   pzBtn("Configurar mando", () => startPadCfg());
-  pzBtn("Controles", () => { const h = $("#help"); if (h) h.style.display = h.style.display === "none" ? "" : "none"; });
+  pzBtn("Controles", () => { const h = $("#help"); if (h) h.style.display = ""; });
   // panel de cambios: primero el que sale (con su energía), luego el que entra
   const sp = document.createElement("div"); Object.assign(sp.style, { position: "fixed", inset: 0, display: "none", placeItems: "center", alignContent: "center", background: "#050a14f2", zIndex: 21, gap: "10px", padding: "16px", overflow: "auto" }); document.body.appendChild(sp);
   function openSubs(sel) { const t = HT(), T = TEAMS[t]; sp.innerHTML = ""; sp.style.display = "grid";
@@ -1491,7 +1491,8 @@
     if (!sel) { for (const q of P.filter(q => q.t === t && !q.sent)) { const e = Math.round((q.sta == null ? 1 : q.sta) * 100); item(`${q.num || ""} ${q.name}`, `${q.role} · energía ${e}%${q.inj ? " · lesionado" : ""}`, "", () => openSubs(q), T.subs >= 5); } }
     else { T.bench.forEach((b, i) => item(`${b.num} ${b.n}`, b.role + (b.used ? " · ya ha jugado" : ""), "", async () => { const ok = await doSub(sel, i); sp.style.display = "none"; subB.textContent = `Cambios (${T.subs}/5)`; if (!ok) msg("Ese cambio no se puede hacer", 1.5); }, b.used || (b.role === "POR") !== !!sel.gk)); }
     const back = document.createElement("button"); back.textContent = sel ? "Atrás" : "Cerrar"; Object.assign(back.style, { font: "800 16px system-ui", padding: "10px 24px", borderRadius: "8px", border: 0, background: "#ffd23a", cursor: "pointer", justifySelf: "center", marginTop: "6px" }); back.onclick = () => sel ? openSubs() : (sp.style.display = "none"); sp.appendChild(back); }
-  if (EMB) pzBtn("Abandonar partido", () => { if (confirm("¿Abandonar el partido?")) parent.postMessage({ type: "mdg27quit" }, "*"); });
+  if (!EMB) pzBtn("Entrenamiento libre", () => { location.href = "entrenamiento.html"; });
+  pzBtn("Salir del partido", () => { if (window.mdgAsk) window.mdgAsk(); });
   document.body.appendChild(pz);
   // configurar mando: pulsar el botón que quieres para cada acción
   const PADCFG = { on: false }; const PCA = [["pass", "PASE"], ["shoot", "TIRO / ENTRADA"], ["through", "PASE AL HUECO"], ["lob", "CENTRO / SEGADA"], ["sprint", "ESPRINT"], ["skill", "TIRO CON ROSCA"], ["sw", "CAMBIAR JUGADOR"], ["jockey", "CUBRIR / TEMPORIZAR"], ["spin", "RULETA"], ["stop", "FRENAR BALÓN"], ["pause", "PAUSA"]];

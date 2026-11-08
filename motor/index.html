@@ -1,6 +1,24 @@
 <!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>MDG27 Partido</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,600;0,700;0,800;1,800;1,900&display=swap" rel="stylesheet">
 <style>
+
+:root{--gold:#f5c542;--gold2:#ffd86b;--glass:rgba(8,14,28,.82);--line:rgba(255,255,255,.14);--bc:"Barlow Condensed",system-ui,sans-serif}
+#tb{position:fixed;right:12px;top:10px;display:flex;gap:8px;z-index:8}
+#tb button,.mbt{font:800 15px var(--bc);letter-spacing:.08em;text-transform:uppercase;color:#fff;background:var(--glass);border:1px solid var(--line);border-radius:999px;padding:8px 16px;cursor:pointer;backdrop-filter:blur(6px);box-shadow:0 4px 14px #0006}
+#tb button:hover,.mbt:hover{border-color:var(--gold);color:var(--gold2)}
+.modal{position:fixed;inset:0;z-index:30;display:grid;place-items:center;background:rgba(3,6,14,.72);backdrop-filter:blur(4px);padding:16px}
+.card{background:linear-gradient(160deg,#121c33,#0a1222);border:1px solid var(--line);border-top:3px solid var(--gold);border-radius:16px;padding:22px 26px;max-width:min(560px,94vw);max-height:90vh;overflow:auto;box-shadow:0 20px 60px #000a;text-align:center}
+.card.wide{max-width:min(980px,96vw);text-align:left}
+.card h3{margin:0 0 10px;font:italic 900 34px var(--bc);letter-spacing:.02em;text-transform:uppercase}
+.card p{opacity:.8;margin:0 0 14px}
+.card .row{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+.card button{font:800 17px var(--bc);letter-spacing:.06em;text-transform:uppercase;padding:11px 24px;border-radius:10px;border:1px solid var(--line);background:#1d2a48;color:#fff;cursor:pointer;min-width:170px}
+.card button.pri{background:linear-gradient(180deg,var(--gold2),var(--gold));color:#141414;border:0}
+.card button:hover{filter:brightness(1.15)}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:18px}@media (max-width:700px){.cols{grid-template-columns:1fr}}
+.cols h4{margin:0 0 8px;font:800 18px var(--bc);letter-spacing:.1em;color:var(--gold2);text-transform:uppercase}
+.kl{display:grid;grid-template-columns:auto 1fr;gap:5px 12px;font-size:14px;align-items:center}.kl kbd{font:800 13px var(--bc);background:#ffffff14;border:1px solid var(--line);border-bottom-width:3px;border-radius:6px;padding:2px 8px;text-align:center;min-width:34px;white-space:nowrap}
 html,body{margin:0;height:100%;background:#050a14;overflow:hidden;font-family:system-ui,sans-serif;color:#fff}
 #cv{position:fixed;inset:0;width:100%;height:100%;display:block}
 #sb{position:fixed;left:12px;top:10px;width:min(560px,62vw);aspect-ratio:952/65;background:center/100% 100% no-repeat;container-type:inline-size;filter:drop-shadow(0 3px 8px #000a);font-weight:900;color:#0b1a3a}
@@ -8,30 +26,25 @@ html,body{margin:0;height:100%;background:#050a14;overflow:hidden;font-family:sy
 #sbn0{left:1.9%;width:18.1%}#sbs0{left:21.5%;width:4.3%;font-size:3.6cqw!important}#sbs1{left:26.9%;width:4.4%;font-size:3.6cqw!important}#sbn1{left:32.8%;width:18.9%}#sbh{left:54.6%;width:12.6%;font-size:2.4cqw!important}#clock{left:68.8%;width:9.8%;top:10%!important;height:80%!important;font-size:3.6cqw!important}#sbx{left:80%;width:18.3%;font-size:2.4cqw!important;opacity:.75}#score{display:none!important}
 #sb i.kc{display:inline-block;width:.5cqw;height:2.6cqw;margin-right:.8cqw;border-radius:2px}#sb i.rc{display:inline-block;width:.9cqw;height:1.3cqw;margin-left:.6cqw;background:#e11d2e;border-radius:1px}
 #fps{position:fixed;right:14px;top:12px;font-size:12px;opacity:.7}
-#help{position:fixed;left:16px;bottom:12px;font-size:12px;line-height:1.5;background:#0009;padding:8px 12px;border-radius:8px;max-width:calc(100% - 64px)}
-#help b{color:#ffd23a}
 #pw{display:none;position:fixed;left:50%;bottom:176px;transform:translateX(-50%);width:240px;height:12px;border:2px solid #fff;border-radius:8px;background:#0008}
 #pw i{display:block;height:100%;width:0;border-radius:6px;background:linear-gradient(90deg,#3ddc84,#ffd23a 70%,#ff4d5e)}
 #msg{position:fixed;left:0;right:0;top:24%;text-align:center;font-size:clamp(28px,6vw,64px);font-weight:900;font-style:italic;opacity:0;transition:opacity .25s;text-shadow:0 4px 18px #000;padding:0 16px}
 #load{position:fixed;inset:0;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;padding-bottom:7vh;background:#050a14 center/cover no-repeat;font-size:18px;font-weight:700;text-shadow:0 2px 8px #000;transition:background-image .3s}
 #load::before{content:"";position:absolute;inset:0;background:linear-gradient(transparent 55%,#050a14ee);pointer-events:none}
 #load>*{position:relative}#load .lbar{width:min(420px,70vw);height:6px;margin-top:12px;border-radius:4px;background:#ffffff26;overflow:hidden}#load .lbar i{display:block;height:100%;width:35%;border-radius:4px;background:linear-gradient(90deg,#ffd23a,#fff3b0);animation:lb 1.4s ease-in-out infinite}@keyframes lb{0%{transform:translateX(-100%)}100%{transform:translateX(300%)}}
-#end{display:none;position:fixed;inset:0;place-items:center;align-content:center;gap:14px;background:#050a14ee;text-align:center}
-#end h2{margin:0;font-size:40px;font-style:italic}#end .es{font-size:22px}#end b{color:#ffd23a;margin:0 10px}
+#end{display:none;position:fixed;inset:0;place-items:center;align-content:center;gap:14px;background:radial-gradient(ellipse at center,#14213ddd,#050a14f5);text-align:center;font-family:var(--bc);z-index:25}
+#end h2{margin:0;font-size:56px;font-style:italic;font-weight:900;letter-spacing:.04em}#end .es{font-size:30px;font-weight:800;text-transform:uppercase}#end b{color:#ffd23a;margin:0 10px}
 #end table{border-collapse:collapse;margin:0 auto;font-size:16px}#end td,#end th{padding:5px 16px}#end th{font-weight:600;opacity:.75}
-#end button{margin-top:10px;font:inherit;font-weight:800;padding:10px 22px;border-radius:8px;border:0;background:#ffd23a;color:#111;cursor:pointer}
+#end table{background:var(--glass);border:1px solid var(--line);border-radius:12px;padding:6px 10px;font-size:18px}#end button{margin:10px 6px 0;font:800 18px var(--bc);letter-spacing:.06em;text-transform:uppercase;padding:12px 26px;border-radius:10px;border:0;background:linear-gradient(180deg,var(--gold2),var(--gold));color:#111;cursor:pointer}
 #hb{position:fixed;right:14px;bottom:12px;font:inherit;font-size:12px;background:#0009;color:#fff;border:1px solid #fff4;border-radius:8px;padding:6px 10px;cursor:pointer}
 </style></head><body>
 <canvas id="cv"></canvas>
 <div id="sb"><span id="sbn0"></span><span id="sbs0">0</span><span id="sbs1">0</span><span id="sbn1"></span><span id="sbh">1ª PARTE</span><span id="clock">00'</span><span id="sbx">MDG 27</span><span id="score"></span></div>
 <div id="fps"></div><div id="msg"></div><div id="pw"><i></i></div>
-<div id="help"><b>Ataque:</b> WASD mover · Shift esprint · J pase · I al hueco · L centro/pase alto · Espacio tiro (mantén) · F + tiro = rosca · <b>Shift + tiro</b> = tiro potente · <b>C</b> cubrir/temporizar · <b>R</b> ruleta · <b>T</b> frenar · <b>Esc</b> pausa<br>
-<b>Defensa:</b> J presionar · Espacio entrada · L segada · Q cambiar jugador &nbsp; <b>Mando:</b> A pase · Y al hueco · X centro · B tiro · RB rosca · RT + B tiro potente · RT esprint · LB cambiar · LT cubrir/temporizar · R3 ruleta · L3 frenar · Start pausa</div>
-<button id="hb" onclick="document.getElementById('help').style.display=document.getElementById('help').style.display==='none'?'':'none'">Controles</button>
-<a href="entrenamiento.html" style="position:fixed;right:104px;bottom:12px;font-size:12px;color:#fff;background:#0009;padding:6px 10px;border-radius:8px;border:1px solid #fff4;text-decoration:none">Entrenamiento</a>
 <div id="end"></div>
-<button id="quit" style="display:none;position:fixed;right:14px;top:40px;font:inherit;font-size:12px;background:#0009;color:#fff;border:1px solid #fff4;border-radius:8px;padding:6px 10px;cursor:pointer" onclick="if(confirm('¿Abandonar el partido?'))parent.postMessage({type:'mdg27quit'},'*')">Salir</button>
-<script>if(/embed/.test(location.search)){document.getElementById('quit').style.display='';var e=document.querySelector('a[href="entrenamiento.html"]');if(e)e.remove();}</script>
+<div id="tb"><button id="bPause">Pausa</button><button id="bQuit">Salir</button></div>
+<div id="help" class="modal" style="display:none" onclick="if(event.target===this)this.style.display='none'"><div class="card wide"><h3>Controles</h3><div class="cols"><div><h4>Teclado</h4><div class="kl"><kbd>WASD</kbd><span>Mover</span><kbd>Shift</kbd><span>Esprint</span><kbd>J</kbd><span>Pase · presionar</span><kbd>I</kbd><span>Pase al hueco</span><kbd>L</kbd><span>Centro · segada</span><kbd>Espacio</kbd><span>Tiro (mantén) · entrada</span><kbd>F + tiro</kbd><span>Tiro con rosca</span><kbd>Shift + tiro</kbd><span>Tiro potente</span><kbd>C</kbd><span>Cubrir · temporizar</span><kbd>R</kbd><span>Ruleta</span><kbd>T</kbd><span>Frenar</span><kbd>Q</kbd><span>Cambiar jugador</span><kbd>I / X</kbd><span>Salida del portero (defendiendo)</span><kbd>Esc</kbd><span>Pausa</span></div></div><div><h4>Mando</h4><div class="kl"><kbd>A</kbd><span>Pase</span><kbd>B</kbd><span>Tiro · entrada</span><kbd>X</kbd><span>Centro · segada</span><kbd>Y</kbd><span>Al hueco · salida del portero</span><kbd>RB</kbd><span>Rosca</span><kbd>RT</kbd><span>Esprint</span><kbd>RT + B</kbd><span>Tiro potente</span><kbd>LB</kbd><span>Cambiar jugador</span><kbd>LT</kbd><span>Cubrir · temporizar</span><kbd>R3</kbd><span>Ruleta</span><kbd>L3</kbd><span>Frenar</span><kbd>Start</kbd><span>Pausa</span></div></div></div><div class="row" style="margin-top:16px"><button class="pri" onclick="document.getElementById('help').style.display='none'">Cerrar</button></div></div></div>
+<div id="ask" class="modal" style="display:none"><div class="card"><h3>¿Salir del partido?</h3><p>Se perderá el resultado de este partido.</p><div class="row"><button class="pri" id="askNo">Seguir jugando</button><button id="askYes">Salir</button></div></div></div>
 <div id="load"><div>Cargando <b>…</b></div><div class="lbar"><i></i></div></div>
 <script>window.PREF=["m_mx","campo2","m_est_grada","m_est_foco","m_est_banquillo","m_est_marcador","balon","red","vallas","camisetas","sonidos","m_gn01","m_gn02","m_gn03","m_arbitro","m_juez","m_entrenador1","m_entrenador2","m_aficionado1","m_aficionado2","m_aficionado3"].concat(Array.from({length:12},(_,i)=>"m_pn"+String(i+1).padStart(2,"0")),["m_pj01","m_pj05","m_pj02","m_pj07","m_pj11","m_pj14","m_pj03","m_pj04","m_pj06","m_pj08"]);</script>
 <script src="three.js"></script>
@@ -40,4 +53,9 @@ html,body{margin:0;height:100%;background:#050a14;overflow:hidden;font-family:sy
 function get(n){return window.MA&&MA[n]?Promise.resolve(MA[n]):fetch("m3d/"+n+".txt").then(function(r){return r.text()});}
 window.__ldBg=function(n){get(n).then(function(u){var l=document.getElementById("load");if(l)l.style.backgroundImage="url("+u+")";}).catch(function(){});};
 __ldBg(k);get("hud_marcador").then(function(u){document.getElementById("sb").style.backgroundImage="url("+u+")";}).catch(function(){});})();</script>
+<script>(function(){var Q=new URLSearchParams(location.search);if(!Q.has("fps")){var f=document.getElementById("fps");if(f)f.style.display="none";}
+window.mdgQuit=function(){if(/embed/.test(location.search)){parent.postMessage({type:"mdg27quit"},"*");return;}var v=Q.get("volver");location.href=v&&/^[\w.\/-]+\.html$/.test(v)?v:"../index.html";};
+window.mdgAsk=function(){document.getElementById("ask").style.display="";};
+document.getElementById("bQuit").onclick=mdgAsk;document.getElementById("askNo").onclick=function(){document.getElementById("ask").style.display="none";};document.getElementById("askYes").onclick=function(){mdgQuit();};
+document.getElementById("bPause").onclick=function(){dispatchEvent(new KeyboardEvent("keydown",{code:"Escape"}));};})();</script>
 </body></html>
