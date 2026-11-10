@@ -332,7 +332,10 @@
     // si las camisetas se parecen, el visitante cambia a su segunda equipación
     const c0 = new THREE.Color(TEAMS[0].kit[0]), c1 = new THREE.Color(TEAMS[1].kit[0]); if (Math.abs(c0.r - c1.r) + Math.abs(c0.g - c1.g) + Math.abs(c0.b - c1.b) < .55) TEAMS[1].kit = lum(TEAMS[0].kit[0]) > .55 ? ["#1f2937", "#111827"] : ["#f4f4f4", TEAMS[1].kit[0]]; }
   if (STREET && !EMB) { const q = new URLSearchParams(location.search), c1 = hex(q.get("c1")), c2 = hex(q.get("c2"));   // Street: tu equipo con tu ropa contra la banda del barrio
-    TEAMS[0].name = "TU EQUIPO"; TEAMS[0].short = "TÚ"; if (c1) TEAMS[0].kit = [c1, c2 || "#111111"]; TEAMS[1].name = "LOS DEL PUERTO"; TEAMS[1].short = "PTO"; { const c = new THREE.Color(TEAMS[0].kit[0]), red = c.r > c.b + .15 && c.r > c.g; TEAMS[1].kit = red || lum(TEAMS[0].kit[0]) > .6 ? ["#1e6bff", "#f4f7ff"] : ["#d3202c", "#f4f7ff"]; } }
+    TEAMS[0].name = "TU EQUIPO"; TEAMS[0].short = "TÚ"; if (c1) TEAMS[0].kit = [c1, c2 || "#111111"]; TEAMS[1].name = "LOS DEL PUERTO"; TEAMS[1].short = "PTO"; { const c = new THREE.Color(TEAMS[0].kit[0]), red = c.r > c.b + .15 && c.r > c.g; TEAMS[1].kit = red || lum(TEAMS[0].kit[0]) > .6 ? ["#1e6bff", "#f4f7ff"] : ["#d3202c", "#f4f7ff"]; }
+    // reto del barrio (Rey de la pista): nombre, ropa y nivel de la banda rival
+    const rn = (q.get("rn") || "").slice(0, 22), r1 = hex(q.get("r1")), r2 = hex(q.get("r2")); if (rn) { TEAMS[1].name = rn.toUpperCase(); TEAMS[1].short = (q.get("rs") || rn).slice(0, 3).toUpperCase(); } if (r1) TEAMS[1].kit = [r1, r2 || "#111111"];
+    window.ST_RD = clamp(+(q.get("rd") || 0), -12, 14); }
   { const hs = n => [...String(n)].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7); TEAMS.forEach(T => T.des = window.KITDES != null ? window.KITDES : hs(T.name) % 9); if (TEAMS[1].des === TEAMS[0].des) TEAMS[1].des = (TEAMS[1].des + 4) % 9; }
   setLoad("jugadores");
   const P = [], NP = STREET ? 4 : 11;
@@ -348,6 +351,7 @@
       const r = () => 68 + Math.floor(Math.random() * 20), S0 = d && d.st ? d.st : null, sv = (k, def) => S0 && S0[k] != null ? +S0[k] : def;
       const st = { pac: sv("pac", r()), acc: sv("pac", r()), agi: sv("dri", r()), dri: sv("dri", r()), sho: sv("sho", r()), pas: sv("pas", r()), def: sv("def", r()), phy: sv("phy", r()), gk: gkk ? (d && d.ov ? +d.ov : 82) : 40 };
       if (!S0) { if (R[1] === "fwd") { st.sho += 8; st.pac += 5; st.def -= 15; } if (R[1] === "def") { st.def += 8; st.sho -= 15; } }
+      if (t === 1 && window.ST_RD) for (const kk in st) st[kk] = clamp(st[kk] + window.ST_RD, 30, 99);
       if (EMB && EMB.cpu && EMB.cpu.includes(t)) { const k = { "Fácil": -8, "Normal": 0, "Difícil": 5, "Leyenda": 9 }[EMB.diff] || 0; for (const kk in st) st[kk] = clamp(st[kk] + k, 30, 99); }
       Object.assign(a, { model: gkk ? TEAMS[t].gkModel : PJM[(i - 1 + t * 10) % PJM.length], t, i, role, cat: gkk ? "gk" : R[1], fb: !!R[2], base: { d: R[0], w: widths[i] != null ? widths[i] : .5 }, gk: gkk, name: d ? d.n : NAMES[t][i], u: d ? d.u : null, num: [1, 3, 4, 5, 2, 8, 6, 10, 11, 9, 7][i],
         st, ai: { t: Math.random() * .5, run: null, tgt: null }, dr: { plan: null, lastT: -9, loose: 0, lastFoot: "R" }, down: 0 });

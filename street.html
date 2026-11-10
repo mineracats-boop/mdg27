@@ -31,12 +31,27 @@ canvas{display:block}
 .card button:hover{filter:brightness(1.15)}
 .kl{display:grid;grid-template-columns:auto 1fr;gap:6px 12px;font-size:15px;align-items:center}.kl kbd{font:800 14px var(--bc);background:#ffffff14;border:1px solid var(--line);border-bottom-width:3px;border-radius:6px;padding:2px 8px;text-align:center;white-space:nowrap}
 .cr{opacity:.55;font-size:11px;margin-top:14px;line-height:1.4}
+#nbst{position:fixed;left:12px;top:10px;z-index:8;background:var(--glass);border:1px solid var(--line);border-left:4px solid var(--acc);border-radius:10px;padding:6px 12px;font:600 15px var(--bc);letter-spacing:.04em;display:none}#nbst b{color:var(--acc)}
+#chat{position:fixed;left:12px;bottom:190px;width:min(420px,70vw);z-index:6;display:flex;flex-direction:column;gap:3px;pointer-events:none;font:600 16px var(--bc)}#chat div{background:rgba(8,14,28,.7);border-radius:8px;padding:4px 10px;transition:opacity 1s;text-shadow:0 1px 2px #000}#chat div.old{opacity:0}#chat b{color:var(--gold2)}#chat i{color:#9fd8ff;font-style:normal}
+#chatin{position:fixed;left:12px;bottom:150px;width:min(420px,80vw);z-index:9;font:600 18px var(--bc);padding:8px 12px;border-radius:10px;border:2px solid var(--gold);background:#0a1222ee;color:#fff;outline:0}
+@media (pointer:fine){#chat{bottom:70px}#chatin{bottom:30px}}
+.card input.nbi{font:800 22px var(--bc);text-align:center;padding:10px;border-radius:10px;border:1px solid var(--line);background:#0a1222;color:#fff;width:100%;text-transform:none}
+.card .sub{opacity:.75;font-size:14px;margin:-4px 0 4px}
+#nbmsg{color:#ff9a9a;min-height:20px;font-size:14px}
 </style></head><body>
 <div id="load">Cargando el barrio…</div>
 <div id="hud"></div><div id="msg"></div><div id="tip"></div><div id="power"><i></i></div><div id="panel"></div>
-<div id="tb"><button id="bMenu" onclick="hubMenu(true)">Menú</button></div>
+<div id="nbst"></div><div id="chat"></div><input id="chatin" maxlength="120" placeholder="Escribe y pulsa Enter" style="display:none" enterkeyhint="send">
+<div id="tb"><button id="bChat" onclick="chatOpen()" style="display:none">Chat</button><button id="bRet" onclick="retosPanel()">Retos</button><button id="bOn" onclick="nbMenu(true)">Online</button><button id="bMenu" onclick="hubMenu(true)">Menú</button></div>
+<div id="nbon" class="modal" style="display:none" onclick="if(event.target===this)nbMenu(false)"><div class="card"><h3>Barrio online</h3><div class="col">
+<div class="sub">Tu nombre en el barrio</div><input id="nbname" class="nbi" maxlength="14" placeholder="NOMBRE">
+<button class="pri" onclick="nbNameOk()&&nbJoin('global').then(ok=>ok&&nbMenu(false))">Barrio global · entra todo el mundo</button>
+<button onclick="nbNameOk()&&nbJoin('priv').then(ok=>ok&&nbMenu(false))">Crear barrio privado</button>
+<div style="display:flex;gap:8px"><input id="nbcode" class="nbi" maxlength="8" placeholder="CÓDIGO" style="text-transform:uppercase"><button onclick="nbNameOk()&&nbJoin('priv',$('#nbcode').value.trim()).then(ok=>ok&&nbMenu(false))">Unirse</button></div>
+<div id="nbmsg"></div><button id="nbleave" onclick="nbLeave();nbMenu(false)">Salir del online</button><button onclick="nbMenu(false)">Cerrar</button></div></div></div>
+<div id="nbask" class="modal" style="display:none"><div class="card"><h3>¡Reto!</h3><p style="font-size:18px"></p><div class="col"><button class="pri">Aceptar</button><button class="no">Rechazar</button></div></div></div>
 <div id="hmenu" class="modal" style="display:none" onclick="if(event.target===this)hubMenu(false)"><div class="card"><h3>Street Football</h3><div class="col">
-<button class="pri" onclick="hubMenu(false)">Seguir jugando</button><button onclick="goOnline()">Online con amigos</button><button onclick="hubHelp(true)">Controles</button><button onclick="location.href='index.html'">Volver a MDG 27</button></div></div></div>
+<button class="pri" onclick="hubMenu(false)">Seguir jugando</button><button onclick="nbMenu(true)">Barrio online</button><button onclick="goOnline()">Partido online con código</button><button onclick="hubHelp(true)">Controles</button><button onclick="location.href='index.html'">Volver a MDG 27</button></div></div></div>
 <div id="hhelp" class="modal" style="display:none" onclick="if(event.target===this)hubHelp(false)"><div class="card wide"><h3>Controles</h3><div class="kl">
 <kbd>WASD / flechas</kbd><span>Moverte</span><kbd>Shift</kbd><span>Correr</span><kbd>Z / X · arrastrar</kbd><span>Girar la cámara</span><kbd>E</kbd><span>Entrar en tiendas, usar, jugar en la cancha de la playa o los toques</span><kbd>Esc</kbd><span>Menú</span><kbd>Móvil</kbd><span>Joystick a la izquierda; botones a la derecha</span></div>
 <div style="margin-top:10px;opacity:.85">En los partidos de la jaula se usan los mismos controles que en el fútbol 11 (menú de pausa &gt; Controles).</div>
@@ -197,7 +212,7 @@ function loco(a, sp, own) { if (a.lock > 0) return; if (sp < .45) play(a, a.gk ?
 function once(a, n, t, ts = 1.4) { play(a, n, .08, true, ts); a.lock = t; }
 // ---------- entrada ----------
 const keys = {}; let joy = { x: 0, y: 0, id: null }, touchRun = 0, charge = -1;
-addEventListener("keydown", e => { if (e.code === "Escape") { hubMenu($("#hmenu").style.display === "none"); return; } if (keys[e.code]) return; keys[e.code] = 1; onBtn(e.code); });
+addEventListener("keydown", e => { if (e.target && e.target.tagName === "INPUT") { if (e.target.id === "chatin" && e.code === "Enter") chatSend(); if (e.code === "Escape") e.target.blur(); return; } if (e.code === "Enter" && mode === "hub") { chatOpen(); return; } if (e.code === "Escape" && mode === "mini") { mgEnd(); return; } if (e.code === "Escape") { hubMenu($("#hmenu").style.display === "none"); return; } if (keys[e.code]) return; keys[e.code] = 1; onBtn(e.code); });
 function hubMenu(on) { $("#hmenu").style.display = on ? "" : "none"; if (!on) $("#hhelp").style.display = "none"; }
 function hubHelp(on) { $("#hhelp").style.display = on ? "" : "none"; }
 addEventListener("keyup", e => { keys[e.code] = 0; if (e.code === "KeyK") release(); });
@@ -225,35 +240,38 @@ let YAW = 0, SNAP = 1, mode = "hub", me = null, place = "calle", kit = store.get
 const say = (t, ms = 1500) => { const m = $("#msg"); m.textContent = t; m.style.opacity = 1; clearTimeout(say.h); say.h = setTimeout(() => m.style.opacity = 0, ms); };
 const tip = t => { const e = $("#tip"); e.innerHTML = t || ""; e.style.opacity = t ? 1 : 0; };
 function onBtn(c) {
+  if (mode === "mini") { if (c === "KeyK" && MG.state === "aim" && charge < 0) charge = 0; return; }
   if (mode === "toques") { if (["KeyJ", "KeyE", "Space", "KeyK"].includes(c)) toqueHit(); return; }
-  if (mode === "hub") { if (c === "KeyE") interact(); return; }
+  if (mode === "hub") { if (c === "KeyE") interact(); if (c === "KeyR" && NB.ws) { const p = nbNear(); if (p) nbReto(p); } return; }
   if (mode !== "match") return;
   if (c === "KeyJ") { if (G.owner === G.human) pass(G.human); else switchHuman(); }
   if (c === "KeyQ") switchHuman();
   if (c === "KeyK") { if (G.owner === G.human && charge < 0) charge = 0; else if (G.owner && G.owner.team !== 0) tackle(G.human); }
   if (c === "KeyL" && G.owner === G.human) skill(G.human);
 }
-function release() { if (charge < 0) return; const p = Math.min(1, charge); charge = -1; $("#power").style.opacity = 0; if (mode === "match" && G.owner === G.human) shoot(G.human, p); }
+function release() { if (charge < 0) return; const p = Math.min(1, charge); charge = -1; $("#power").style.opacity = 0; if (mode === "mini") { mgShot(p); return; } if (mode === "match" && G.owner === G.human) shoot(G.human, p); }
 // ---------- barrio: andar, tiendas ----------
 function nearDoor() { let best = null, bd = 2.2; for (const d of DOORS) { const dd = Math.hypot(me.x - (d.k === "salir" ? d.x : (SHOPS.find(s => s.k === d.k) || {}).dx || d.x), me.z - d.z); if (dd < bd) { bd = dd; best = d; } } return best; }
 function interact() {
   const d = nearDoor();
+  if (!d && place === "calle") { const mk = mgNear(); if (mk) return mgStart(mk); if (Math.hypot(me.x - REY.x, me.z - REY.z) < 2.2) return reyPanel(); }
   if (!d && place === "calle" && Math.hypot(me.x - TOQ.x, me.z - TOQ.z) < 1.6) return startToques();
   if (!d && place === "calle" && me.x > BEACH.x0 && me.x < BEACH.x1 && me.z > BEACH.z0 && me.z < BEACH.z1) return goMatch("playa");
   if (d) { if (d.k === "salir") { const s = SHOPS.find(s => s.k === d.from); me.x = s.dx; me.z = s.z + 2.2; place = "calle"; INTG.visible = false; $("#panel").style.display = "none"; S.fog = FOG; S.background = new THREE.Color(0xf2a86a); SNAP = 1; return; }
     me.x = INTPOS[d.k]; me.z = 62.5; me.dir = -Math.PI / 2; place = d.k; INTG.visible = true; S.fog = null; S.background = new THREE.Color(0x0b0b10); SNAP = 1; tip(INT[d.k][3] + " · acércate al mostrador y pulsa E"); return; }
   if (place !== "calle" && Math.hypot(me.x - INTPOS[place], me.z - 59.2) < 2.6) shopPanel(place);
 }
+const KITC = ["#f4d21c", "#d3202c", "#1e6bff", "#14161c", "#f4f7ff", "#2e9e44", "#ff7a1a", "#7a2bd6", "#e83e8c", "#19c7c0"];
 function shopPanel(k) {
   const P = $("#panel"); let h = "";
   if (k === "sobres") h = `<h3>Tienda de sobres</h3><div>Los sobres se abren en tu Ultimate Team de MDG 27, con tus monedas.</div><div class="row"><a href="index.html">Ir a abrir sobres</a><button onclick="this.closest('#panel').style.display='none'">Cerrar</button></div>`;
-  if (k === "equip") { const C = ["#f4d21c", "#d3202c", "#1e6bff", "#14161c", "#f4f7ff", "#2e9e44", "#ff7a1a", "#7a2bd6", "#e83e8c", "#19c7c0"];
-    h = `<h3>Tienda de equipaciones</h3><div>Elige la ropa de tu equipo callejero.</div><div style="margin-top:8px">Camiseta</div><div class="row">${C.map(c => `<button class="sw" style="background:${c}" onclick="setKit('c1','${c}')"></button>`).join("")}</div>
-      <div style="margin-top:8px">Pantalón</div><div class="row">${C.map(c => `<button class="sw" style="background:${c}" onclick="setKit('c2','${c}')"></button>`).join("")}</div><div class="row"><button onclick="this.closest('#panel').style.display='none'">Listo</button></div>`; }
+  if (k === "equip") { const C = KITC, own = store.get("colores", []), lk = c => C.indexOf(c) >= 5 && !own.includes(c) ? "outline:2px dashed #fff8;opacity:.55" : "";
+    h = `<h3>Tienda de equipaciones</h3><div>Elige la ropa de tu equipo callejero. Los colores con borde discontinuo cuestan 100 monedas (tienes ${coins()}).</div><div style="margin-top:8px">Camiseta</div><div class="row">${C.map(c => `<button class="sw" style="background:${c};${lk(c)}" onclick="setKit('c1','${c}')"></button>`).join("")}</div>
+      <div style="margin-top:8px">Pantalón</div><div class="row">${C.map(c => `<button class="sw" style="background:${c};${lk(c)}" onclick="setKit('c2','${c}')"></button>`).join("")}</div><div class="row"><button onclick="this.closest('#panel').style.display='none'">Listo</button></div>`; }
   if (k === "bar") h = `<h3>Bar deportivo</h3><div>Aquí se queda la gente a ver los partidos. Cuando tengamos servidor, desde aquí verás partidos de tus amigos en directo.</div><div class="row"><button onclick="this.closest('#panel').style.display='none'">Cerrar</button></div>`;
   P.innerHTML = h; P.style.display = "block";
 }
-function setKit(k, c) { kit[k] = c; store.set("kit", kit); me.a.mats.forEach(m => m.userData.U[k === "c1" ? "k1" : "k2"].value.set(c)); }
+function setKit(k, c) { const own = store.get("colores", []), ix = KITC.indexOf(c); if (ix >= 5 && !own.includes(c)) { if (coins() < 100) return say("Te faltan monedas (100)", 1500); store.set("monedas", coins() - 100); own.push(c); store.set("colores", own); updCoins(); shopPanel("equip"); } misEv("kit"); kit[k] = c; store.set("kit", kit); me.a.mats.forEach(m => m.userData.U[k === "c1" ? "k1" : "k2"].value.set(c)); }
 /* ---------- mobiliario urbano y playa (modelos de Sketchfab, CC BY: ver créditos) ---------- */
 function mergeGeoms(gs) {
   const has = n => gs.every(g => g.attributes[n]), names = ["position", "normal", "uv"].filter(has), out = new THREE.BufferGeometry();
@@ -322,7 +340,7 @@ function stepNPCs(dt) {
         else { let a = Math.atan2(dz, dx) - c.dir; a = Math.atan2(Math.sin(a), Math.cos(a)); c.dir += a * Math.min(1, dt * 3); c.spd += (1.25 - c.spd) * Math.min(1, dt * 3); } }
       const pd = Math.hypot(c.x - me.x, c.z - me.z); if (pd < 1.2 && place === "calle") { c.x += (c.x - me.x) / (pd || 1) * dt * 2; c.z += (c.z - me.z) / (pd || 1) * dt * 2; }   // se apartan
       c.x += Math.cos(c.dir) * c.spd * dt; c.z += Math.sin(c.dir) * c.spd * dt; c.z = clamp(c.z, c.zone[0], c.zone[1]);
-    } else if (c.keeper || place === "calle") { const tgt = c.keeper ? Math.atan2(me.z - c.z, me.x - c.x) : Math.PI / 2; let a = tgt - c.dir; a = Math.atan2(Math.sin(a), Math.cos(a)); c.dir += a * Math.min(1, dt * 2); }
+    } else if (c.keeper || place === "calle") { const tgt = c.keeper || c.rey ? Math.atan2(me.z - c.z, me.x - c.x) : Math.PI / 2; let a = tgt - c.dir; a = Math.atan2(Math.sin(a), Math.cos(a)); c.dir += a * Math.min(1, dt * 2); }
     c.a.wrap.position.set(c.x, 0, c.z); c.a.wrap.rotation.y = -c.dir + Math.PI / 2; loco(c.a, c.spd, false); c.a.mixer.update(dt);
   }
 }
@@ -336,13 +354,164 @@ function stepHub(dt) {
   else { const ox = INTPOS[place]; me.x = clamp(me.x, ox - 4.5, ox + 4.5); me.z = clamp(me.z, 57.2, 63.4); }
   me.a.wrap.position.set(me.x, 0, me.z); me.a.wrap.rotation.y = -me.dir + Math.PI / 2; me.a.lock = 0; loco(me.a, me.spd, false); me.a.mixer.update(dt);
   const dd = nearDoor(), inBeach = me.x > BEACH.x0 && me.x < BEACH.x1 && me.z > BEACH.z0 && me.z < BEACH.z1, nearToq = Math.hypot(me.x - TOQ.x, me.z - TOQ.z) < 1.6;
-  if (place === "calle") tip(dd ? `Pulsa <b>E</b> para entrar en la ${INT[dd.k][3].toLowerCase()}` : nearToq ? `Toques: pulsa <b>E</b> para empezar (récord: ${store.get("toques", 0)})` : inBeach ? "Cancha de la playa: pulsa <b>E</b> para jugar un 4 contra 4 en la arena" : me.x > 55 ? "La jaula: entra para jugar un 4 contra 4" : "");
+  const np = NB.ws && place === "calle" ? nbNear() : null;
+  const mk = place === "calle" ? mgNear() : null, nRey = place === "calle" && Math.hypot(me.x - REY.x, me.z - REY.z) < 2.2;
+  if (np) tip(`<b>${esc(np.name)}</b> · pulsa <b>R</b> para retarle a un partido`); else if (mk) tip(`${MG_INFO[mk][0]}: pulsa <b>E</b> para empezar`); else if (nRey) tip("<b>Rey de la pista</b> · pulsa <b>E</b> para ver las bandas del barrio"); else if (place === "calle") tip(dd ? `Pulsa <b>E</b> para entrar en la ${INT[dd.k][3].toLowerCase()}` : nearToq ? `Toques: pulsa <b>E</b> para empezar (récord: ${store.get("toques", 0)})` : inBeach ? "Cancha de la playa: pulsa <b>E</b> para jugar un 4 contra 4 en la arena" : me.x > 55 ? "La jaula: entra para jugar un 4 contra 4" : "");
   else tip(dd ? "Pulsa <b>E</b> para salir" : Math.hypot(me.x - INTPOS[place], me.z - 59.2) < 2.6 ? "Pulsa <b>E</b> en el mostrador" : INT[place][3]);
   stepYaw(dt); const fw = place === "calle" ? 7.5 : 3.8, fh = place === "calle" ? 3.6 : 2.2, want = new THREE.Vector3(me.x + Math.sin(YAW) * fw, fh, me.z + Math.cos(YAW) * fw);
   if (place !== "calle") { const ox = INTPOS[place]; want.x = clamp(want.x, ox - 4.6, ox + 4.6); want.z = clamp(want.z, 56.3, 63.8); }
   cam.position.lerp(want, SNAP ? 1 : Math.min(1, dt * 3)); SNAP = 0; cam.lookAt(me.x - Math.sin(YAW) * 1.5, 1.3, me.z - Math.cos(YAW) * 1.5);
   sun.target.position.set(me.x, 0, me.z); sun.position.set(me.x - 40, 35, me.z + 25);
 }
+// ---------- barrio online: plaza global (sin código) y barrio privado (con código), chat y retos ----------
+const NB = { ws: null, k: null, sala: "", me: -1, peers: new Map(), last: 0, lastP: "", chatT: 0, srv: "", retoDe: null };
+const NB_LIST = (new URLSearchParams(location.search).get("srv") ? [new URLSearchParams(location.search).get("srv")] : ["https://mdg27-online.mineracats.workers.dev"]).concat(window.MDG27_RESERVA ? [window.MDG27_RESERVA] : []).map(u => u.replace(/\/$/, ""));
+const NB_BAD = /\b(puta|puto|putas|mierda|gilipollas|cabr[oó]n|maric[oó]n|polla|co[ñn]o|joder|subnormal|hijoputa|zorra|imb[eé]cil|retrasado|idiota|tonto|follar)\b/gi;
+const nbName = () => store.get("nombre", "");
+async function nbSrv() { if (NB.srv) return NB.srv; for (const u of NB_LIST) { try { const c = new AbortController(), tm = setTimeout(() => c.abort(), u.includes("onrender") ? 70000 : 4000); const r = await fetch(u + "/ping", { signal: c.signal }); clearTimeout(tm); if (r.ok) return NB.srv = u; } catch (e) {} } throw new Error("No hay conexión con el servidor online. Si estás en España en día de partido, LaLiga puede estar bloqueándolo: prueba más tarde o con datos móviles."); }
+function nbSend(o) { try { if (NB.ws && NB.ws.readyState === 1) NB.ws.send(JSON.stringify(o)); } catch (e) {} }
+function nbStatus() { const e = $("#nbst"); if (!NB.ws) { e.style.display = "none"; return; } e.style.display = ""; e.innerHTML = `<b>${NB.k === "global" ? "GLOBAL" : "PRIVADO · " + NB.sala}</b> · ${NB.peers.size + 1} en el barrio`; $("#bChat").style.display = ""; }
+async function nbJoin(k, sala) {
+  nbLeave(true); const st = $("#nbmsg"); st.textContent = "Conectando con el servidor…";
+  try { const u = await nbSrv();
+    if (k === "global") sala = (await fetch(u + "/plaza").then(r => r.json())).sala;
+    else if (!sala) sala = (await fetch(u + "/nueva").then(r => r.json())).sala;
+    sala = sala.toUpperCase(); if (!/^[A-Z0-9]{4,8}$/.test(sala)) throw new Error("Código no válido");
+    await new Promise((res, rej) => { const ws = new WebSocket(u.replace(/^http/, "ws") + "/sala/" + sala + "?max=" + (k === "global" ? 25 : 12) + "&nombre=" + encodeURIComponent(nbName())); NB.ws = ws;
+      const to = setTimeout(() => rej(new Error("El barrio está lleno o no responde")), 9000);
+      ws.onmessage = e => { let d; try { d = JSON.parse(e.data); } catch (er) { return; } if (d.t === "hola") { clearTimeout(to); NB.me = d.n; for (const o of d.otros || []) if (o.n !== d.n) nbPeer(o.n, o.name); res(); } nbRecv(d); };
+      ws.onerror = () => { clearTimeout(to); rej(new Error("No se puede entrar en el barrio")); };
+      ws.onclose = () => { if (NB.ws === ws) { nbLeave(true); chatLine("", "Te has desconectado del barrio online"); } }; });
+    NB.k = k; NB.sala = sala; try { sessionStorage.setItem("street_nb", JSON.stringify({ k, sala: k === "global" ? "" : sala })); } catch (e) {}
+    nbSend({ t: "p", ...nbPose(), full: 1 }); $("#nbon").style.display = "none"; nbStatus();
+    chatLine("", k === "global" ? "Has entrado en el barrio global. Saluda en el chat (tecla Enter)." : "Barrio privado " + sala + ". Pasa el código a tus amigos."); return true;
+  } catch (e) { st.textContent = e.message || String(e); nbLeave(true); return false; }
+}
+function nbLeave(quiet) { const ws = NB.ws; NB.ws = null; try { ws && ws.close(); } catch (e) {} for (const p of NB.peers.values()) nbDrop(p); NB.peers.clear(); NB.k = null; if (!quiet) try { sessionStorage.removeItem("street_nb"); } catch (e) {} nbStatus(); if (!NB.ws) $("#bChat").style.display = "none"; }
+function nbPose() { return { x: +me.x.toFixed(2), z: +me.z.toFixed(2), d: +me.dir.toFixed(2), s: +me.spd.toFixed(1), pl: place === "calle" ? (mode === "hub" ? "c" : "j") : place, k1: kit.c1, k2: kit.c2, nm: nbName() }; }
+function nbLabel(txt) { const c = document.createElement("canvas"); c.width = 256; c.height = 64; const x = c.getContext("2d"); x.font = "700 34px 'Barlow Condensed',system-ui"; const w = Math.min(250, x.measureText(txt).width + 24);
+  x.fillStyle = "rgba(8,14,28,.75)"; x.beginPath(); x.roundRect((256 - w) / 2, 8, w, 46, 12); x.fill(); x.fillStyle = "#fff"; x.textAlign = "center"; x.textBaseline = "middle"; x.fillText(txt, 128, 32);
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), depthTest: false, transparent: true })); sp.scale.set(1.6, .4, 1); sp.position.y = 2.25; sp.renderOrder = 9; return sp; }
+function nbPeer(n, name) { if (NB.peers.has(n)) return NB.peers.get(n); const p = { n, name: name || "Jugador", x: 0, z: 0, tx: 0, tz: 0, dir: 0, td: 0, spd: 0, pl: "c", a: null, lbl: null, k1: "#888888", k2: "#222222", ready: false };
+  NB.peers.set(n, p); loadModel("pj18").then(g => { if (!NB.peers.has(n)) return; p.a = actor(g, p.k1, p.k2); p.a.wrap.visible = false; p.lbl = nbLabel(p.name); p.a.wrap.add(p.lbl); }); nbStatus(); return p; }
+function nbDrop(p) { if (p.a) { S.remove(p.a.wrap); p.a.mixer.stopAllAction(); } }
+function nbRecv(d) {
+  if (d.t === "entra") { nbPeer(d.n, d.name); chatLine("", (d.name || "Alguien") + " ha entrado en el barrio"); nbSend({ a: d.n, t: "p", ...nbPose(), full: 1 }); }
+  else if (d.t === "sale") { const p = NB.peers.get(d.n); if (p) { chatLine("", p.name + " se ha ido"); nbDrop(p); NB.peers.delete(d.n); nbStatus(); } }
+  else if (d.t === "p" && d.de != null) { const p = nbPeer(d.de, d.nm); const first = !p.ready; p.tx = d.x; p.tz = d.z; p.td = d.d; p.spd = d.s; p.pl = d.pl;
+    if (d.nm && d.nm !== p.name && p.a) { p.name = d.nm; p.a.wrap.remove(p.lbl); p.lbl = nbLabel(p.name); p.a.wrap.add(p.lbl); } else if (d.nm) p.name = d.nm;
+    if (p.a && (d.k1 !== p.k1 || d.k2 !== p.k2)) p.a.mats.forEach(m => { if (m.userData.U) { m.userData.U.k1.value.set(d.k1); m.userData.U.k2.value.set(d.k2); } }); p.k1 = d.k1; p.k2 = d.k2;
+    if (first) { p.x = d.x; p.z = d.z; p.dir = d.d; p.ready = true; } }
+  else if (d.t === "c" && d.de != null) { const p = NB.peers.get(d.de); chatLine(p ? p.name : "?", String(d.m || "").slice(0, 120)); }
+  else if (d.t === "reto" && d.de != null) { const p = NB.peers.get(d.de); if (!p || NB.retoDe != null || mode !== "hub") { nbSend({ a: d.de, t: "no" }); return; } NB.retoDe = d.de; nbAsk(`<b>${esc(p.name)}</b> te reta a un partido en la jaula`, () => { nbSend({ a: d.de, t: "si" }); say("¡Reto aceptado!", 1400); }, () => { nbSend({ a: d.de, t: "no" }); NB.retoDe = null; }); }
+  else if (d.t === "no" && d.de != null) { const p = NB.peers.get(d.de); say((p ? p.name : "El rival") + " no acepta", 1600); NB.reto = null; }
+  else if (d.t === "si" && d.de != null && NB.reto === d.de) { (async () => { try { const s = (await fetch(NB.srv + "/nueva").then(r => r.json())).sala; nbSend({ a: d.de, t: "ve", sala: s }); nbGoMatch(s, 0); } catch (e) { say("No se pudo crear el partido", 1600); } })(); }
+  else if (d.t === "ve" && d.de != null && NB.retoDe === d.de && /^[A-Z0-9]{4,8}$/.test(d.sala || "")) nbGoMatch(d.sala, 1500);
+}
+function nbGoMatch(sala, wait) { mode = "loading"; say("¡Al partido!", 1500); const back = location.pathname.split("/").pop() || "street.html";
+  setTimeout(() => { location.href = "motor/index.html?modo=street&online=1&sala=" + sala + (NB.srv && NB.srv !== "https://mdg27-online.mineracats.workers.dev" ? "&srv=" + encodeURIComponent(NB.srv) : "") + "&volver=" + encodeURIComponent("../" + back); }, wait + 400); }
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+function nbAsk(html, yes, no) { const m = $("#nbask"); m.querySelector("p").innerHTML = html; m.style.display = ""; m.querySelector(".pri").onclick = () => { m.style.display = "none"; yes(); }; m.querySelector(".no").onclick = () => { m.style.display = "none"; no(); }; }
+function nbReto(p) { if (NB.reto != null) return; NB.reto = p.n; nbSend({ a: p.n, t: "reto" }); say("Reto enviado a " + p.name, 1600); setTimeout(() => { if (NB.reto === p.n) { NB.reto = null; } }, 20000); }
+function nbNear() { let b = null, bd = 2.4; for (const p of NB.peers.values()) { if (!p.ready || p.pl !== "c") continue; const d = Math.hypot(p.x - me.x, p.z - me.z); if (d < bd) { bd = d; b = p; } } return b; }
+function stepNet(dt) {
+  if (!NB.ws) return; const now = performance.now();
+  // mi posición: 6 veces por segundo si me muevo; cada 2 s si estoy quieto
+  const ps = nbPose(), key = [ps.x, ps.z, ps.d, ps.pl].join(); if ((key !== NB.lastP && now - NB.last > 166) || now - NB.last > 2000) { NB.last = now; NB.lastP = key; nbSend({ t: "p", ...ps }); }
+  for (const p of NB.peers.values()) { if (!p.a) continue; const vis = p.ready && ((place === "calle" && (p.pl === "c" || p.pl === "j")) || p.pl === place); p.a.wrap.visible = vis && Math.hypot(p.tx - me.x, p.tz - me.z) < 70; if (!p.a.wrap.visible) continue;
+    const k = Math.min(1, dt * 10); p.x += (p.tx - p.x) * k; p.z += (p.tz - p.z) * k; let a = p.td - p.dir; a = Math.atan2(Math.sin(a), Math.cos(a)); p.dir += a * k;
+    p.a.wrap.position.set(p.x, 0, p.z); p.a.wrap.rotation.y = -p.dir + Math.PI / 2; loco(p.a, p.spd, false); p.a.mixer.update(dt); }
+}
+function chatLine(who, txt) { const box = $("#chat"), e = document.createElement("div"); txt = txt.replace(NB_BAD, w => w[0] + "*".repeat(w.length - 1)); e.innerHTML = who ? `<b>${esc(who)}:</b> ${esc(txt)}` : `<i>${esc(txt)}</i>`; box.appendChild(e); while (box.children.length > 7) box.firstChild.remove(); setTimeout(() => e.classList.add("old"), 14000); }
+function chatOpen() { if (!NB.ws) return nbMenu(true); const i = $("#chatin"); i.style.display = ""; i.value = ""; i.focus(); }
+function chatSend() { const i = $("#chatin"), t = i.value.trim().slice(0, 120); i.style.display = "none"; i.blur(); if (!t) return; const now = performance.now(); if (now - NB.chatT < 1500) return say("Espera un poco", 900); NB.chatT = now; const clean = t.replace(NB_BAD, w => w[0] + "*".repeat(w.length - 1)); misEv("chat"); nbSend({ t: "c", m: clean }); chatLine(nbName() + " (tú)", clean); }
+function nbMenu(on) { $("#nbon").style.display = on ? "" : "none"; if (on) { $("#nbmsg").textContent = ""; $("#nbname").value = nbName(); $("#nbleave").style.display = NB.ws ? "" : "none"; hubMenu(false); } }
+function nbNameOk() { const v = $("#nbname").value.trim().replace(NB_BAD, "").replace(/[^\p{L}\p{N} _.-]/gu, "").slice(0, 14); if (v.length < 2) { $("#nbmsg").textContent = "Escribe un nombre (mínimo 2 letras)"; return false; } store.set("nombre", v); return true; }
+// ---------- monedas, misiones diarias, Rey de la pista ----------
+const coins = () => store.get("monedas", 0);
+function addCoins(n, why) { store.set("monedas", coins() + n); updCoins(); if (why) setTimeout(() => say("+" + n + " monedas · " + why, 1800), 900); }
+function updCoins() { const b = $("#bRet"); if (b) b.textContent = "Retos · " + coins(); }
+const today = (o = 0) => { const d = new Date(Date.now() + o * 864e5); return d.getFullYear() + "-" + (d.getMonth() + 1) + "-" + d.getDate(); };
+const MIS = [
+  { id: "toq20", t: "Haz 20 toques seguidos", ev: "toques", n: 20, max: 1, p: 60 }, { id: "toq40", t: "Haz 40 toques seguidos", ev: "toques", n: 40, max: 1, p: 120 },
+  { id: "jaula", t: "Gana un partido en la jaula", ev: "winJaula", n: 1, p: 80 }, { id: "playa", t: "Gana un partido en la playa", ev: "winPlaya", n: 1, p: 80 },
+  { id: "gol5", t: "Marca 5 goles en partidos del barrio", ev: "goles", n: 5, p: 70 }, { id: "rey", t: "Gana un reto del Rey de la pista", ev: "rey", n: 1, p: 100 },
+  { id: "larg", t: "Dale 2 veces al larguero en una tanda", ev: "larguero", n: 2, max: 1, p: 80 }, { id: "pen", t: "Marca 4 de 5 penaltis", ev: "penaltis", n: 4, max: 1, p: 70 },
+  { id: "con", t: "Termina el slalom en menos de 26 s", ev: "slalom", n: 1, p: 80 }, { id: "chat", t: "Saluda en el chat del barrio online", ev: "chat", n: 1, p: 40 },
+  { id: "kit", t: "Estrena ropa en la tienda", ev: "kit", n: 1, p: 30 }, { id: "par3", t: "Juega 3 partidos en el barrio", ev: "partido", n: 3, p: 90 }];
+function misHoy() { let s = store.get("mis", null); if (!s || s.day !== today()) { const h = [...today()].reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, 11), pool = MIS.slice(), ids = [];
+    for (let i = 0; i < 3; i++) ids.push(pool.splice((h >>> (i * 5)) % pool.length, 1)[0].id); s = { day: today(), ids, prog: {}, got: [], racha: (s && s.racha) || 0, lastFull: (s && s.lastFull) || "" }; store.set("mis", s); } return s; }
+function misEv(ev, v = 1) { const s = misHoy(); let ch = false;
+  for (const id of s.ids) { const m = MIS.find(x => x.id === id); if (m.ev !== ev || s.got.includes(id)) continue; s.prog[id] = m.max ? Math.max(s.prog[id] || 0, v) : (s.prog[id] || 0) + v; ch = true;
+    if (s.prog[id] >= m.n) { s.got.push(id); store.set("monedas", coins() + m.p); setTimeout(() => say("Misión cumplida · +" + m.p, 2200), 1400); } }
+  if (ch && s.got.length === 3 && s.lastFull !== today()) { s.racha = s.lastFull === today(-1) ? s.racha + 1 : 1; s.lastFull = today(); const b = 50 * Math.min(7, s.racha); store.set("monedas", coins() + b); setTimeout(() => say("Racha de " + s.racha + " día" + (s.racha > 1 ? "s" : "") + " · +" + b, 2400), 3800); }
+  if (ch) { store.set("mis", s); updCoins(); } }
+const BANDAS = [["Los del Puerto", "PTO", "#3a6ea5", "#f2f2f2", -6, 50], ["La Viña FC", "VIÑ", "#7a1f3d", "#f4d21c", -3, 80], ["Santa María Crew", "SMC", "#1f7a4d", "#111111", 0, 120],
+  ["Los de la Caleta", "CAL", "#f2f2f2", "#1e3a8a", 3, 160], ["Callejón Real", "CRL", "#111111", "#d4a017", 6, 220], ["Reyes del Muelle", "RDM", "#d3202c", "#111111", 10, 400]];
+const REY = { x: 61, z: -5.6 };
+function retosPanel() { const s = misHoy(), P = $("#panel");
+  P.innerHTML = `<h3>Retos del barrio</h3><div><b style="color:var(--gold2)">${coins()} monedas</b> · Racha: <b>${s.racha || 0}</b> día${s.racha === 1 ? "" : "s"}</div><div style="margin-top:10px;display:grid;gap:6px">${s.ids.map(id => { const m = MIS.find(x => x.id === id), ok = s.got.includes(id), pr = Math.min(m.n, s.prog[id] || 0);
+    return `<div style="display:flex;justify-content:space-between;gap:10px;background:#ffffff0d;border-radius:8px;padding:7px 10px;${ok ? "opacity:.6" : ""}"><span>${ok ? "✔ " : ""}${m.t}</span><span style="white-space:nowrap;color:var(--gold2)">${ok ? "hecha" : (m.max ? "" : pr + "/" + m.n + " · ") + "+" + m.p}</span></div>`; }).join("")}</div>
+    <div style="margin-top:8px;opacity:.7;font-size:13px">Cumple las 3 cada día para subir la racha (más monedas cada día seguido). Récords: toques ${store.get("toques", 0)} · larguero ${store.get("larg", 0)}/5 · penaltis ${store.get("pen", 0)}/5 · slalom ${store.get("slalom", 0) ? store.get("slalom", 0).toFixed(1) + " s" : "—"}</div>
+    <div class="row"><button onclick="this.closest('#panel').style.display='none'">Cerrar</button></div>`; P.style.display = "block"; }
+function reyPanel() { const lv = store.get("rey", 0), P = $("#panel");
+  P.innerHTML = `<h3>Rey de la pista</h3><div>Gana a las bandas del barrio una a una. Si ganas a los Reyes del Muelle, la pista es tuya.</div><div style="margin-top:10px;display:grid;gap:6px">${BANDAS.map((b, i) => `<div style="display:flex;align-items:center;gap:10px;background:#ffffff0d;border-radius:8px;padding:6px 10px;${i > lv ? "opacity:.45" : ""}"><span style="width:16px;height:16px;border-radius:4px;background:${b[2]};border:3px solid ${b[3]}"></span><span style="flex:1">${i + 1}. ${b[0]}</span><span style="color:var(--gold2)">${i < lv ? "ganado" : "+" + b[5]}</span>${i === lv ? `<button onclick="reyJugar(${i})" style="padding:6px 12px">Retar</button>` : ""}</div>`).join("")}</div>
+    ${lv >= BANDAS.length ? `<div style="margin-top:10px;color:var(--gold2);font-weight:800">Eres el Rey de la pista. Puedes volver a retar a cualquiera por monedas.</div><div class="row">${BANDAS.map((b, i) => `<button onclick="reyJugar(${i})">${b[1]}</button>`).join("")}</div>` : ""}
+    <div class="row"><button onclick="this.closest('#panel').style.display='none'">Cerrar</button></div>`; P.style.display = "block"; }
+function reyJugar(i) { const b = BANDAS[i]; try { sessionStorage.setItem("st_pend", JSON.stringify({ k: "rey", i })); } catch (e) {} mode = "loading"; say(b[0], 1400); $("#panel").style.display = "none"; const back = location.pathname.split("/").pop() || "street.html";
+  setTimeout(() => { location.href = "motor/index.html?modo=street&c1=" + encodeURIComponent(kit.c1) + "&c2=" + encodeURIComponent(kit.c2) + "&rn=" + encodeURIComponent(b[0]) + "&rs=" + b[1] + "&r1=" + encodeURIComponent(b[2]) + "&r2=" + encodeURIComponent(b[3]) + "&rd=" + b[4] + "&volver=" + encodeURIComponent("../" + back); }, 700); }
+function applyResult(a, b) { let pend = null; try { pend = JSON.parse(sessionStorage.getItem("st_pend") || "null"); sessionStorage.removeItem("st_pend"); } catch (e) {} const w = a > b;
+  misEv("partido"); if (a) misEv("goles", a);
+  if (pend && pend.k === "rey") { const B = BANDAS[pend.i], lv = store.get("rey", 0); if (w) { misEv("rey"); misEv("winJaula"); addCoins(pend.i < lv ? Math.round(B[5] / 3) : B[5], "has ganado a " + B[0]); if (pend.i === lv) { store.set("rey", lv + 1); if (lv + 1 >= BANDAS.length) setTimeout(() => say("¡ERES EL REY DE LA PISTA!", 3500), 3200); } } else addCoins(10, "por jugar"); return; }
+  if (w) { misEv(pend && pend.k === "playa" ? "winPlaya" : "winJaula"); addCoins(40, "victoria"); } else addCoins(a === b ? 20 : 10, a === b ? "empate" : "por jugar"); }
+// ---------- minijuegos: larguero, penaltis, slalom ----------
+const MG = { k: null, t: 0, n: 0, hits: 0, shots: 0, ball: null, kp: null, aim: 0, gates: [], gi: 0, time: 0, state: "" };
+const LGOAL = { x: BEACH.x1 - .4, z: (BEACH.z0 + BEACH.z1) / 2 }, SPOTS = { larg: { x: LGOAL.x - 11, z: LGOAL.z - 2.6 }, pen: { x: LGOAL.x - 11, z: LGOAL.z + 2.6 }, sla: { x: -36, z: 9 } };
+const SLALOM = [[-32, 7.2], [-28, 11], [-24, 7.2], [-20, 11], [-16, 7.2], [-12, 11], [-8, 7.2], [-4, 9]];
+const mgMarks = [];
+function mgSetup() { const mk = (x, z, c) => { const r = new THREE.Mesh(new THREE.RingGeometry(.55, .75, 40), new THREE.MeshBasicMaterial({ color: c, transparent: true, opacity: .8, depthWrite: false })); r.rotation.x = -Math.PI / 2; r.position.set(x, .23, z); S.add(r); return r; };
+  for (const k in SPOTS) mgMarks.push(mk(SPOTS[k].x, SPOTS[k].z, 0xc8ff3c)); mgMarks.push(mk(TOQ.x, TOQ.z, 0xc8ff3c));
+  for (const [x, z] of SLALOM) { const g = mk(x, z, 0xf5c542); g.scale.setScalar(1.4); g.visible = false; MG.gates.push(g); } }
+function mgNear() { for (const k in SPOTS) if (Math.hypot(me.x - SPOTS[k].x, me.z - SPOTS[k].z) < 1.4) return k; return null; }
+const MG_INFO = { larg: ["Larguero", "5 tiros: mantén <b>K</b> / TIRO para la fuerza y apunta con el stick. Dale al larguero."], pen: ["Penaltis", "5 penaltis contra el portero del barrio. Apunta con el stick, mantén <b>K</b> / TIRO y suelta."], sla: ["Slalom", "Conduce el balón por los aros amarillos lo más rápido posible. <b>Shift</b> / CORRER para acelerar."] };
+async function mgStart(k) { mode = "mini"; MG.k = k; MG.shots = 0; MG.hits = 0; MG.state = "aim"; MG.aim = 0; MG.t = 0; SNAP = 1; $("#panel").style.display = "none"; mgMarks.forEach(m => m.visible = false);
+  say(MG_INFO[k][0], 1300); tip(MG_INFO[k][1]);
+  if (k === "sla") { MG.gi = 0; MG.time = 0; MG.state = "run"; me.x = SPOTS.sla.x; me.z = SPOTS.sla.z; me.dir = 0; MG.gates.forEach(g => { g.visible = true; g.material.color.set(0xf5c542); }); return; }
+  me.x = SPOTS[k].x; me.z = k === "pen" ? LGOAL.z : SPOTS[k].z; if (k === "larg") me.z = LGOAL.z; me.dir = 0; MG.ball = { x: me.x + .6, y: BR, z: me.z, vx: 0, vy: 0, vz: 0, live: false };
+  if (k === "pen" && !MG.kp) { const g = await loadModel("gk02"); MG.kp = { a: actor(g, "#16a34a", "#111111"), z: LGOAL.z, vz: 0 }; } if (MG.kp) { MG.kp.a.wrap.visible = k === "pen"; MG.kp.z = LGOAL.z; MG.kp.a.lock = 0; play(MG.kp.a, "GkReady"); } }
+function mgEnd() { const k = MG.k; mode = "hub"; ring.position.y = -5; charge = -1; $("#power").style.opacity = 0; MG.k = null; mgMarks.forEach(m => m.visible = true); MG.gates.forEach(g => g.visible = false); if (MG.kp) MG.kp.a.wrap.visible = false; ballM.position.set(CX, BR, 0); tip(""); }
+function mgShot(p) { if (MG.state !== "aim") return; const B = MG.ball, k = MG.k, aimZ = MG.aim * 1.9, dx = LGOAL.x - B.x, dz = (LGOAL.z + aimZ) - B.z, d = Math.hypot(dx, dz);
+  const sp = 15 + p * 13, T = d / sp, wantY = k === "larg" ? .6 + p * 1.6 : .2 + p * 1.9; B.vx = dx / T; B.vz = dz / T; B.vy = (wantY - B.y + 4.9 * T * T) / T; B.live = true; MG.state = "fly"; MG.t = 0; MG.res = "";
+  once(me.a, p > .7 ? "PowerShot" : "Kick_a_Soccer_Ball", .7, 1.6); MG.shots++;
+  if (k === "pen") { const guess = rnd() < .3 ? 0 : rnd() < .5 ? -1 : 1, lean = Math.abs(MG.aim) > .3 && rnd() < .45 ? Math.sign(MG.aim) : guess; MG.kp.dive = lean; } }
+function stepMini(dt) { if (!MG.k) { mode = "hub"; return; }
+  const inp = input(), k = MG.k;
+  if (k === "sla") { const d = camDir(inp.x, inp.y), m = Math.hypot(d.x, d.z), sp = m * (inp.run ? 7.2 : 4.6); me.spd += (sp - me.spd) * Math.min(1, dt * 5);
+    if (m > .1) { let a = Math.atan2(d.z, d.x) - me.dir; a = Math.atan2(Math.sin(a), Math.cos(a)); me.dir += a * Math.min(1, dt * 7); }
+    me.x += Math.cos(me.dir) * me.spd * dt; me.z += Math.sin(me.dir) * me.spd * dt; me.z = clamp(me.z, 5.5, SEA_Z - 4); MG.time += dt;
+    const g = SLALOM[MG.gi]; if (g && Math.hypot(me.x - g[0], me.z - g[1]) < 1.1) { MG.gates[MG.gi].material.color.set(0x22c55e); MG.gi++; }
+    tip(`Slalom · <b style="font-size:1.4em">${MG.time.toFixed(1)} s</b> · aro ${Math.min(MG.gi + 1, SLALOM.length)}/${SLALOM.length}`);
+    if (MG.gi >= SLALOM.length) { const t = MG.time, best = store.get("slalom", 0); if (!best || t < best) store.set("slalom", t); if (t < 26) misEv("slalom"); say((!best || t < best ? "¡Récord! " : "") + t.toFixed(1) + " s", 2400); if (t < 22) addCoins(30, "slalom rápido"); mgEnd(); return; }
+    if (MG.time > 60) { say("Demasiado lento", 1800); mgEnd(); return; }
+    ballM.position.set(me.x + Math.cos(me.dir) * .5, BR, me.z + Math.sin(me.dir) * .5); ballM.rotation.z -= me.spd * dt * 3;
+    me.a.wrap.position.set(me.x, 0, me.z); me.a.wrap.rotation.y = -me.dir + Math.PI / 2; loco(me.a, me.spd, true); me.a.mixer.update(dt); mgCam(dt, 6, 3); return; }
+  const B = MG.ball;
+  if (MG.state === "aim") { MG.aim = clamp(MG.aim + inp.x * dt * 1.4 * (Math.cos(YAW) > 0 ? 1 : -1), -1, 1); ring.position.set(LGOAL.x, .25, LGOAL.z + MG.aim * 1.9); if (charge >= 0) { charge += dt * .9; $("#power").style.opacity = 1; $("#power i").style.width = Math.min(100, charge * 100) + "%"; } }
+  else if (MG.state === "fly") { MG.t += dt; const px = B.x; B.vy -= 9.8 * dt; B.x += B.vx * dt; B.y += B.vy * dt; B.z += B.vz * dt; if (B.y < BR) { B.y = BR; B.vy *= -.45; B.vx *= .7; B.vz *= .7; }
+    if (px < LGOAL.x && B.x >= LGOAL.x && !MG.res) { const dz = B.z - LGOAL.z, inW = Math.abs(dz) < 1.45, bar = Math.abs(B.y - 1.8) < .16 && Math.abs(dz) < 1.55, post = Math.abs(Math.abs(dz) - 1.5) < .14 && B.y < 1.85;
+      if (k === "larg") { MG.res = bar ? "¡LARGUERO!" : post ? "Al palo" : inW && B.y < 1.8 ? "Dentro, pero no vale" : "Fuera"; if (bar) { MG.hits++; B.vx = -B.vx * .5; B.vy = -Math.abs(B.vy) * .3; } else if (post) B.vx = -B.vx * .5; }
+      else { const kz = MG.kp.z, saved = B.y < 1.75 && Math.abs(dz - (kz - LGOAL.z)) < .85; MG.res = bar || post ? "Al palo" : !inW || B.y > 1.8 ? "Fuera" : saved ? "¡Parada!" : "¡GOL!"; if (MG.res === "¡GOL!") MG.hits++; if (saved || bar || post) { B.vx = -B.vx * .35; B.vz *= .5; } else if (inW && B.y < 1.8) { B.vx *= .15; B.vz *= .15; } }
+      say(MG.res, 1100); }
+    if (MG.t > 1.8) { if (MG.shots >= 5) { const n = MG.hits; if (k === "larg") { if (n > store.get("larg", 0)) store.set("larg", n); misEv("larguero", n); if (n) addCoins(n * 15, "larguero"); } else { if (n > store.get("pen", 0)) store.set("pen", n); misEv("penaltis", n); if (n) addCoins(n * 8, "penaltis"); }
+        setTimeout(() => say(MG_INFO[k][0] + ": " + n + " de 5", 2200), 1150); mgEnd(); return; }
+      Object.assign(B, { x: me.x + .6, y: BR, z: me.z, vx: 0, vy: 0, vz: 0, live: false }); MG.state = "aim"; MG.aim = 0; if (MG.kp) { MG.kp.z = LGOAL.z; MG.kp.dive = 0; MG.kp.a.lock = 0; play(MG.kp.a, "GkReady"); } } }
+  if (k === "pen" && MG.kp) { const kp = MG.kp; if (MG.state === "fly" && kp.dive != null && MG.t > .12 && !kp.did) { kp.did = 1; if (kp.dive) once(kp.a, kp.dive > 0 ? "DiveR" : "DiveL", 1.2, 1.4); } if (MG.state === "aim") kp.did = 0;
+    if (MG.state === "fly" && kp.dive && MG.t > .12) kp.z += (LGOAL.z + kp.dive * 1.15 - kp.z) * Math.min(1, dt * 8);
+    kp.a.wrap.position.set(LGOAL.x - .5, 0, kp.z); kp.a.wrap.rotation.y = -Math.PI / 2 - Math.PI / 2; kp.a.lock = Math.max(0, (kp.a.lock || 0) - dt); kp.a.mixer.update(dt); }
+  ballM.position.set(B.x, B.y, B.z); if (B.live) ballM.rotation.x += dt * 12;
+  me.a.wrap.position.set(me.x, 0, me.z); me.a.wrap.rotation.y = -me.dir + Math.PI / 2; me.a.lock = Math.max(0, (me.a.lock || 0) - dt); loco(me.a, 0, false); me.a.mixer.update(dt);
+  const want = new THREE.Vector3(me.x - 3.4, 3, me.z - 1.7); cam.position.lerp(want, SNAP ? 1 : Math.min(1, dt * 3)); SNAP = 0; cam.lookAt(LGOAL.x - 2, 1, LGOAL.z); sun.target.position.set(me.x, 0, me.z); sun.position.set(me.x - 40, 35, me.z + 25); }
+function mgCam(dt, fw, fh) { stepYaw(dt); const want = new THREE.Vector3(me.x + Math.sin(YAW) * fw, fh, me.z + Math.cos(YAW) * fw); cam.position.lerp(want, SNAP ? 1 : Math.min(1, dt * 3)); SNAP = 0; cam.lookAt(me.x, 1.2, me.z); sun.target.position.set(me.x, 0, me.z); sun.position.set(me.x - 40, 35, me.z + 25); }
 // ---------- minijuego: toques (darle al balón cuando baja a los pies; cada vez el margen es más pequeño) ----------
 const TQS = { n: 0, y: 0, vy: 0, end: 0 };
 function startToques() { mode = "toques"; me.x = TOQ.x; me.z = TOQ.z; me.dir = -Math.PI / 2; me.spd = 0; Object.assign(TQS, { n: 0, y: 1.6, vy: 1.5, end: 0 }); SNAP = 1;
@@ -350,7 +519,7 @@ function startToques() { mode = "toques"; me.x = TOQ.x; me.z = TOQ.z; me.dir = -
 function toqueHit() { if (TQS.end > 0) return; const lo = .16 + Math.min(.3, TQS.n * .006);
   if (TQS.vy < 0 && TQS.y < .95 && TQS.y > lo) { TQS.n++; TQS.vy = 4.2 + Math.random() * .8; once(me.a, Math.random() < .5 ? "ThighCtl" : "FirstTouch", .32, 2.2); tip(`<b style="font-size:1.6em">${TQS.n}</b> toques`); }
   else if (TQS.y >= .95) toqueFail("¡Demasiado pronto!"); }
-function toqueFail(why) { if (TQS.end > 0) return; TQS.end = 2.4; const best = store.get("toques", 0); if (TQS.n > best) store.set("toques", TQS.n);
+function toqueFail(why) { if (TQS.end > 0) return; TQS.end = 2.4; misEv("toques", TQS.n); if (TQS.n >= 30) addCoins(Math.floor(TQS.n / 10) * 5, "toques"); const best = store.get("toques", 0); if (TQS.n > best) store.set("toques", TQS.n);
   say((why ? why + " · " : "") + (TQS.n > best ? "¡Récord! " : "") + TQS.n + " toques", 2200); }
 function stepToques(dt) {
   if (TQS.end > 0) { TQS.end -= dt; if (TQS.end <= 0) { mode = "hub"; ballM.position.set(CX, BR, 0); tip(""); } }
@@ -366,7 +535,7 @@ const TEAMC = () => [[kit.c1, kit.c2], [kit.c1 === "#d3202c" ? "#1e6bff" : "#d32
 const SPR = 7.6, RUN = 5.4, BR = .11, GOALX = s => CX + s * CW / 2;
 // el partido se juega en el motor nuevo (el mismo del fútbol 11): jaula con paredes, 4 contra 4
 function goOnline() { const back = location.pathname.split("/").pop() || "street.html"; location.href = "motor/" + "index" + ".html?modo=street&online=1&volver=" + encodeURIComponent("../" + back); }
-function goMatch(cancha) { mode = "loading"; say("¡A la jaula!", 1200); const back = location.pathname.split("/").pop() || "street.html"; setTimeout(() => { location.href = "motor/" + "index" + ".html?modo=street&c1=" + encodeURIComponent(kit.c1) + "&c2=" + encodeURIComponent(kit.c2) + "&volver=" + encodeURIComponent("../" + back) + (cancha ? "&cancha=" + cancha : ""); }, 600); }
+function goMatch(cancha) { try { sessionStorage.setItem("st_pend", JSON.stringify({ k: cancha || "jaula" })); } catch (e) {} mode = "loading"; say("¡A la jaula!", 1200); const back = location.pathname.split("/").pop() || "street.html"; setTimeout(() => { location.href = "motor/" + "index" + ".html?modo=street&c1=" + encodeURIComponent(kit.c1) + "&c2=" + encodeURIComponent(kit.c2) + "&volver=" + encodeURIComponent("../" + back) + (cancha ? "&cancha=" + cancha : ""); }, 600); }
 async function startMatch() {
   mode = "loading"; tip(""); S.fog = FOG; place = "calle"; $("#panel").style.display = "none"; say("4 contra 4", 1600); $("#hud").style.display = "block";
   const cols = TEAMC(), names = ["pj01", "pj05", "pj09", "pj13", "gk02", "pj17", "pj20", "pj03"];
@@ -456,13 +625,15 @@ let ballM, ring;
   let hb = null; an.scene.traverse(o => { if (o.name) animRest[o.name] = o.quaternion.clone(); if (!hb && o.name === "Hips") hb = o; }); hipsRestY = hb ? hb.position.y : 1;
   for (const c of an.animations) { c.tracks = c.tracks.filter(t => !t.name.endsWith(".scale") && (!t.name.endsWith(".position") || t.name === "Hips.position")); baseClips[c.name] = c; }
   const g = await loadModel("pj18"); me = { a: actor(g, kit.c1, kit.c2), x: -40, z: 3, dir: 0, spd: 0 };
-  spawnNPCs(); addProps();
-  $("#load").remove(); tip("Bienvenido al barrio. Entra en las tiendas o ve a la jaula del fondo para jugar.");
-  { const rs = new URLSearchParams(location.search).get("res"); if (rs && /^\d+-\d+$/.test(rs)) { const [a, b] = rs.split("-").map(Number); me.x = CX - CW / 2 - 4; me.z = 0; me.dir = Math.PI; SNAP = 1; setTimeout(() => say(a > b ? "¡Ganaste " + a + "-" + b + "!" : a === b ? "Empate " + a + "-" + b : "Has perdido " + a + "-" + b, 2800), 300); history.replaceState(null, "", location.pathname); } }
+  spawnNPCs(); addProps(); mgSetup(); updCoins();
+  loadModel("entrenador1").then(g => { const a = actor(g, null, null); a.wrap.position.set(REY.x, 0, REY.z); a.wrap.rotation.y = -Math.PI + Math.PI / 2; play(a, "Idle"); const l = nbLabel("REY DE LA PISTA"); a.wrap.add(l); NPCS.push({ a, x: REY.x, z: REY.z, dir: Math.PI, walk: false, spd: 0, keeper: false, rey: 1 }); }).catch(() => {});
+  $("#load").remove(); try { const nb = JSON.parse(sessionStorage.getItem("street_nb") || "null"); if (nb && nbName()) nbJoin(nb.k, nb.sala); } catch (e) {} tip("Bienvenido al barrio. Entra en las tiendas o ve a la jaula del fondo para jugar.");
+  { const rs = new URLSearchParams(location.search).get("res"); if (rs && /^\d+-\d+$/.test(rs)) { const [a, b] = rs.split("-").map(Number); me.x = CX - CW / 2 - 4; me.z = 0; me.dir = Math.PI; SNAP = 1; applyResult(a, b); setTimeout(() => say(a > b ? "¡Ganaste " + a + "-" + b + "!" : a === b ? "Empate " + a + "-" + b : "Has perdido " + a + "-" + b, 2800), 300); history.replaceState(null, "", location.pathname); } }
   let last = performance.now(), fpsA = 60, lowQ = false;
   (function loop(now) { const dt = Math.min(.05, (now - last) / 1000); last = now;
     fpsA += (1 / Math.max(dt, .001) - fpsA) * .05; if (!lowQ && now > 8000 && fpsA < 32) { lowQ = true; R.setPixelRatio(Math.min(1, DPR())); R.shadowMap.enabled = false; S.traverse(o => { if (o.material) (Array.isArray(o.material) ? o.material : [o.material]).forEach(m => m.needsUpdate = true); }); }   // equipo justo: baja calidad sola
-    if (mode === "hub") { stepHub(dt); stepNPCs(dt); } else if (mode === "match") stepMatch(dt); else if (mode === "toques") stepToques(dt);
+    if (mode === "hub") { stepHub(dt); stepNPCs(dt); } else if (mode === "match") stepMatch(dt); else if (mode === "toques") stepToques(dt); else if (mode === "mini") stepMini(dt);
+    if (me) stepNet(dt);
     R.render(S, cam); requestAnimationFrame(loop); })(last);
 })();
 </script></body></html>
