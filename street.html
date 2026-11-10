@@ -38,19 +38,45 @@ canvas{display:block}
 .card input.nbi{font:800 22px var(--bc);text-align:center;padding:10px;border-radius:10px;border:1px solid var(--line);background:#0a1222;color:#fff;width:100%;text-transform:none}
 .card .sub{opacity:.75;font-size:14px;margin:-4px 0 4px}
 #nbmsg{color:#ff9a9a;min-height:20px;font-size:14px}
+
+/* ===== estilo MDG 27: azul marino, azul eléctrico, dorado y plata ===== */
+:root{--acc:#4f8dff;--gold:#d4a64a;--gold2:#f3d27a;--bg:#050b1c;--navy2:#0a1530;--navy3:#11224a;--blue:#1e6bff;--glass:rgba(5,11,28,.84);--line:rgba(243,210,122,.22)}
+html,body{background:var(--bg)}
+#load{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;padding-bottom:9vh;gap:14px;background:#050b1c var(--i-carga,none) center/cover no-repeat;font:800 21px var(--bc);letter-spacing:.14em;text-transform:uppercase}
+#load img{width:min(560px,70vw);filter:drop-shadow(0 6px 24px #000c);margin-bottom:auto;margin-top:12vh}
+#load .lbar{width:min(520px,72vw);height:8px;border-radius:6px;background:#050b1ccc;border:1px solid #d4a64a88;box-shadow:0 0 14px #1e6bff55;overflow:hidden}#load .lbar i{display:block;height:100%;width:35%;border-radius:6px;background:linear-gradient(90deg,#1e6bff,#7fc2ff 55%,#f3d27a);animation:lb 1.4s ease-in-out infinite}@keyframes lb{0%{transform:translateX(-100%)}100%{transform:translateX(300%)}}
+#tb button{display:flex;align-items:center;gap:6px;background:linear-gradient(180deg,#11224aee,#050b1cee);border:1px solid #d4a64a99;color:#f4f7ff;padding:5px 14px 5px 8px;box-shadow:0 4px 14px #0008,inset 0 1px 0 #ffffff1a}
+#tb button img{height:24px;width:auto}
+#tb button:hover{border-color:var(--gold2);color:var(--gold2)}
+#tb #bRet b{color:var(--gold2)}
+#nbst{background:linear-gradient(180deg,#11224aee,#050b1cee);border:1px solid #d4a64a66;border-left:4px solid var(--blue)}#nbst b{color:#7fc2ff}
+#tip{background:linear-gradient(180deg,#11224af0,#050b1cf0);border:1px solid #d4a64a55;border-left:4px solid var(--gold)}
+#msg{color:#fff;background:linear-gradient(180deg,#fff 20%,#f3d27a 60%,#d4a64a);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;filter:drop-shadow(0 4px 12px #000)}
+.card,#panel{background:linear-gradient(165deg,#11224af5,#050b1cf8);border:1px solid #d4a64a55;border-top:3px solid var(--gold);box-shadow:0 20px 60px #000c,0 0 0 1px #1e6bff22 inset}
+.card h3,#panel h3{color:#f4f7ff;letter-spacing:.03em;text-shadow:0 2px 0 #1e6bff88}
+.card h3 img,#panel h3 img{display:block;margin:0 auto;max-width:100%}
+.card button,#panel button,#panel a{border:14px solid transparent;border-image:var(--i-boton) 38 fill / 14px stretch;background:none;color:#fff;border-radius:0;padding:7px 18px;min-height:56px;font-size:19px;text-shadow:0 1px 3px #000a}
+.card button.pri,#panel a:first-child,#panel .row>a,#panel button.pri{border-image:var(--i-boton-on) 38 fill / 14px stretch;color:#1a1204;text-shadow:none;background:none}
+.card button:hover,#panel button:hover{filter:brightness(1.18)}
+#panel .sw{border:3px solid #d4a64a;border-image:none;border-radius:50%;padding:0;min-height:0}
+.tb{background:var(--i-redondo) center/100% 100% no-repeat!important;border:0!important;box-shadow:none!important;color:#fff;text-shadow:0 1px 3px #000}
+#joy{border-color:#d4a64a99;background:radial-gradient(circle,#11224a55,#050b1caa)}#joy i{background:radial-gradient(circle at 40% 35%,#f3d27a,#d4a64a)}
+#power{border:1px solid #d4a64a88}#power i{background:linear-gradient(90deg,#1e6bff,#7fc2ff,#f3d27a)}
+#chat b{color:var(--gold2)}#chat i{color:#7fc2ff}
+.coin{height:1.1em;vertical-align:-.2em}
 </style></head><body>
-<div id="load">Cargando el barrio…</div>
+<div id="load"><img id="loadLogo" alt="Street"><div>Cargando el <b style="color:#f3d27a">barrio</b>…</div><div class="lbar"><i></i></div></div>
 <div id="hud"></div><div id="msg"></div><div id="tip"></div><div id="power"><i></i></div><div id="panel"></div>
 <div id="nbst"></div><div id="chat"></div><input id="chatin" maxlength="120" placeholder="Escribe y pulsa Enter" style="display:none" enterkeyhint="send">
-<div id="tb"><button id="bChat" onclick="chatOpen()" style="display:none">Chat</button><button id="bRet" onclick="retosPanel()">Retos</button><button id="bOn" onclick="nbMenu(true)">Online</button><button id="bMenu" onclick="hubMenu(true)">Menú</button></div>
-<div id="nbon" class="modal" style="display:none" onclick="if(event.target===this)nbMenu(false)"><div class="card"><h3>Barrio online</h3><div class="col">
+<div id="tb"><button id="bChat" onclick="chatOpen()" style="display:none"><img data-ui="ico_chat" alt="">Chat</button><button id="bRet" onclick="retosPanel()"><img data-ui="ico_moneda" alt=""><span id="bRetT">0</span></button><button id="bOn" onclick="nbMenu(true)"><img data-ui="ico_online" alt="">Online</button><button id="bMenu" onclick="hubMenu(true)"><img data-ui="ico_ajustes" alt="">Menú</button></div>
+<div id="nbon" class="modal" style="display:none" onclick="if(event.target===this)nbMenu(false)"><div class="card"><h3><img data-ui="ico_online" alt="" style="height:64px;width:auto;margin:0 auto 6px">Barrio online</h3><div class="col">
 <div class="sub">Tu nombre en el barrio</div><input id="nbname" class="nbi" maxlength="14" placeholder="NOMBRE">
 <button class="pri" onclick="nbNameOk()&&nbJoin('global').then(ok=>ok&&nbMenu(false))">Barrio global · entra todo el mundo</button>
 <button onclick="nbNameOk()&&nbJoin('priv').then(ok=>ok&&nbMenu(false))">Crear barrio privado</button>
 <div style="display:flex;gap:8px"><input id="nbcode" class="nbi" maxlength="8" placeholder="CÓDIGO" style="text-transform:uppercase"><button onclick="nbNameOk()&&nbJoin('priv',$('#nbcode').value.trim()).then(ok=>ok&&nbMenu(false))">Unirse</button></div>
 <div id="nbmsg"></div><button id="nbleave" onclick="nbLeave();nbMenu(false)">Salir del online</button><button onclick="nbMenu(false)">Cerrar</button></div></div></div>
-<div id="nbask" class="modal" style="display:none"><div class="card"><h3>¡Reto!</h3><p style="font-size:18px"></p><div class="col"><button class="pri">Aceptar</button><button class="no">Rechazar</button></div></div></div>
-<div id="hmenu" class="modal" style="display:none" onclick="if(event.target===this)hubMenu(false)"><div class="card"><h3>Street Football</h3><div class="col">
+<div id="nbask" class="modal" style="display:none"><div class="card"><h3><img data-ui="ico_reto" alt="" style="height:64px;width:auto;margin:0 auto 6px">¡Reto!</h3><p style="font-size:18px"></p><div class="col"><button class="pri">Aceptar</button><button class="no">Rechazar</button></div></div></div>
+<div id="hmenu" class="modal" style="display:none" onclick="if(event.target===this)hubMenu(false)"><div class="card"><h3><img data-ui="logo_street" alt="Street Football" style="width:min(360px,80%)"></h3><div class="col">
 <button class="pri" onclick="hubMenu(false)">Seguir jugando</button><button onclick="nbMenu(true)">Barrio online</button><button onclick="goOnline()">Partido online con código</button><button onclick="hubHelp(true)">Controles</button><button onclick="location.href='index.html'">Volver a MDG 27</button></div></div></div>
 <div id="hhelp" class="modal" style="display:none" onclick="if(event.target===this)hubHelp(false)"><div class="card wide"><h3>Controles</h3><div class="kl">
 <kbd>WASD / flechas</kbd><span>Moverte</span><kbd>Shift</kbd><span>Correr</span><kbd>Z / X · arrastrar</kbd><span>Girar la cámara</span><kbd>E</kbd><span>Entrar en tiendas, usar, jugar en la cancha de la playa o los toques</span><kbd>Esc</kbd><span>Menú</span><kbd>Móvil</kbd><span>Joystick a la izquierda; botones a la derecha</span></div>
@@ -74,6 +100,9 @@ S.add(new THREE.HemisphereLight(0xffe2c4, 0x45403a, 1.15));
 const sun = new THREE.DirectionalLight(0xffc48a, 2.3); sun.position.set(-40, 35, 25); sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048);
 Object.assign(sun.shadow.camera, { left: -30, right: 30, top: 30, bottom: -30, near: 1, far: 140 }); sun.shadow.bias = -.0005; sun.shadow.normalBias = .02; S.add(sun, sun.target);
 const TL = new THREE.TextureLoader(), texCache = {}, SU = n => (window.SA && SA[n.replace('../street/', '')]) || "street/" + n;
+{ const U = n => SU(n + ".webp"), st = document.documentElement.style; st.setProperty("--i-boton", `url(${U("ui_boton")})`); st.setProperty("--i-boton-on", `url(${U("ui_boton_on")})`); st.setProperty("--i-redondo", `url(${U("ui_redondo")})`); st.setProperty("--i-carga", `url(${U("carga_barrio")})`);
+  document.querySelectorAll("img[data-ui]").forEach(i => i.src = U(i.dataset.ui)); const ll = document.getElementById("loadLogo"); if (ll) ll.src = U("logo_street"); }
+const UI = n => SU(n + ".webp");
 function tex(n, rep) { const k = n + (rep || ""); if (!texCache[k]) { const t = TL.load(SU(n)); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = R.capabilities.getMaxAnisotropy(); if (rep) { t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(rep[0], rep[1]); } texCache[k] = t; } return texCache[k]; }
 const mat = (n, rep, o = {}) => new THREE.MeshStandardMaterial(Object.assign({ map: tex(n, rep), roughness: .9 }, o));
 function box(w, h, d, mats, x, y, z, ry = 0) { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mats); m.position.set(x, y, z); m.rotation.y = ry; m.castShadow = m.receiveShadow = true; S.add(m); return m; }
@@ -88,7 +117,7 @@ function roomWindow(img, x, y, z, w, h, ry) {
 // ---------- barrio ----------
 const SHOPS = [], DOORS = [], KEEPERS = [];
 // el barrio junto al mar: una calle larga con tiendas al norte y el paseo marítimo al sur; alrededor, el mar
-const SEA_Z = 22, X0 = -116, X1 = 64, BEACH = { x0: -96, x1: -66, z0: 10.5, z1: 20.5 }, TOQ = { x: -45, z: 15 };
+const SEA_Z = 22, X0 = -176, X1 = 64, BEACH = { x0: -96, x1: -66, z0: 10.5, z1: 20.5 }, TOQ = { x: -45, z: 15 };
 let seaM = null;
 function buildBarrio() {
   const land = new THREE.Mesh(new THREE.PlaneGeometry(X1 - X0 + 60, SEA_Z + 40), new THREE.MeshStandardMaterial({ color: 0x3b3a3d, roughness: 1 })); land.rotation.x = -Math.PI / 2; land.position.set((X0 + X1 + 60) / 2 - 4, 0, (SEA_Z - 40) / 2); land.receiveShadow = true; S.add(land);
@@ -107,25 +136,35 @@ function buildBarrio() {
   const FAC = ["fachada_portal.webp", "fachada_persiana.webp", "fachada_ladrillo.webp", "fachada_desconchada.webp", "fachada_colores.webp", "fachada_naves.webp", "fachada_mural.webp", "fachada_bar.webp"].concat(["fachada_blanca.webp", "chiringuito.webp"].filter(SA_has));
   const side = mat("pared_ladrillo.webp", [3, 3]), roof = new THREE.MeshStandardMaterial({ color: 0x4a4440, roughness: .9 });
   // edificios al norte de la calle (tres son tiendas)
-  const plan = []; let k = 0; for (let x = X0 + 7; x < X1 - 6; x += 13.5) { plan.push([x, 13, 9 + (k * 5) % 7, k % FAC.length, { 4: "bar", 8: "equip", 11: "sobres" }[k]]); k++; }
-  plan.forEach(([x, w, h, f, shop]) => { const zf = -8, d = 12; box(w - .3, h, d, [side, side, roof, roof, mat(FAC[f], null), side], x, h / 2, zf - d / 2);
+  // fachadas en orden de oeste a este (las 4 primeras son la zona nueva del barrio); alto según la proporción de la imagen
+  const ORD = ["fachada_polideportivo.webp", "st_grafiti1.webp", "fachada_bloque.webp", "fachada_cadiz_blanca.webp", "fachada_portal.webp", "fachada_azulejos.webp", "fachada_ladrillo.webp", "fachada_cadiz_blanca.webp", "fachada_bar.webp", "fachada_colores.webp", "fachada_bloque.webp", "st_grafiti2.webp", "fachada_tienda_deportes.webp", "fachada_azulejos.webp", "fachada_desconchada.webp", "fachada_persiana.webp", "fachada_naves.webp", "fachada_mural.webp"];
+  const AR = { "fachada_polideportivo.webp": .46, "st_grafiti1.webp": .5, "st_grafiti2.webp": .5, "fachada_bloque.webp": 1.04, "fachada_cadiz_blanca.webp": 1.2, "fachada_azulejos.webp": .64, "fachada_tienda_deportes.webp": .66 };
+  const plan = []; let k = 0; for (let x = X0 + 13; x < X1 - 6; x += 13.5) { const f = ORD[k % ORD.length]; plan.push([x, 13, AR[f] ? Math.round(13 * AR[f] * 10) / 10 : 9 + (k * 5) % 7, f, { 8: "bar", 12: "equip", 15: "sobres" }[k]]); k++; }
+  plan.forEach(([x, w, h, f, shop]) => { const zf = -8, d = 12; box(w - .3, h, d, [side, side, roof, roof, mat(f, null), side], x, h / 2, zf - d / 2);
     if (shop) { SHOPS.push({ k: shop, x, z: zf }); DOORS.push({ k: shop, x, z: zf + .9 }); } });
   // farolas a lo largo del paseo y de la calle, bancos y papeleras
   const metal = new THREE.MeshStandardMaterial({ color: 0x2b2f35, roughness: .5, metalness: .6 }), bulbM = new THREE.MeshBasicMaterial({ color: 0xffd9a0 });
   for (let x = X0 + 4; x <= X1 + 40; x += 16) for (const z of [-5.3, SEA_Z - 1.2]) { if (z < 0 && x > X1) continue; const p = new THREE.Mesh(new THREE.CylinderGeometry(.08, .1, 6, 8), metal); p.position.set(x, 3, z); p.castShadow = true; S.add(p);
     const bulb = new THREE.Mesh(new THREE.SphereGeometry(.22, 10, 8), bulbM); bulb.position.set(x, 5.95, z); S.add(bulb); }
   // cancha de la playa (arena) en el paseo
-  const sand = SA_has("arena.webp") ? mat("arena.webp", [6, 2]) : new THREE.MeshStandardMaterial({ color: 0xd8c08c, roughness: 1 });
+  const sand = SA_has("st_arena.webp") ? mat("st_arena.webp", [5, 2]) : new THREE.MeshStandardMaterial({ color: 0xd8c08c, roughness: 1 });
   const bf = new THREE.Mesh(new THREE.PlaneGeometry(BEACH.x1 - BEACH.x0, BEACH.z1 - BEACH.z0), sand); bf.rotation.x = -Math.PI / 2; bf.position.set((BEACH.x0 + BEACH.x1) / 2, .2, (BEACH.z0 + BEACH.z1) / 2); bf.receiveShadow = true; S.add(bf);
   const white = new THREE.MeshStandardMaterial({ color: 0xf4f4f0, roughness: .35 });
   for (const gx of [BEACH.x0 + .4, BEACH.x1 - .4]) for (const dz of [-1.5, 1.5]) { const p = new THREE.Mesh(new THREE.CylinderGeometry(.05, .05, 1.6, 8), white); p.position.set(gx, 1, (BEACH.z0 + BEACH.z1) / 2 + dz); S.add(p); }
   for (const gx of [BEACH.x0 + .4, BEACH.x1 - .4]) { const c = new THREE.Mesh(new THREE.CylinderGeometry(.05, .05, 3, 8), white); c.rotation.x = Math.PI / 2; c.position.set(gx, 1.8, (BEACH.z0 + BEACH.z1) / 2); S.add(c); }
   // punto de los toques (aro amarillo en el suelo)
   const tq = new THREE.Mesh(new THREE.RingGeometry(.9, 1.1, 40), new THREE.MeshBasicMaterial({ color: 0xffd23a })); tq.rotation.x = -Math.PI / 2; tq.position.set(TOQ.x, .2, TOQ.z); S.add(tq);
+  // zona nueva del oeste: plaza de adoquines, quiosco con terraza de barro y el horizonte de Cádiz al fondo del mar
+  { const pl = new THREE.Mesh(new THREE.PlaneGeometry(60, 10), mat("suelo_adoquin.webp", [14, 2.4])); pl.rotation.x = -Math.PI / 2; pl.position.set(X0 + 30, .015, 0); pl.receiveShadow = true; S.add(pl);
+    const ter = new THREE.Mesh(new THREE.PlaneGeometry(10, 7), mat("st_azotea.webp", [3, 2])); ter.rotation.x = -Math.PI / 2; ter.position.set(-124, .19, 9.5); ter.receiveShadow = true; S.add(ter);
+    const kw = new THREE.MeshStandardMaterial({ color: 0x23463a, roughness: .7 }); box(3.6, 4.4, 2.6, [kw, kw, roof, roof, kw, mat("fachada_kiosco.webp", null)], -124, 2.4, 8.2);
+    const sky = new THREE.Mesh(new THREE.PlaneGeometry(760, 760 * 315 / 2048), new THREE.MeshBasicMaterial({ map: tex("fondo_ciudad.webp"), transparent: true, alphaTest: .4, fog: false, color: 0xffe2c8 }));
+    box(9, 4.6, 4, [kw, kw, roof, roof, kw, mat("chiringuito.webp", null)], -105, 2.4, 14);   // chiringuito junto a la playa
+    sky.position.set(-40, 760 * 315 / 2048 / 2 - 3, 345); sky.rotation.y = Math.PI; S.add(sky); }
   // puertas de las tiendas iluminadas
   for (const s of SHOPS) s.dx = s.x + 3.2;   // la puerta es la de la propia fachada
 }
-window.STREET_IMG = window.STREET_IMG || ["mar.webp", "paseo.webp", "muro.webp", "fachada_blanca.webp", "chiringuito.webp"];
+window.STREET_IMG = window.STREET_IMG || ["mar.webp", "paseo.webp", "muro.webp", "fachada_blanca.webp", "chiringuito.webp", "st_arena.webp"];
 function SA_has(n) { return !!(window.SA && SA[n]) || !!(window.STREET_IMG && STREET_IMG.includes(n)); }
 // ---------- tiendas por dentro (cajas con texturas) ----------
 const INT = { bar: ["tienda_bar_suelo.webp", "tienda_bar_pared.webp", "tienda_bar_fondo.webp", "Bar deportivo"], equip: ["tienda_equip_suelo.webp", "tienda_equip_pared.webp", "tienda_equip_fondo.webp", "Tienda de equipaciones"], sobres: ["tienda_sobres_suelo.webp", "tienda_sobres_pared.webp", "tienda_sobres_fondo.webp", "Tienda de sobres"] };
@@ -430,7 +469,7 @@ function nbNameOk() { const v = $("#nbname").value.trim().replace(NB_BAD, "").re
 // ---------- monedas, misiones diarias, Rey de la pista ----------
 const coins = () => store.get("monedas", 0);
 function addCoins(n, why) { store.set("monedas", coins() + n); updCoins(); if (why) setTimeout(() => say("+" + n + " monedas · " + why, 1800), 900); }
-function updCoins() { const b = $("#bRet"); if (b) b.textContent = "Retos · " + coins(); }
+function updCoins() { const b = $("#bRetT"); if (b) b.textContent = coins(); }
 const today = (o = 0) => { const d = new Date(Date.now() + o * 864e5); return d.getFullYear() + "-" + (d.getMonth() + 1) + "-" + d.getDate(); };
 const MIS = [
   { id: "toq20", t: "Haz 20 toques seguidos", ev: "toques", n: 20, max: 1, p: 60 }, { id: "toq40", t: "Haz 40 toques seguidos", ev: "toques", n: 40, max: 1, p: 120 },
@@ -450,12 +489,12 @@ const BANDAS = [["Los del Puerto", "PTO", "#3a6ea5", "#f2f2f2", -6, 50], ["La Vi
   ["Los de la Caleta", "CAL", "#f2f2f2", "#1e3a8a", 3, 160], ["Callejón Real", "CRL", "#111111", "#d4a017", 6, 220], ["Reyes del Muelle", "RDM", "#d3202c", "#111111", 10, 400]];
 const REY = { x: 61, z: -5.6 };
 function retosPanel() { const s = misHoy(), P = $("#panel");
-  P.innerHTML = `<h3>Retos del barrio</h3><div><b style="color:var(--gold2)">${coins()} monedas</b> · Racha: <b>${s.racha || 0}</b> día${s.racha === 1 ? "" : "s"}</div><div style="margin-top:10px;display:grid;gap:6px">${s.ids.map(id => { const m = MIS.find(x => x.id === id), ok = s.got.includes(id), pr = Math.min(m.n, s.prog[id] || 0);
+  P.innerHTML = `<h3><img src="${UI("ico_mision")}" alt="" style="height:46px;display:inline;vertical-align:middle;margin:0 8px 0 0">Retos del barrio</h3><div><img class="coin" src="${UI("ico_moneda")}" alt=""> <b style="color:var(--gold2)">${coins()} monedas</b> · Racha: <b>${s.racha || 0}</b> día${s.racha === 1 ? "" : "s"}</div><div style="margin-top:10px;display:grid;gap:6px">${s.ids.map(id => { const m = MIS.find(x => x.id === id), ok = s.got.includes(id), pr = Math.min(m.n, s.prog[id] || 0);
     return `<div style="display:flex;justify-content:space-between;gap:10px;background:#ffffff0d;border-radius:8px;padding:7px 10px;${ok ? "opacity:.6" : ""}"><span>${ok ? "✔ " : ""}${m.t}</span><span style="white-space:nowrap;color:var(--gold2)">${ok ? "hecha" : (m.max ? "" : pr + "/" + m.n + " · ") + "+" + m.p}</span></div>`; }).join("")}</div>
     <div style="margin-top:8px;opacity:.7;font-size:13px">Cumple las 3 cada día para subir la racha (más monedas cada día seguido). Récords: toques ${store.get("toques", 0)} · larguero ${store.get("larg", 0)}/5 · penaltis ${store.get("pen", 0)}/5 · slalom ${store.get("slalom", 0) ? store.get("slalom", 0).toFixed(1) + " s" : "—"}</div>
     <div class="row"><button onclick="this.closest('#panel').style.display='none'">Cerrar</button></div>`; P.style.display = "block"; }
 function reyPanel() { const lv = store.get("rey", 0), P = $("#panel");
-  P.innerHTML = `<h3>Rey de la pista</h3><div>Gana a las bandas del barrio una a una. Si ganas a los Reyes del Muelle, la pista es tuya.</div><div style="margin-top:10px;display:grid;gap:6px">${BANDAS.map((b, i) => `<div style="display:flex;align-items:center;gap:10px;background:#ffffff0d;border-radius:8px;padding:6px 10px;${i > lv ? "opacity:.45" : ""}"><span style="width:16px;height:16px;border-radius:4px;background:${b[2]};border:3px solid ${b[3]}"></span><span style="flex:1">${i + 1}. ${b[0]}</span><span style="color:var(--gold2)">${i < lv ? "ganado" : "+" + b[5]}</span>${i === lv ? `<button onclick="reyJugar(${i})" style="padding:6px 12px">Retar</button>` : ""}</div>`).join("")}</div>
+  P.innerHTML = `<h3><img src="${UI("cartel_rey")}" alt="Rey de la pista" style="width:min(340px,80%)"></h3><div>Gana a las bandas del barrio una a una. Si ganas a los Reyes del Muelle, la pista es tuya.</div><div style="margin-top:10px;display:grid;gap:6px">${BANDAS.map((b, i) => `<div style="display:flex;align-items:center;gap:10px;background:#ffffff0d;border-radius:8px;padding:6px 10px;${i > lv ? "opacity:.45" : ""}"><span style="width:16px;height:16px;border-radius:4px;background:${b[2]};border:3px solid ${b[3]}"></span><span style="flex:1">${i + 1}. ${b[0]}</span><span style="color:var(--gold2)">${i < lv ? "ganado" : "+" + b[5]}</span>${i === lv ? `<button onclick="reyJugar(${i})" style="padding:6px 12px">Retar</button>` : ""}</div>`).join("")}</div>
     ${lv >= BANDAS.length ? `<div style="margin-top:10px;color:var(--gold2);font-weight:800">Eres el Rey de la pista. Puedes volver a retar a cualquiera por monedas.</div><div class="row">${BANDAS.map((b, i) => `<button onclick="reyJugar(${i})">${b[1]}</button>`).join("")}</div>` : ""}
     <div class="row"><button onclick="this.closest('#panel').style.display='none'">Cerrar</button></div>`; P.style.display = "block"; }
 function reyJugar(i) { const b = BANDAS[i]; try { sessionStorage.setItem("st_pend", JSON.stringify({ k: "rey", i })); } catch (e) {} mode = "loading"; say(b[0], 1400); $("#panel").style.display = "none"; const back = location.pathname.split("/").pop() || "street.html";
