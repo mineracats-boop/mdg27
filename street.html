@@ -81,7 +81,7 @@ html,body{background:var(--bg)}
 <div id="hhelp" class="modal" style="display:none" onclick="if(event.target===this)hubHelp(false)"><div class="card wide"><h3>Controles</h3><div class="kl">
 <kbd>WASD / flechas</kbd><span>Moverte</span><kbd>Shift</kbd><span>Correr</span><kbd>Z / X · arrastrar</kbd><span>Girar la cámara</span><kbd>E</kbd><span>Entrar en tiendas, usar, jugar en la cancha de la playa o los toques</span><kbd>Esc</kbd><span>Menú</span><kbd>Móvil</kbd><span>Joystick a la izquierda; botones a la derecha</span></div>
 <div style="margin-top:10px;opacity:.85">En los partidos de la jaula se usan los mismos controles que en el fútbol 11 (menú de pausa &gt; Controles).</div>
-<div class="cr">Modelos 3D (CC BY, sketchfab.com): «Street Props» de syedraza · «Plant Series – Palm Tree» de UPWARD · «Beach Umbrella» de stealth86 · «Sun lounger 3D» de rodestrela · «Ice Cream Cart» de tylerlherring</div>
+<div class="cr">Modelos 3D (CC BY, sketchfab.com): «Street Props» de syedraza · «Plant Series – Palm Tree» de UPWARD · «Beach Umbrella» de stealth86 · «Sun lounger 3D» de rodestrela · «Ice Cream Cart» de tylerlherring · «Furniture Pack For Summer Caffe» de kozlovchik · «Old Scooter» de ribitis · «Yellow bicycle» de volkovatatyana · «Trash can» de bazz4r · «Low-Poly Fruit Box Assets» de Bowen154 · «Medieval Fountain Empty» de wolfgar74 · «Tree S2» de snowvy · «Optimized Potted Plants» de Nicholas01 · «Lifeguard Tower» de Sololopenko · «Rowing Boat» de jw202471</div>
 <div style="text-align:center;margin-top:14px"><button class="pri" onclick="hubHelp(false)">Cerrar</button></div></div></div>
 <div class="tc" id="joy"><i></i></div><div class="tc tb" id="bA">PASE</div><div class="tc tb" id="bB">TIRO</div><div class="tc tb" id="bC">CORRER</div><div class="tc tb" id="bD">REGATE</div>
 <script src="three.js"></script>
@@ -93,7 +93,7 @@ const store = { get(k, d) { try { const v = localStorage.getItem("street_" + k);
 const R = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
 const DPR = () => Math.min(devicePixelRatio, 1.5, 1920 / Math.max(1, innerWidth), 1200 / Math.max(1, innerHeight)); R.setPixelRatio(DPR()); R.setSize(innerWidth, innerHeight); R.outputColorSpace = THREE.SRGBColorSpace; R.toneMapping = THREE.ACESFilmicToneMapping; R.toneMappingExposure = 1.1;
 R.shadowMap.enabled = true; R.shadowMap.type = THREE.PCFShadowMap; document.body.prepend(R.domElement);
-const S = new THREE.Scene(); S.background = new THREE.Color(0xf2a86a); const FOG = new THREE.Fog(0xe9a06a, 45, 150); S.fog = FOG;
+const S = new THREE.Scene(); S.background = new THREE.Color(0xf2a86a); const FOG = new THREE.Fog(0xe9a06a, 50, 230); S.fog = FOG;
 const cam = new THREE.PerspectiveCamera(50, innerWidth / innerHeight, .1, 400);
 addEventListener("resize", () => { R.setPixelRatio(DPR()); R.setSize(innerWidth, innerHeight); cam.aspect = innerWidth / innerHeight; cam.updateProjectionMatrix(); });
 S.add(new THREE.HemisphereLight(0xffe2c4, 0x45403a, 1.15));
@@ -119,6 +119,9 @@ const SHOPS = [], DOORS = [], KEEPERS = [];
 // el barrio junto al mar: una calle larga con tiendas al norte y el paseo marítimo al sur; alrededor, el mar
 const SEA_Z = 22, X0 = -176, X1 = 64, BEACH = { x0: -96, x1: -66, z0: 10.5, z1: 20.5 }, TOQ = { x: -45, z: 15 };
 let seaM = null;
+const OBST = [[-150, 0, 1.9], [-124, 8.2, 1.9], [-105, 14, 4.2], [-61.5, 18.2, 1.8], [-140.2, -4.25, 1.4], [-76, -4.25, .9], [-10.2, -4.25, 1.4], [46, -4.25, .9]];
+// altura del suelo: aceras, paseo y arena están un poco por encima de la calzada (los pies no se hunden)
+function gy(x, z) { if (x > BEACH.x0 && x < BEACH.x1 && z > BEACH.z0 && z < BEACH.z1) return .2; if (z >= 5 && z <= SEA_Z && x >= X0 - 1 && x <= X1 + 42) return .18; if (z <= -5 && z >= -8 && x >= X0 && x <= X1) return .18; return 0; }
 function buildBarrio() {
   const land = new THREE.Mesh(new THREE.PlaneGeometry(X1 - X0 + 60, SEA_Z + 40), new THREE.MeshStandardMaterial({ color: 0x3b3a3d, roughness: 1 })); land.rotation.x = -Math.PI / 2; land.position.set((X0 + X1 + 60) / 2 - 4, 0, (SEA_Z - 40) / 2); land.receiveShadow = true; S.add(land);
   // mar: imagen de agua repetida que se mueve despacio (si aún no está la imagen, agua lisa)
@@ -157,10 +160,10 @@ function buildBarrio() {
   // zona nueva del oeste: plaza de adoquines, quiosco con terraza de barro y el horizonte de Cádiz al fondo del mar
   { const pl = new THREE.Mesh(new THREE.PlaneGeometry(60, 10), mat("suelo_adoquin.webp", [14, 2.4])); pl.rotation.x = -Math.PI / 2; pl.position.set(X0 + 30, .015, 0); pl.receiveShadow = true; S.add(pl);
     const ter = new THREE.Mesh(new THREE.PlaneGeometry(10, 7), mat("st_azotea.webp", [3, 2])); ter.rotation.x = -Math.PI / 2; ter.position.set(-124, .19, 9.5); ter.receiveShadow = true; S.add(ter);
-    const kw = new THREE.MeshStandardMaterial({ color: 0x23463a, roughness: .7 }); box(3.6, 4.4, 2.6, [kw, kw, roof, roof, kw, mat("fachada_kiosco.webp", null)], -124, 2.4, 8.2);
-    const sky = new THREE.Mesh(new THREE.PlaneGeometry(760, 760 * 315 / 2048), new THREE.MeshBasicMaterial({ map: tex("fondo_ciudad.webp"), transparent: true, alphaTest: .4, fog: false, color: 0xffe2c8 }));
-    box(9, 4.6, 4, [kw, kw, roof, roof, kw, mat("chiringuito.webp", null)], -105, 2.4, 14);   // chiringuito junto a la playa
-    sky.position.set(-40, 760 * 315 / 2048 / 2 - 3, 345); sky.rotation.y = Math.PI; S.add(sky); }
+    const kw = new THREE.MeshStandardMaterial({ color: 0x3f7a5a, roughness: .7 }), kf = mat("fachada_kiosco.webp", null); box(3.6, 4.4, 2.6, [kw, kw, roof, roof, kf, kf], -124, 2.4, 8.2);
+    const sky = new THREE.Mesh(new THREE.PlaneGeometry(215, 215 * 315 / 2048), new THREE.MeshBasicMaterial({ map: tex("fondo_ciudad.webp"), transparent: true, alphaTest: .4, fog: false, color: 0xffe2c8 }));
+    { const wd = new THREE.MeshStandardMaterial({ color: 0xcaa47a, roughness: .85 }), ch = mat("chiringuito.webp", null); box(9, 4.6, 4, [wd, wd, roof, roof, ch, ch], -105, 2.4, 14); }   // chiringuito junto a la playa
+    sky.position.set(-40, 215 * 315 / 2048 / 2 - 4.2, 226); sky.rotation.y = Math.PI; S.add(sky); }
   // puertas de las tiendas iluminadas
   for (const s of SHOPS) s.dx = s.x + 3.2;   // la puerta es la de la propia fachada
 }
@@ -330,7 +333,7 @@ function bakeProp(node, size, mode = "h") {
 }
 function instance(parts, list, shadow = true) {   // una llamada de dibujo por material para todas las copias
   for (const p of parts) { const im = new THREE.InstancedMesh(p.g, p.m, list.length), q = new THREE.Object3D();
-    list.forEach(([x, z, ry, s = 1], i) => { q.position.set(x, list.y || 0, z); q.rotation.set(0, ry || 0, 0); q.scale.setScalar(s); q.updateMatrix(); im.setMatrixAt(i, q.matrix); });
+    list.forEach(([x, z, ry, s = 1], i) => { q.position.set(x, list.y != null ? list.y : gy(x, z), z); q.rotation.set(0, ry || 0, 0); q.scale.setScalar(s); q.updateMatrix(); im.setMatrixAt(i, q.matrix); });
     im.castShadow = shadow; im.receiveShadow = true; S.add(im); }
 }
 async function addProps() {
@@ -351,6 +354,21 @@ async function addProps() {
     U.y = .2; Lg.y = .2; instance(um, U); instance(lg, Lg);
     instance(bakeProp(cart.scene, 2.2, "len"), [[BEACH.x1 + 9, SEA_Z - 5.5, -.4], [TOQ.x + 9, TOQ.z - 3, .5], [X0 + 30, 9, 2.6]]);   // carritos de helados
   } catch (e) { console.warn("props", e); }
+  // ---- vida de barrio: modelos de Sketchfab (CC BY), cada uno se carga por separado para que un fallo no deje el barrio vacío ----
+  const one = async (n, f) => { try { const g = await load(n); f(g); } catch (e) { console.warn("prop", n, e); } };
+  const tint = (parts, c) => { parts.forEach(p => { p.m.color = new THREE.Color(c); if (p.m.map) p.m.color.multiplyScalar(1.6); }); return parts; };
+  const doors = SHOPS.map(s => s.dx);
+  one("terraza", g => instance(bakeProp(g.scene, .9), [[-127.4, 11.6, .3], [-121.2, 11.4, -.4], [-56.5, 7.2, .1], [-51.5, 7.4, -.6], [-2, 7.3, .5]]));
+  one("vespa", g => { const b = g.scene.getObjectByName("Object_4") || g.scene; instance(bakeProp(b, 1.8, "len"), [[-149, -4.1, .12], [-87, -4.2, -.1], [-21, -4.1, Math.PI + .1], [31, -4.2, .05]]); });
+  one("bici", g => instance(bakeProp(g.scene, 1.75, "len"), [[-131, -7.35, 0], [-61, -7.35, 0], [9, -7.35, Math.PI], [-31, SEA_Z - .95, 0], [16, SEA_Z - .95, Math.PI]]));
+  one("contenedor", g => { const b = g.scene.getObjectByName("group") || g.scene; instance(tint(bakeProp(b, 1.3), 0x2f6b3c), [[-141, -4.25, 0], [-139.3, -4.25, 0], [-76, -4.25, 0], [-11, -4.25, 0], [-9.3, -4.25, 0], [46, -4.25, 0]]); });
+  one("cajas", g => instance(bakeProp(g.scene, .3), [[-120.6, 8.6, Math.PI / 2], [-99.6, 13.2, .3]]));
+  one("fuente", g => instance(bakeProp(g.scene, 3.2), [[-150, 0, 0]]));
+  one("planta", g => instance(bakeProp(g.scene, 1.45), doors.flatMap(x => [[x - 1.6, -7.45, 0], [x + 1.6, -7.45, 1]])));
+  one("macetas", g => { const L = [[], [], []]; let i = 0; for (let x = X0 + 6; x < X1 - 4; x += 5.5 + (i % 3)) { if (doors.some(d => Math.abs(d - x) < 3)) continue; L[i % 3].push([x, -7.55, i * 1.7]); i++; }
+    ["Pot", "Pot_9", "Pot_12"].forEach((n, k) => { const node = g.scene.getObjectByName(n); if (node && L[k].length) instance(bakeProp(node, [.75, .95, .85][k]), L[k]); }); });
+  one("socorrista", g => instance(bakeProp(g.scene, 3.4), [[-61.5, 18.2, Math.PI]]));
+  one("barca", g => instance(bakeProp(g.scene, 3.6, "len"), [[-101.5, 18.6, .5]]));
 }
 
 /* ---------- gente del barrio (modelos del juego con sus animaciones) ---------- */
@@ -380,7 +398,7 @@ function stepNPCs(dt) {
       const pd = Math.hypot(c.x - me.x, c.z - me.z); if (pd < 1.2 && place === "calle") { c.x += (c.x - me.x) / (pd || 1) * dt * 2; c.z += (c.z - me.z) / (pd || 1) * dt * 2; }   // se apartan
       c.x += Math.cos(c.dir) * c.spd * dt; c.z += Math.sin(c.dir) * c.spd * dt; c.z = clamp(c.z, c.zone[0], c.zone[1]);
     } else if (c.keeper || place === "calle") { const tgt = c.keeper || c.rey ? Math.atan2(me.z - c.z, me.x - c.x) : Math.PI / 2; let a = tgt - c.dir; a = Math.atan2(Math.sin(a), Math.cos(a)); c.dir += a * Math.min(1, dt * 2); }
-    c.a.wrap.position.set(c.x, 0, c.z); c.a.wrap.rotation.y = -c.dir + Math.PI / 2; loco(c.a, c.spd, false); c.a.mixer.update(dt);
+    c.a.wrap.position.set(c.x, gy(c.x, c.z), c.z); c.a.wrap.rotation.y = -c.dir + Math.PI / 2; loco(c.a, c.spd, false); c.a.mixer.update(dt);
   }
 }
 function stepHub(dt) {
@@ -391,7 +409,8 @@ function stepHub(dt) {
     if (!inCage && me.x > CX - CW / 2 - 1 && Math.abs(me.z) > 1.6) me.x = Math.min(me.x, CX - CW / 2 - 1);
     if (inCage && me.x > CX - CW / 2 + 3) { goMatch(); return; } }
   else { const ox = INTPOS[place]; me.x = clamp(me.x, ox - 4.5, ox + 4.5); me.z = clamp(me.z, 57.2, 63.4); }
-  me.a.wrap.position.set(me.x, 0, me.z); me.a.wrap.rotation.y = -me.dir + Math.PI / 2; me.a.lock = 0; loco(me.a, me.spd, false); me.a.mixer.update(dt);
+  if (place === "calle") for (const [ox, oz, r] of OBST) { const dx = me.x - ox, dz = me.z - oz, d = Math.hypot(dx, dz); if (d < r && d > .001) { me.x = ox + dx / d * r; me.z = oz + dz / d * r; } }
+  me.a.wrap.position.set(me.x, gy(me.x, me.z), me.z); me.a.wrap.rotation.y = -me.dir + Math.PI / 2; me.a.lock = 0; loco(me.a, me.spd, false); me.a.mixer.update(dt);
   const dd = nearDoor(), inBeach = me.x > BEACH.x0 && me.x < BEACH.x1 && me.z > BEACH.z0 && me.z < BEACH.z1, nearToq = Math.hypot(me.x - TOQ.x, me.z - TOQ.z) < 1.6;
   const np = NB.ws && place === "calle" ? nbNear() : null;
   const mk = place === "calle" ? mgNear() : null, nRey = place === "calle" && Math.hypot(me.x - REY.x, me.z - REY.z) < 2.2;
@@ -459,7 +478,7 @@ function stepNet(dt) {
   const ps = nbPose(), key = [ps.x, ps.z, ps.d, ps.pl].join(); if ((key !== NB.lastP && now - NB.last > 166) || now - NB.last > 2000) { NB.last = now; NB.lastP = key; nbSend({ t: "p", ...ps }); }
   for (const p of NB.peers.values()) { if (!p.a) continue; const vis = p.ready && ((place === "calle" && (p.pl === "c" || p.pl === "j")) || p.pl === place); p.a.wrap.visible = vis && Math.hypot(p.tx - me.x, p.tz - me.z) < 70; if (!p.a.wrap.visible) continue;
     const k = Math.min(1, dt * 10); p.x += (p.tx - p.x) * k; p.z += (p.tz - p.z) * k; let a = p.td - p.dir; a = Math.atan2(Math.sin(a), Math.cos(a)); p.dir += a * k;
-    p.a.wrap.position.set(p.x, 0, p.z); p.a.wrap.rotation.y = -p.dir + Math.PI / 2; loco(p.a, p.spd, false); p.a.mixer.update(dt); }
+    p.a.wrap.position.set(p.x, gy(p.x, p.z), p.z); p.a.wrap.rotation.y = -p.dir + Math.PI / 2; loco(p.a, p.spd, false); p.a.mixer.update(dt); }
 }
 function chatLine(who, txt) { const box = $("#chat"), e = document.createElement("div"); txt = txt.replace(NB_BAD, w => w[0] + "*".repeat(w.length - 1)); e.innerHTML = who ? `<b>${esc(who)}:</b> ${esc(txt)}` : `<i>${esc(txt)}</i>`; box.appendChild(e); while (box.children.length > 7) box.firstChild.remove(); setTimeout(() => e.classList.add("old"), 14000); }
 function chatOpen() { if (!NB.ws) return nbMenu(true); const i = $("#chatin"); i.style.display = ""; i.value = ""; i.focus(); }
@@ -516,7 +535,7 @@ const MG_INFO = { larg: ["Larguero", "5 tiros: mantén <b>K</b> / TIRO para la f
 async function mgStart(k) { mode = "mini"; MG.k = k; MG.shots = 0; MG.hits = 0; MG.state = "aim"; MG.aim = 0; MG.t = 0; SNAP = 1; $("#panel").style.display = "none"; mgMarks.forEach(m => m.visible = false);
   say(MG_INFO[k][0], 1300); tip(MG_INFO[k][1]);
   if (k === "sla") { MG.gi = 0; MG.time = 0; MG.state = "run"; me.x = SPOTS.sla.x; me.z = SPOTS.sla.z; me.dir = 0; MG.gates.forEach(g => { g.visible = true; g.material.color.set(0xf5c542); }); return; }
-  me.x = SPOTS[k].x; me.z = k === "pen" ? LGOAL.z : SPOTS[k].z; if (k === "larg") me.z = LGOAL.z; me.dir = 0; MG.ball = { x: me.x + .6, y: BR, z: me.z, vx: 0, vy: 0, vz: 0, live: false };
+  me.x = SPOTS[k].x; me.z = k === "pen" ? LGOAL.z : SPOTS[k].z; if (k === "larg") me.z = LGOAL.z; me.dir = 0; MG.ball = { x: me.x + .6, y: BR + .2, z: me.z, vx: 0, vy: 0, vz: 0, live: false };
   if (k === "pen" && !MG.kp) { const g = await loadModel("gk02"); MG.kp = { a: actor(g, "#16a34a", "#111111"), z: LGOAL.z, vz: 0 }; } if (MG.kp) { MG.kp.a.wrap.visible = k === "pen"; MG.kp.z = LGOAL.z; MG.kp.a.lock = 0; play(MG.kp.a, "GkReady"); } }
 function mgEnd() { const k = MG.k; mode = "hub"; ring.position.y = -5; charge = -1; $("#power").style.opacity = 0; MG.k = null; mgMarks.forEach(m => m.visible = true); MG.gates.forEach(g => g.visible = false); if (MG.kp) MG.kp.a.wrap.visible = false; ballM.position.set(CX, BR, 0); tip(""); }
 function mgShot(p) { if (MG.state !== "aim") return; const B = MG.ball, k = MG.k, aimZ = MG.aim * 1.9, dx = LGOAL.x - B.x, dz = (LGOAL.z + aimZ) - B.z, d = Math.hypot(dx, dz);
@@ -532,23 +551,23 @@ function stepMini(dt) { if (!MG.k) { mode = "hub"; return; }
     tip(`Slalom · <b style="font-size:1.4em">${MG.time.toFixed(1)} s</b> · aro ${Math.min(MG.gi + 1, SLALOM.length)}/${SLALOM.length}`);
     if (MG.gi >= SLALOM.length) { const t = MG.time, best = store.get("slalom", 0); if (!best || t < best) store.set("slalom", t); if (t < 26) misEv("slalom"); say((!best || t < best ? "¡Récord! " : "") + t.toFixed(1) + " s", 2400); if (t < 22) addCoins(30, "slalom rápido"); mgEnd(); return; }
     if (MG.time > 60) { say("Demasiado lento", 1800); mgEnd(); return; }
-    ballM.position.set(me.x + Math.cos(me.dir) * .5, BR, me.z + Math.sin(me.dir) * .5); ballM.rotation.z -= me.spd * dt * 3;
-    me.a.wrap.position.set(me.x, 0, me.z); me.a.wrap.rotation.y = -me.dir + Math.PI / 2; loco(me.a, me.spd, true); me.a.mixer.update(dt); mgCam(dt, 6, 3); return; }
+    ballM.position.set(me.x + Math.cos(me.dir) * .5, BR + gy(me.x, me.z), me.z + Math.sin(me.dir) * .5); ballM.rotation.z -= me.spd * dt * 3;
+    me.a.wrap.position.set(me.x, gy(me.x, me.z), me.z); me.a.wrap.rotation.y = -me.dir + Math.PI / 2; loco(me.a, me.spd, true); me.a.mixer.update(dt); mgCam(dt, 6, 3); return; }
   const B = MG.ball;
   if (MG.state === "aim") { MG.aim = clamp(MG.aim + inp.x * dt * 1.4 * (Math.cos(YAW) > 0 ? 1 : -1), -1, 1); ring.position.set(LGOAL.x, .25, LGOAL.z + MG.aim * 1.9); if (charge >= 0) { charge += dt * .9; $("#power").style.opacity = 1; $("#power i").style.width = Math.min(100, charge * 100) + "%"; } }
-  else if (MG.state === "fly") { MG.t += dt; const px = B.x; B.vy -= 9.8 * dt; B.x += B.vx * dt; B.y += B.vy * dt; B.z += B.vz * dt; if (B.y < BR) { B.y = BR; B.vy *= -.45; B.vx *= .7; B.vz *= .7; }
+  else if (MG.state === "fly") { MG.t += dt; const px = B.x; B.vy -= 9.8 * dt; B.x += B.vx * dt; B.y += B.vy * dt; B.z += B.vz * dt; const fl = BR + gy(B.x, B.z); if (B.y < fl) { B.y = fl; B.vy *= -.45; B.vx *= .7; B.vz *= .7; }
     if (px < LGOAL.x && B.x >= LGOAL.x && !MG.res) { const dz = B.z - LGOAL.z, inW = Math.abs(dz) < 1.45, bar = Math.abs(B.y - 1.8) < .16 && Math.abs(dz) < 1.55, post = Math.abs(Math.abs(dz) - 1.5) < .14 && B.y < 1.85;
       if (k === "larg") { MG.res = bar ? "¡LARGUERO!" : post ? "Al palo" : inW && B.y < 1.8 ? "Dentro, pero no vale" : "Fuera"; if (bar) { MG.hits++; B.vx = -B.vx * .5; B.vy = -Math.abs(B.vy) * .3; } else if (post) B.vx = -B.vx * .5; }
       else { const kz = MG.kp.z, saved = B.y < 1.75 && Math.abs(dz - (kz - LGOAL.z)) < .85; MG.res = bar || post ? "Al palo" : !inW || B.y > 1.8 ? "Fuera" : saved ? "¡Parada!" : "¡GOL!"; if (MG.res === "¡GOL!") MG.hits++; if (saved || bar || post) { B.vx = -B.vx * .35; B.vz *= .5; } else if (inW && B.y < 1.8) { B.vx *= .15; B.vz *= .15; } }
       say(MG.res, 1100); }
     if (MG.t > 1.8) { if (MG.shots >= 5) { const n = MG.hits; if (k === "larg") { if (n > store.get("larg", 0)) store.set("larg", n); misEv("larguero", n); if (n) addCoins(n * 15, "larguero"); } else { if (n > store.get("pen", 0)) store.set("pen", n); misEv("penaltis", n); if (n) addCoins(n * 8, "penaltis"); }
         setTimeout(() => say(MG_INFO[k][0] + ": " + n + " de 5", 2200), 1150); mgEnd(); return; }
-      Object.assign(B, { x: me.x + .6, y: BR, z: me.z, vx: 0, vy: 0, vz: 0, live: false }); MG.state = "aim"; MG.aim = 0; if (MG.kp) { MG.kp.z = LGOAL.z; MG.kp.dive = 0; MG.kp.a.lock = 0; play(MG.kp.a, "GkReady"); } } }
+      Object.assign(B, { x: me.x + .6, y: BR + .2, z: me.z, vx: 0, vy: 0, vz: 0, live: false }); MG.state = "aim"; MG.aim = 0; if (MG.kp) { MG.kp.z = LGOAL.z; MG.kp.dive = 0; MG.kp.a.lock = 0; play(MG.kp.a, "GkReady"); } } }
   if (k === "pen" && MG.kp) { const kp = MG.kp; if (MG.state === "fly" && kp.dive != null && MG.t > .12 && !kp.did) { kp.did = 1; if (kp.dive) once(kp.a, kp.dive > 0 ? "DiveR" : "DiveL", 1.2, 1.4); } if (MG.state === "aim") kp.did = 0;
     if (MG.state === "fly" && kp.dive && MG.t > .12) kp.z += (LGOAL.z + kp.dive * 1.15 - kp.z) * Math.min(1, dt * 8);
-    kp.a.wrap.position.set(LGOAL.x - .5, 0, kp.z); kp.a.wrap.rotation.y = -Math.PI / 2 - Math.PI / 2; kp.a.lock = Math.max(0, (kp.a.lock || 0) - dt); kp.a.mixer.update(dt); }
+    kp.a.wrap.position.set(LGOAL.x - .5, gy(LGOAL.x - .5, kp.z), kp.z); kp.a.wrap.rotation.y = -Math.PI / 2 - Math.PI / 2; kp.a.lock = Math.max(0, (kp.a.lock || 0) - dt); kp.a.mixer.update(dt); }
   ballM.position.set(B.x, B.y, B.z); if (B.live) ballM.rotation.x += dt * 12;
-  me.a.wrap.position.set(me.x, 0, me.z); me.a.wrap.rotation.y = -me.dir + Math.PI / 2; me.a.lock = Math.max(0, (me.a.lock || 0) - dt); loco(me.a, 0, false); me.a.mixer.update(dt);
+  me.a.wrap.position.set(me.x, gy(me.x, me.z), me.z); me.a.wrap.rotation.y = -me.dir + Math.PI / 2; me.a.lock = Math.max(0, (me.a.lock || 0) - dt); loco(me.a, 0, false); me.a.mixer.update(dt);
   const want = new THREE.Vector3(me.x - 3.4, 3, me.z - 1.7); cam.position.lerp(want, SNAP ? 1 : Math.min(1, dt * 3)); SNAP = 0; cam.lookAt(LGOAL.x - 2, 1, LGOAL.z); sun.target.position.set(me.x, 0, me.z); sun.position.set(me.x - 40, 35, me.z + 25); }
 function mgCam(dt, fw, fh) { stepYaw(dt); const want = new THREE.Vector3(me.x + Math.sin(YAW) * fw, fh, me.z + Math.cos(YAW) * fw); cam.position.lerp(want, SNAP ? 1 : Math.min(1, dt * 3)); SNAP = 0; cam.lookAt(me.x, 1.2, me.z); sun.target.position.set(me.x, 0, me.z); sun.position.set(me.x - 40, 35, me.z + 25); }
 // ---------- minijuego: toques (darle al balón cuando baja a los pies; cada vez el margen es más pequeño) ----------
@@ -563,8 +582,8 @@ function toqueFail(why) { if (TQS.end > 0) return; TQS.end = 2.4; misEv("toques"
 function stepToques(dt) {
   if (TQS.end > 0) { TQS.end -= dt; if (TQS.end <= 0) { mode = "hub"; ballM.position.set(CX, BR, 0); tip(""); } }
   else { TQS.vy -= 9.8 * (1 + TQS.n * .012) * dt; TQS.y += TQS.vy * dt; if (TQS.y < BR) { TQS.y = BR; toqueFail("Se te cayó"); } }
-  ballM.position.set(me.x + Math.cos(me.dir) * .45, Math.max(BR, TQS.y), me.z + Math.sin(me.dir) * .45); ballM.rotation.x += dt * 6;
-  me.a.wrap.position.set(me.x, 0, me.z); me.a.wrap.rotation.y = -me.dir + Math.PI / 2; loco(me.a, 0, false); me.a.lock = Math.max(0, (me.a.lock || 0) - dt); me.a.mixer.update(dt);
+  ballM.position.set(me.x + Math.cos(me.dir) * .45, Math.max(BR, TQS.y) + gy(me.x, me.z), me.z + Math.sin(me.dir) * .45); ballM.rotation.x += dt * 6;
+  me.a.wrap.position.set(me.x, gy(me.x, me.z), me.z); me.a.wrap.rotation.y = -me.dir + Math.PI / 2; loco(me.a, 0, false); me.a.lock = Math.max(0, (me.a.lock || 0) - dt); me.a.mixer.update(dt);
   stepYaw(dt); const want = new THREE.Vector3(me.x + Math.sin(YAW) * 4.5, 2.2, me.z + Math.cos(YAW) * 4.5); cam.position.lerp(want, SNAP ? 1 : Math.min(1, dt * 3)); SNAP = 0; cam.lookAt(me.x, 1, me.z);
   sun.target.position.set(me.x, 0, me.z); sun.position.set(me.x - 40, 35, me.z + 25); }
 // ---------- partido 4 contra 4 en la jaula ----------
@@ -628,7 +647,7 @@ function stepMatch(dt) {
     if (!G.owner && e.cd <= 0 && e.kick <= 0 && dist(e, b) < (e.gk ? 1.2 : .8) && b.y < (e.gk ? 2 : .7) && G.goalT <= 0) { G.owner = e; G.last = e.team; if (e.gk && Math.hypot(b.vx, b.vz) > 8) { once(e.a, "GkCatch", .6, 1.4); e.cd = .6; } }
     if (G.owner && G.owner.team !== e.team && e.cd <= 0 && dist(e, G.owner) < .9 && G.owner.skill <= 0 && rnd() < dt * .9) { const o = G.owner; G.owner = null; o.cd = .7; G.last = e.team; b.vx = Math.cos(e.dir) * 4; b.vz = Math.sin(e.dir) * 4; }
     if (G.owner === e) { const lead = .55 + e.spd * .05; b.x += (e.x + Math.cos(e.dir) * lead - b.x) * Math.min(1, dt * 14); b.z += (e.z + Math.sin(e.dir) * lead - b.z) * Math.min(1, dt * 14); b.y = BR; b.vx = Math.cos(e.dir) * e.spd; b.vz = Math.sin(e.dir) * e.spd; b.vy = 0; }
-    e.a.wrap.position.set(e.x, 0, e.z); e.a.wrap.rotation.y = -e.dir + Math.PI / 2; loco(e.a, e.spd, G.owner === e); e.a.mixer.update(dt);
+    e.a.wrap.position.set(e.x, gy(e.x, e.z), e.z); e.a.wrap.rotation.y = -e.dir + Math.PI / 2; loco(e.a, e.spd, G.owner === e); e.a.mixer.update(dt);
   }
   // balón: rebota en las vallas y en la red de la jaula
   if (!G.owner) { b.vy -= 9.8 * dt; const dr = Math.exp(-dt * .25); b.vx *= dr; b.vz *= dr; b.x += b.vx * dt; b.z += b.vz * dt; b.y += b.vy * dt;
@@ -665,7 +684,7 @@ let ballM, ring;
   for (const c of an.animations) { c.tracks = c.tracks.filter(t => !t.name.endsWith(".scale") && (!t.name.endsWith(".position") || t.name === "Hips.position")); baseClips[c.name] = c; }
   const g = await loadModel("pj18"); me = { a: actor(g, kit.c1, kit.c2), x: -40, z: 3, dir: 0, spd: 0 };
   spawnNPCs(); addProps(); mgSetup(); updCoins();
-  loadModel("entrenador1").then(g => { const a = actor(g, null, null); a.wrap.position.set(REY.x, 0, REY.z); a.wrap.rotation.y = -Math.PI + Math.PI / 2; play(a, "Idle"); const l = nbLabel("REY DE LA PISTA"); a.wrap.add(l); NPCS.push({ a, x: REY.x, z: REY.z, dir: Math.PI, walk: false, spd: 0, keeper: false, rey: 1 }); }).catch(() => {});
+  loadModel("entrenador1").then(g => { const a = actor(g, null, null); a.wrap.position.set(REY.x, gy(REY.x, REY.z), REY.z); a.wrap.rotation.y = -Math.PI + Math.PI / 2; play(a, "Idle"); const l = nbLabel("REY DE LA PISTA"); a.wrap.add(l); NPCS.push({ a, x: REY.x, z: REY.z, dir: Math.PI, walk: false, spd: 0, keeper: false, rey: 1 }); }).catch(() => {});
   $("#load").remove(); try { const nb = JSON.parse(sessionStorage.getItem("street_nb") || "null"); if (nb && nbName()) nbJoin(nb.k, nb.sala); } catch (e) {} tip("Bienvenido al barrio. Entra en las tiendas o ve a la jaula del fondo para jugar.");
   { const rs = new URLSearchParams(location.search).get("res"); if (rs && /^\d+-\d+$/.test(rs)) { const [a, b] = rs.split("-").map(Number); me.x = CX - CW / 2 - 4; me.z = 0; me.dir = Math.PI; SNAP = 1; applyResult(a, b); setTimeout(() => say(a > b ? "¡Ganaste " + a + "-" + b + "!" : a === b ? "Empate " + a + "-" + b : "Has perdido " + a + "-" + b, 2800), 300); history.replaceState(null, "", location.pathname); } }
   let last = performance.now(), fpsA = 60, lowQ = false;
