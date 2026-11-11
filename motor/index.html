@@ -49,7 +49,7 @@ html,body{margin:0;height:100%;background:#050a14;overflow:hidden;font-family:sy
 <script>window.PREF=["m_mx","campo2","m_estadio2","estadio2_seats","m_est_banquillo","balon","red","vallas","camisetas","sonidos","m_gn01","m_gn02","m_gn03","m_arbitro","m_juez","m_entrenador1","m_entrenador2","m_aficionado1","m_aficionado2","m_aficionado3"].concat(Array.from({length:12},(_,i)=>"m_pn"+String(i+1).padStart(2,"0")),["m_pj01","m_pj05","m_pj02","m_pj07","m_pj11","m_pj14","m_pj03","m_pj04","m_pj06","m_pj08"]);</script>
 <script src="three.js"></script>
 <script src="motor2.js"></script>
-<script>(function(){var q=location.search,k=/modo=street/.test(q)?"carga_street":/ejercicio=/.test(q)?"carga_ciudad":"carga_estadio";
+<script>(function(){var q=location.search,k=/modo=street/.test(q)?"carga_street":/ejercicio=/.test(q)?"carga_ciudad":/online=1/.test(q)?"carga_online":"carga_estadio";
 function get(n){return window.MA&&MA[n]?Promise.resolve(MA[n]):fetch("m3d/"+n+".txt").then(function(r){return r.text()});}
 window.__ldBg=function(n){get(n).then(function(u){var l=document.getElementById("load");if(l)l.style.backgroundImage="url("+u+")";}).catch(function(){});};
 __ldBg(k);get("hud_marcador").then(function(u){document.getElementById("sb").style.backgroundImage="url("+u+")";}).catch(function(){});})();</script>
