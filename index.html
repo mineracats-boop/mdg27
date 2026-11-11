@@ -11402,11 +11402,11 @@ function inputKind() {
   return "kb";
 }
 const KEYG = {
-  touch: { move: "el joystick (mitad izquierda de la pantalla)", pass: "PASE", shoot: "TIRO", through: "AL HUECO", skill: "REGATE", sprint: "SPRINT", sw: "CAMBIO", press: "PRESIÓN", tackle: "ENTRADA", slide: "BARRIDA", jockey: "CONTENER" },
+  touch: { move: "el joystick (mitad izquierda de la pantalla)", pass: "PASE", shoot: "TIRO", through: "AL HUECO", skill: "REGATE", sprint: "SPRINT", sw: "PASE (cambia al defender)", press: "AL HUECO (presión al defender)", tackle: "ENTRADA", slide: "BARRIDA", jockey: "CONTENER" },
   kb:    { move: "W A S D o las flechas", pass: "J o ESPACIO", shoot: "K", through: "L", skill: "E", sprint: "MAYÚS", sw: "Q", press: "J", tackle: "K", slide: "I", jockey: "CTRL" },
-  ps:    { move: "el stick izquierdo", pass: "✕", shoot: "○", through: "△", skill: "R1", sprint: "R2", sw: "L1", press: "✕", tackle: "○", slide: "□", jockey: "L2" },
-  xbox:  { move: "el stick izquierdo", pass: "A", shoot: "B", through: "Y", skill: "RB", sprint: "RT", sw: "LB", press: "A", tackle: "B", slide: "X", jockey: "LT" },
-  nin:   { move: "el stick izquierdo", pass: "B", shoot: "A", through: "X", skill: "R", sprint: "ZR", sw: "L", press: "B", tackle: "A", slide: "Y", jockey: "ZL" }
+  ps:    { move: "el stick izquierdo", pass: "✕", shoot: "○", through: "△", skill: "R1", sprint: "R2", sw: "✕ (o L1)", press: "△", tackle: "○", slide: "□", jockey: "L2" },
+  xbox:  { move: "el stick izquierdo", pass: "A", shoot: "B", through: "Y", skill: "RB", sprint: "RT", sw: "A (o LB)", press: "Y", tackle: "B", slide: "X", jockey: "LT" },
+  nin:   { move: "el stick izquierdo", pass: "B", shoot: "A", through: "X", skill: "R", sprint: "ZR", sw: "B (o L)", press: "X", tackle: "A", slide: "Y", jockey: "ZL" }
 };
 const KIND_NAME = { touch: device === "Tablet" ? "tablet · controles táctiles" : "móvil · controles táctiles", kb: "ordenador · teclado", ps: "mando PlayStation", xbox: "mando Xbox", nin: "mando Nintendo" };
 const k_ = (kind, k) => `<span class="tk">${esc(KEYG[kind][k])}</span>`;
