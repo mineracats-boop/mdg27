@@ -1605,8 +1605,25 @@
       dprop("porteria", DR.fin.x + dir * 1, cy, 1.1); dprop("escalera", m.x + dir * 3, cy + 2, .9, { flat: true }); for (const x of [-10, 0, 10]) for (const s of [-1, 1]) dprop("cono", cx + dir * x, cy + s * 3, .45); giveBall(m); }
     else if (k === "control") { const m = T0.slice(0, 2); keep(m); DR.goalN = 6; DR.noGK = [0, 1]; DR.me = m[0]; DR.mate = m[1]; m[0].x = cx; m[0].y = cy; m[1].x = cx - dir * 15; m[1].y = cy; DR.spots.set(m[1], { x: m[1].x, y: m[1].y });
       DR.ring = await dprop("aro", cx, cy, 1.8, { flat: true }); drCtlNext(); }
+    else if (k === "custom") { const sp = EMB.drillSpec || { items: [], start: [.3, .5], obj: "aros", goal: 1 }, X = u => dir > 0 ? u * L : L - u * L, Y = v => v * W;
+      DRN.custom = sp.n || "Entreno personalizado";
+      const cs = sp.items.filter(i => i.t === "comp"), ds = sp.items.filter(i => i.t === "def"), me = T0[0], mates = T0.slice(1, 1 + cs.length), Dd = T1.slice(0, ds.length);
+      keep([me].concat(mates, Dd)); DR.noGK = sp.gk ? [0] : [0, 1];
+      DR.cu = { obj: sp.obj, start: { x: X(sp.start[0]), y: Y(sp.start[1]) }, gates: [], rings: [], minis: [], mates, defs: Dd, me };
+      mates.forEach((p, i) => { const q = { x: X(cs[i].u), y: Y(cs[i].v) }; DR.spots.set(p, q); p.x = q.x; p.y = q.y; p.h = p.mh = Math.atan2(DR.cu.start.y - q.y, DR.cu.start.x - q.x); });
+      Dd.forEach((p, i) => { const q = { x: X(ds[i].u), y: Y(ds[i].v) }; DR.spots.set(p, q); p.x = q.x; p.y = q.y; });
+      for (const it of sp.items) { const x = X(it.u), y = Y(it.v);
+        if (it.t === "puerta") { DR.cu.gates.push({ x, y, ok: false }); dprop("pica", x, y - 1.6, 1.5); dprop("pica", x, y + 1.6, 1.5); }
+        else if (it.t === "aro") { const m = await dprop("aro", x, y, 1.8, { flat: true }); DR.cu.rings.push({ x, y, ok: false, m }); }
+        else if (it.t === "cono") dprop("cono", x, y, .45);
+        else if (it.t === "mini") { DR.cu.minis.push({ x, y }); dprop("porteria", x, y, 1.1); } }
+      const auto = { puertas: DR.cu.gates.length, aros: DR.cu.rings.length, pases: 8, mini: 3, gol: 3 }[sp.obj] || 1;
+      DR.goalN = Math.max(1, sp.goal || auto); if (sp.obj === "puertas") DR.goalN = Math.max(1, DR.cu.gates.length); if (sp.obj === "aros") DR.goalN = Math.min(DR.goalN, Math.max(1, DR.cu.rings.length));
+      DR.time = sp.time || 0; DR.maxTries = sp.obj === "gol" || sp.obj === "mini" ? (sp.tries || 6) : 0; drCuReset(); }
     setHuman(team(0).find(q => !q.gk && !q.parked)); drMsg(); msg(DRN[k].toUpperCase(), 1.8); { const sb = document.getElementById("sb"); if (sb) sb.style.display = "none"; }
   }
+  function drCuReset() { const c = DR.cu, me = c.me, dir = M.dirOf[0]; me.x = c.start.x; me.y = c.start.y; me.h = me.mh = dir > 0 ? 0 : Math.PI; me.one = null; me.req = null;
+    for (const p of c.mates.concat(c.defs)) { const q = DR.spots.get(p); p.x = q.x; p.y = q.y; p.v = 0; p.req = null; } DR.shot = false; giveBall(me); setHuman(me); }
   function drTarget() { const c = DR.recv.filter(p => p !== DR.target); DR.target = c[Math.floor(Math.random() * c.length)]; DR.ring.position.copy(P3(DR.target.x, DR.target.y, .03)); }
   function drShotReset() { const m = DR.shooter, gx = opp(0), dir = M.dirOf[0], ys = [-6, 0, 6]; m.x = gx - dir * 22; m.y = W / 2 + ys[DR.tries % 3]; m.h = m.mh = Math.atan2(W / 2 - m.y, gx - m.x); m.one = null; m.req = null; DR.shot = false; giveBall(m); }
   function drFk() { const dir = M.dirOf[0]; DR.fkDone = false; DR.shot = false; startSet("fk", 0, opp(0) - dir * 21, W / 2 + (DR.tries % 2 ? 4 : -3)); }
@@ -1614,6 +1631,11 @@
     DR.me.x = L / 2; DR.me.y = W / 2; giveBall(DR.mate); setHuman(DR.me); later(1, () => { if (DR.state === "play" && M.owner === DR.mate) passTo(DR.mate, DR.me, "pass", .6); }); }
   // IA de los ejercicios: los compañeros guardan su sitio y la buscan si se queda suelta; los defensores del rondo presionan
   function drAI(p, dt, C) { const k = DR.k, sp = DR.spots.get(p);
+    if (k === "custom" && p.t === 1 && sp) { const o = M.owner;
+      if (o && o.t === 0 && Math.hypot(o.x - sp.x, o.y - sp.y) < 12) return dGo(p, o.x, o.y, true, null, C);
+      if (!o && Math.hypot(ball.x - sp.x, ball.y - sp.y) < 10) { const ip = interceptPt(p); return dGo(p, ip.x, ip.y, true, null, C); }
+      return dGo(p, sp.x, sp.y, false, Math.atan2(ball.y - p.y, ball.x - p.x), C); }
+    if (k === "custom" && hasBall(p) && p !== DR.cu.me && p.t === 0) { if (!p.req && (p.drT = (p.drT || 0) + dt) > .6) { p.drT = 0; passTo(p, DR.cu.me, "pass", .5); } return dGo(p, p.x, p.y, false, null, C); }
     if ((k === "rondo4" || k === "rondo5") && p.t === 1) { const o = M.owner, i = DR.D.indexOf(p);
       if (!o || o.t === 1) { const ip = interceptPt(p); return dGo(p, ip.x, ip.y, true, null, C); }
       if (i === 0) return dGo(p, o.x, o.y, true, null, C);
@@ -1629,7 +1651,10 @@
     if (k === "rondo4" || k === "rondo5") { if (p.t === 1) { if (DR.cnt > 0) msg("¡Robo! Vuelta a empezar", 1.2); DR.cnt = 0; DR.steal = true; later(.8, () => { if (DR.state === "play") { DR.steal = false; giveBall(DR.A[Math.floor(Math.random() * DR.A.length)]); } }); }
       else if (pa && pa.from && pa.from.t === 0 && pa.from !== p) { DR.cnt++; if (DR.cnt >= DR.goalN) drEnd(true); } drMsg(); }
     if (k === "pases" && pa && pa.from === DR.pivot && p !== DR.pivot) { if (p === DR.target) { DR.cnt++; msg("¡Bien!", .8); if (DR.cnt >= DR.goalN) drEnd(true); else drTarget(); } else msg("Ese no era", .9); drMsg(); }
-    if (k === "control" && p === DR.me && DR.phase === "pass") { DR.phase = "go"; DR.recvAt = simT; } }
+    if (k === "control" && p === DR.me && DR.phase === "pass") { DR.phase = "go"; DR.recvAt = simT; }
+    if (k === "custom") { const c = DR.cu;
+      if (p.t === 1 && !DR.wait) { msg("¡Te la han robado!", 1); drOut(); return; }
+      if (c.obj === "pases" && pa && pa.from === c.me && p !== c.me && p.t === 0) { DR.cnt++; msg("¡Bien!", .7); drMsg(); if (DR.cnt >= DR.goalN) drEnd(true); } } }
   function drOut() { if (DR.state !== "play" || DR.wait) return; const k = DR.k; DR.wait = true;
     later(.9, () => { DR.wait = false; if (DR.state !== "play") return;
       if (k === "rondo4" || k === "rondo5") { DR.cnt = 0; drMsg(); giveBall(DR.A[0]); }
@@ -1637,10 +1662,13 @@
       else if (k === "dianas") { DR.tries++; drMsg(); if (DR.tries >= DR.maxTries) drEnd(DR.cnt >= DR.goalN, "Te faltaron dianas"); else drShotReset(); }
       else if (k === "faltas") { DR.tries++; drMsg(); if (DR.tries >= DR.maxTries) drEnd(DR.cnt >= DR.goalN, "Te faltaron goles"); else drFk(); }
       else if (k === "eslalon" || k === "sprint") drEnd(false, "Se te escapó el balón");
-      else if (k === "control") drCtlNext(); }); }
+      else if (k === "control") drCtlNext();
+      else if (k === "custom") { const o = DR.cu.obj; if (o === "puertas") return drEnd(false, "Se te escapó el balón");
+        if (DR.maxTries) { DR.tries++; drMsg(); if (DR.tries >= DR.maxTries) return drEnd(DR.cnt >= DR.goalN, "Te faltaron goles"); } drCuReset(); } }); }
   function drGoal(side) { const k = DR.k; if (DR.state !== "play") return;
     if (k === "dianas") { const near = Math.abs(ball.y - W / 2) > GW / 2 - 1.3; if (near) { DR.cnt++; msg("¡DIANA!", 1); } else msg("Gol, pero lejos del palo", 1); drMsg(); if (DR.cnt >= DR.goalN) return drEnd(true); }
     if (k === "faltas") { DR.cnt++; msg("¡GOL DE FALTA!", 1.2); drMsg(); if (DR.cnt >= DR.goalN) return drEnd(true); }
+    if (k === "custom" && DR.cu.obj === "gol" && side === 0) { DR.cnt++; msg("¡GOL!", 1.1); drMsg(); if (DR.cnt >= DR.goalN) return drEnd(true); }
     drOut(); }
   function drStep(dt) { if (!DR || DR.state !== "play") return; DR.t += dt; const k = DR.k, dir = M.dirOf[0];
     if (DR.time && k !== "sprint" && DR.t > DR.time) return drEnd(false, "Se acabó el tiempo");
@@ -1651,6 +1679,11 @@
       if (hasBall(m) && (m.x - DR.fin.x) * dir > -1 && Math.abs(m.y - DR.fin.y) < 3) { DR.cnt = 1; drEnd(true); } }
     if (k === "control" && DR.phase === "go") { if (Math.hypot(DR.me.x - DR.ringAt.x, DR.me.y - DR.ringAt.y) < 1.4 && hasBall(DR.me)) { DR.cnt++; msg("¡Bien!", .8); drMsg(); if (DR.cnt >= DR.goalN) return drEnd(true); DR.phase = "wait"; later(.8, drCtlNext); }
       else if (simT - DR.recvAt > 3) { msg("Más rápido", .9); DR.phase = "wait"; later(.8, drCtlNext); } }
+    if (k === "custom") { const c = DR.cu, me = c.me;
+      if (c.obj === "gol" || c.obj === "mini") { const sh = M.shot && M.shot.t > (DR.lastShotT || -1); if (sh) { DR.lastShotT = M.shot.t; DR.shot = true; DR.shotT = simT; } if (DR.shot && simT - DR.shotT > 3.5 && !DR.wait) drOut(); }
+      if (c.obj === "mini" && !DR.wait && !M.owner) for (const g of c.minis) if (Math.hypot(ball.x - g.x, ball.y - g.y) < 1.3 && Math.hypot(ball.vx, ball.vy) > 2.5) { DR.cnt++; msg("¡GOL!", 1); drMsg(); if (DR.cnt >= DR.goalN) return drEnd(true); drOut(); break; }
+      if (c.obj === "puertas") { const g = c.gates.find(q => !q.ok); if (g && hasBall(me) && Math.abs(me.x - g.x) < .9 && Math.abs(me.y - g.y) < 1.5) { g.ok = true; DR.cnt++; play("toque", .6); drMsg(); if (DR.cnt >= DR.goalN) return drEnd(true); } }
+      if (c.obj === "aros") for (const r of c.rings) if (!r.ok && hasBall(me) && Math.hypot(me.x - r.x, me.y - r.y) < 1.4) { r.ok = true; r.m.visible = false; DR.cnt++; play("toque", .6); msg("¡Bien!", .6); drMsg(); if (DR.cnt >= DR.goalN) return drEnd(true); } }
     if ((Math.floor(DR.t * 2) !== Math.floor((DR.t - dt) * 2))) drMsg(); }
   function tick(dt) {
     { let gp = null; try { gp = navigator.getGamepads && [...navigator.getGamepads()].find(q => q && q.connected); } catch (e) {} const pi = gp ? padMapFor(gp).pause : 9, st = !!(gp && gp.buttons[pi] && gp.buttons[pi].pressed) && !PADCFG.on; if (st && !padStartPrev) setPause(!M.paused); padStartPrev = st; }
