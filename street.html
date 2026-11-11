@@ -423,7 +423,7 @@ function stepHub(dt) {
 }
 // ---------- barrio online: plaza global (sin código) y barrio privado (con código), chat y retos ----------
 const NB = { ws: null, k: null, sala: "", me: -1, peers: new Map(), last: 0, lastP: "", chatT: 0, srv: "", retoDe: null };
-const NB_LIST = (new URLSearchParams(location.search).get("srv") ? [new URLSearchParams(location.search).get("srv")] : ["https://mdg27-online.guidavilagri.workers.dev"]).concat(window.MDG27_RESERVA ? [window.MDG27_RESERVA] : [], ["https://mdg27-online.mineracats.workers.dev"]).map(u => u.replace(/\/$/, ""));
+const NB_LIST = (new URLSearchParams(location.search).get("srv") ? [new URLSearchParams(location.search).get("srv")] : ["https://mdg27-online.guidavilagri.workers.dev"]).concat([window.MDG27_RESERVA || "https://mdg27-online.onrender.com"], ["https://mdg27-online.mineracats.workers.dev"]).map(u => u.replace(/\/$/, ""));
 const NB_BAD = /\b(puta|puto|putas|mierda|gilipollas|cabr[oó]n|maric[oó]n|polla|co[ñn]o|joder|subnormal|hijoputa|zorra|imb[eé]cil|retrasado|idiota|tonto|follar)\b/gi;
 const nbName = () => store.get("nombre", "");
 async function nbSrv() { if (NB.srv) return NB.srv; for (const u of NB_LIST) { try { const c = new AbortController(), tm = setTimeout(() => c.abort(), u.includes("onrender") ? 70000 : 4000); const r = await fetch(u + "/ping", { signal: c.signal }); clearTimeout(tm); if (r.ok) return NB.srv = u; } catch (e) {} } throw new Error("No hay conexión con el servidor online. Si estás en España en día de partido, LaLiga puede estar bloqueándolo: prueba más tarde o con datos móviles."); }

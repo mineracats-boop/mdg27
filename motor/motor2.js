@@ -287,7 +287,7 @@
   /* ---------- ONLINE: sala con código; el anfitrión calcula el partido y el invitado manda sus botones y dibuja lo que le llega ---------- */
   const NQ = new URLSearchParams(location.search), NET = NQ.get("online") ? { host: false, guest: false, ws: null, ev: [], rin: null, ready: false, peer: false } : null; window.NET = NET;
   // servidores: Cloudflare primero; si no responde (bloqueos de LaLiga los fines de semana), la copia de Render
-  const NET_LIST = (NQ.get("srv") ? [NQ.get("srv")] : ["https://mdg27-online.guidavilagri.workers.dev"].concat(window.MDG27_RESERVA ? [window.MDG27_RESERVA] : [], ["https://mdg27-online.mineracats.workers.dev"])).map(u => u.replace(/\/$/, ""));
+  const NET_LIST = (NQ.get("srv") ? [NQ.get("srv")] : ["https://mdg27-online.guidavilagri.workers.dev"].concat([window.MDG27_RESERVA || "https://mdg27-online.onrender.com"], ["https://mdg27-online.mineracats.workers.dev"])).map(u => u.replace(/\/$/, ""));
   let NET_SRV = NET_LIST[0];
   async function pickSrv() { for (const u of NET_LIST) { try { const c = new AbortController(), tm = setTimeout(() => c.abort(), u.includes("onrender") ? 70000 : 4000); const r = await fetch(u + "/ping", { signal: c.signal }); clearTimeout(tm); if (r.ok) { NET_SRV = u; return u; } } catch (e) {} } throw new Error("No hay conexión con el servidor online. Revisa internet y vuelve a intentarlo."); }
   function netSend(o) { try { if (NET && NET.ws && NET.ws.readyState === 1) NET.ws.send(JSON.stringify(o)); } catch (e) {} }
