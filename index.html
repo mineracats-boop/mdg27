@@ -240,6 +240,9 @@ body.touch .hints .h{display:none}
 #login .lgnote{font-size:1.2rem;color:#9fb0d0;line-height:1.45;margin:.2rem 0 0}
 body.nolog #home,body.nolog .screen{visibility:hidden}
 #login .lgoff{font:inherit;font-family:"BC",system-ui;font-style:italic;font-weight:800;font-size:1.7rem;padding:.9rem;border-radius:.9rem;border:2px solid #ffffff33;background:#0a1430;color:#dfe6f5;cursor:pointer}
+.rktabs{display:flex;gap:.4rem;flex-wrap:wrap;margin-bottom:.6rem}.rktabs button{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.15);color:inherit;border-radius:999px;padding:.35rem .8rem;font:inherit;font-size:.8rem;cursor:pointer}.rktabs button.on{background:var(--gold,#f5c518);color:#111;border-color:transparent}
+.rkt{width:100%;border-collapse:collapse;font-size:.82rem}.rkt th,.rkt td{padding:.3rem .35rem;text-align:center;border-bottom:1px solid rgba(255,255,255,.08)}.rkt th{color:var(--mute);font-weight:600;font-size:.72rem}.rkt tr.yo td{background:rgba(245,197,24,.14)}
+.rkyo{margin:.2rem 0 .6rem;font-size:.85rem}.rkcode{letter-spacing:.2em;color:var(--gold,#f5c518)}.lginp{width:100%;padding:.6rem .8rem;border-radius:.6rem;border:1px solid rgba(255,255,255,.2);background:rgba(0,0,0,.3);color:inherit;font:inherit;font-size:1rem;box-sizing:border-box}
 
 /* =====================================================================
    ULTIMATE TEAM · estilos
@@ -7754,7 +7757,7 @@ function toast(t) { const el = $("#toast"); el.textContent = t; el.classList.add
 
 /* ---------------- configuración ---------------- */
 const CFG = [
-  { k: "cuenta", lab: "Cuenta", sub: "Sesión iniciada en este dispositivo" },
+  { k: "cuenta", lab: "Cuenta", sub: "Sesión iniciada · progreso guardado en la nube" },
   { k: "pads", lab: "Mandos", sub: "Mandos detectados en este dispositivo" },
   { k: "music", lab: "Música", sub: "Volumen de la música de menús", type: "range" },
   { k: "sfx", lab: "Efectos", sub: "Volumen de los efectos de sonido", type: "range" },
@@ -7788,7 +7791,7 @@ function renderCfg() {
 ONSHOW.cfg = renderCfg;
 function cfgChange(k, d) {
   if (k === "pads") return padTest();
-  if (k === "cuenta") return confirmDlg("Cerrar sesión", "¿Cerrar la sesión en este dispositivo? Tendrás que volver a entrar con tu usuario y contraseña.", "Cerrar sesión", () => cuentaSalir());
+  if (k === "cuenta") return confirmDlg("Cerrar sesión", "¿Cerrar la sesión en este dispositivo? Tu progreso se guarda antes en la nube y se recupera al volver a entrar con tu usuario y contraseña.", "Cerrar sesión", () => cuentaSalir());
   if (k === "cred") return dlg("Créditos", "MDG 27 · Rocket Jam (Antonio y Guille).<br><br>Estadio 3D: «Soccer Stadium» de R-LAB (@rakshaan) en Sketchfab, licencia CC BY 4.0 (creativecommons.org/licenses/by/4.0). Modificado: sin anuncios ni porterías, colores y geometría simplificados.", [["Cerrar", closeDlg, true, ""]]);
   if (k === "tut") { if (typeof startTutorial === "function") startTutorial(); return; }
   const c = CFG.find(x => x.k === k); if (!c || !c.type) return;
@@ -7980,7 +7983,7 @@ function cuentaGuardar(j) {
   if (!j.admin && had) { try { localStorage.removeItem("mdg27_admkey"); } catch (e) {} return true; }
   return false;
 }
-function cuentaSalir() { const tok = SES && SES.tok; if (tok) cuentaApi("/cuenta/salir", { tok }); SES = null; try { localStorage.removeItem("mdg27_ses"); localStorage.removeItem("mdg27_admkey"); } catch (e) {} location.reload(); }
+async function cuentaSalir() { try { await nubeSubir(true); const ok = +(localStorage.getItem("mdg27_sub") || 0) >= +(localStorage.getItem("mdg27_mod") || 0); if (ok) { for (const k of Object.keys(nubeLocal())) if (k !== "mdg27.settings") localStorage.removeItem(k); localStorage.removeItem("mdg27_mod"); localStorage.removeItem("mdg27_sub"); } } catch (e) {} const tok = SES && SES.tok; if (tok) cuentaApi("/cuenta/salir", { tok }); SES = null; try { localStorage.removeItem("mdg27_ses"); localStorage.removeItem("mdg27_admkey"); } catch (e) {} location.reload(); }
 function cuentaPantalla() {
   if (document.getElementById("login")) return;
   const d = document.createElement("div"); d.id = "login";
@@ -8005,7 +8008,7 @@ function cuentaPantalla() {
     go.disabled = false; go.textContent = mode === "up" ? "CREAR CUENTA" : "ENTRAR";
     if (!j || !j.ok) { err.textContent = (j && j.error) || "No se ha podido entrar."; if (j && j.red) { err.textContent += " Puedes jugar sin conexión mientras tanto (sin online); cuando vuelva el servidor te pedirá entrar."; off.style.display = ""; } return; }
     if (cuentaGuardar(j)) { location.reload(); return; }
-    d.remove(); document.body.classList.remove("nolog"); toast("¡Hola, " + (j.nombre || j.u) + "!"); };
+    d.remove(); document.body.classList.remove("nolog"); toast("¡Hola, " + (j.nombre || j.u) + "!"); setTimeout(nubeBajar, 800); };
   setTimeout(() => f.u.focus(), 50);
 }
 // sin conexión: se vuelve a probar cada minuto; en cuanto haya servidor, se pide iniciar sesión
@@ -8017,6 +8020,54 @@ function cuentaReintento() { setTimeout(async () => { if (SES && SES.tok) return
     if (j.ok) { if (cuentaGuardar(Object.assign({ tok: SES.tok }, j))) location.reload(); }
     else if (j.status === 401) { SES = null; try { localStorage.removeItem("mdg27_ses"); localStorage.removeItem("mdg27_admkey"); } catch (e) {} document.body.classList.add("nolog"); cuentaPantalla(); } });
 })();
+/* ---------------- guardado en la nube ----------------
+   Todo el progreso (Ultimate Team, carreras, torneos, alineaciones…) se sube comprimido a tu cuenta.
+   Al entrar en otro dispositivo se baja la partida más reciente. */
+const NUBE_SKIP = /^mdg27\.(padmap)$/;
+function nubeLocal() { const o = {}; try { for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k && k.startsWith("mdg27.") && !NUBE_SKIP.test(k)) o[k] = localStorage.getItem(k); } } catch (e) {} return o; }
+const nubeMod = () => { try { localStorage.setItem("mdg27_mod", String(Date.now())); } catch (e) {} };
+{ const _set = store.set; store.set = (k, v) => { _set.call(store, k, v); if (k !== "padmap") nubeMod(); }; }
+async function nubeZip(str) { if (typeof CompressionStream === "undefined") return "J" + str;
+  const s = new Blob([str]).stream().pipeThrough(new CompressionStream("gzip")), b = new Uint8Array(await new Response(s).arrayBuffer()); let bin = ""; for (let i = 0; i < b.length; i += 32768) bin += String.fromCharCode.apply(null, b.subarray(i, i + 32768)); return "Z" + btoa(bin); }
+async function nubeUnzip(d) { if (d[0] === "J") return d.slice(1); const bin = atob(d.slice(1)), b = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) b[i] = bin.charCodeAt(i);
+  return await new Response(new Blob([b]).stream().pipeThrough(new DecompressionStream("gzip"))).text(); }
+let nubeUlt = "", nubeOcup = false;
+async function nubeSubir(forzar) {
+  if (!SES || !SES.tok || nubeOcup) return; const mod = +(localStorage.getItem("mdg27_mod") || 0), sub = +(localStorage.getItem("mdg27_sub") || 0); if (!forzar && (!mod || mod <= sub)) return;
+  const raw = JSON.stringify(nubeLocal()); if (raw === nubeUlt && !forzar) return; nubeOcup = true;
+  try { const j = await cuentaApi("/cuenta/guardar", { tok: SES.tok, d: await nubeZip(raw), t: mod || Date.now(), dev: device }); if (j && j.ok) { nubeUlt = raw; localStorage.setItem("mdg27_sub", String(mod || Date.now())); } } catch (e) {} nubeOcup = false;
+}
+async function nubeAplicar(j) { const o = JSON.parse(await nubeUnzip(j.d)); try { for (const k of Object.keys(nubeLocal())) localStorage.removeItem(k); for (const [k, v] of Object.entries(o)) localStorage.setItem(k, v); localStorage.setItem("mdg27_mod", String(j.t)); localStorage.setItem("mdg27_sub", String(j.t)); } catch (e) {} location.reload(); }
+async function nubeBajar() {
+  if (!SES || !SES.tok) return; const j = await cuentaApi("/cuenta/cargar", { tok: SES.tok }); if (!j || !j.ok) return;
+  const mod = +(localStorage.getItem("mdg27_mod") || 0), sub = +(localStorage.getItem("mdg27_sub") || 0);
+  if (j.none) { nubeSubir(true); return; }
+  if (j.t <= Math.max(sub, mod)) { if (mod > sub) nubeSubir(); return; }     // la de aquí es igual o más nueva
+  const fecha = new Date(j.t).toLocaleString("es-ES", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }), local = Object.keys(nubeLocal()).length > 1 && mod > 0;
+  if (!local) { toast("Cargando tu partida de la nube…"); return nubeAplicar(j); }
+  dlg("Partida en la nube", `Tu cuenta tiene una partida guardada más reciente (${esc(fecha)}${j.dev ? " · " + esc(j.dev) : ""}).<br>¿Quieres cargarla en este dispositivo? Si eliges quedarte con la de aquí, se subirá a la nube y sustituirá a esa.`,
+    [["Cargar la de la nube", () => { closeDlg(); nubeAplicar(j); }, true], ["Quedarme con la de aquí", () => { closeDlg(); nubeSubir(true); }]]);
+}
+setInterval(() => nubeSubir(), 90000);
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") nubeSubir(); });
+setTimeout(() => { if (SES && SES.tok) nubeBajar(); }, 2500);
+/* ---------------- clasificación online y ligas entre amigos ---------------- */
+function rkTabla(rows, yo) { if (!rows.length) return `<p style="color:var(--mute)">Aún no hay partidos. Juega online contra un amigo para entrar en la tabla.</p>`;
+  return `<table class="rkt"><tr><th>#</th><th style="text-align:left">Jugador</th><th>PJ</th><th>G</th><th>E</th><th>P</th><th>DG</th><th>PTS</th></tr>${rows.map((r, i) => `<tr class="${yo && r.u === yo ? "yo" : ""}"><td>${i + 1}</td><td style="text-align:left">${esc(r.n || r.u)}</td><td>${r.pj}</td><td>${r.g}</td><td>${r.e}</td><td>${r.p}</td><td>${r.gf - r.gc > 0 ? "+" : ""}${r.gf - r.gc}</td><td><b>${r.pts}</b></td></tr>`).join("")}</table>`; }
+async function onlineTabla(tab = "global") {
+  if (!SES || !SES.tok) return info("Clasificación", "Inicia sesión para ver la clasificación online.");
+  dlg("Clasificación online", "Cargando…", [["Cerrar", closeDlg]]);
+  const [g, l] = await Promise.all([cuentaApi("/cuenta/ranking", {}), cuentaApi("/cuenta/liga", { tok: SES.tok })]);
+  if (!g || !g.ok) return info("Clasificación online", "No se ha podido conectar con el servidor.");
+  const ligas = (l && l.ligas) || [], yo = SES.u;
+  let html = `<div class="rktabs"><button data-t="global" class="${tab === "global" ? "on" : ""}">Mundial</button>${ligas.map(x => `<button data-t="${x.c}" class="${tab === x.c ? "on" : ""}">${esc(x.nombre)}</button>`).join("")}</div>`;
+  if (tab === "global") html += `<p class="rkyo">${l && l.yo ? `Tú: <b>${l.yo.pts} pts</b> · ${l.yo.g}G ${l.yo.e}E ${l.yo.p}P` : "Tú: sin partidos online todavía"}</p>` + rkTabla(g.top, yo);
+  else { const lg = ligas.find(x => x.c === tab); html += `<p class="rkyo">Código para invitar: <b class="rkcode">${lg.c}</b> · ${lg.tab.length} jugadores</p>` + rkTabla(lg.tab, yo); }
+  dlg("Clasificación online", "", [["Crear liga", () => onlineLigaCrear()], ["Unirme con código", () => onlineLigaUnir()], ...(tab !== "global" ? [["Salir de la liga", () => confirmDlg("Salir de la liga", "¿Seguro que quieres salir de esta liga?", "Salir", async () => { await cuentaApi("/cuenta/liga", { tok: SES.tok, op: "salir", c: tab }); onlineTabla(); })]] : []), ["Cerrar", closeDlg, true]], html, { wide: true });
+  $$(".rktabs button").forEach(b => b.onclick = () => onlineTabla(b.dataset.t));
+}
+function onlineLigaCrear() { dlg("Crear liga", "Ponle nombre. Te daremos un código para que tus amigos se unan. Cuenta lo que jugáis online entre todos.", [["Crear", async () => { const n = ($("#lgN") || {}).value || ""; const j = await cuentaApi("/cuenta/liga", { tok: SES.tok, op: "crear", nombre: n.trim() || "Liga de amigos" }); if (!j || !j.ok) return info("Crear liga", (j && j.error) || "No se ha podido crear."); onlineTabla(j.liga.c); }, true], ["Cancelar", () => onlineTabla()]], `<input id="lgN" maxlength="30" placeholder="Liga de los del cole" class="lginp">`); setTimeout(() => { const i = $("#lgN"); if (i) { i.focus(); ["keydown", "keyup"].forEach(t => i.addEventListener(t, e => e.stopPropagation())); } }, 60); }
+function onlineLigaUnir() { dlg("Unirme a una liga", "Escribe el código de 5 letras que te ha pasado tu amigo.", [["Unirme", async () => { const c = (($("#lgC") || {}).value || "").trim().toUpperCase(); const j = await cuentaApi("/cuenta/liga", { tok: SES.tok, op: "unir", c }); if (!j || !j.ok) return info("Unirme a una liga", (j && j.error) || "No se ha podido."); onlineTabla(j.liga.c); }, true], ["Cancelar", () => onlineTabla()]], `<input id="lgC" maxlength="5" placeholder="ABCDE" class="lginp" style="text-transform:uppercase;letter-spacing:.3em">`); setTimeout(() => { const i = $("#lgC"); if (i) { i.focus(); ["keydown", "keyup"].forEach(t => i.addEventListener(t, e => e.stopPropagation())); } }, 60); }
 
 /* =====================================================================
    EQUIPACIONES — diseño y colores de cada club y selección (sin marcas,
@@ -11736,7 +11787,7 @@ ACT.qm = el => {
   const m = el.dataset.m;
   if (m === "cpu") { initPre("cpu"); return show("pre"); }
   if (m === "local") { if (!localSources()) return info("Multijugador local", `Para jugar dos personas en el mismo dispositivo hacen falta <b>2 mandos</b> conectados${device === "Ordenador" ? " (o 1 mando + el teclado)" : ""}.<br>Detectados ahora: <b>${padCount()}</b>.`); initPre("local"); return show("pre"); }
-  dlg("Contra un amigo", "Partido online en tiempo real: crea una sala y pásale el código a tu amigo, o únete con el suyo.", [["Ir al online", () => { const back = location.pathname.split("/").pop() || "index.html"; location.href = "motor/" + "index" + ".html?online=1&volver=" + encodeURIComponent("../" + back); }, true], ["Cancelar", closeDlg]]);
+  dlg("Contra un amigo", "Partido online en tiempo real: crea una sala y pásale el código a tu amigo, o únete con el suyo. Cada partido online cuenta para la clasificación mundial y para tus ligas de amigos.", [["Ir al online", () => { const back = location.pathname.split("/").pop() || "index.html"; location.href = "motor/" + "index" + ".html?online=1&volver=" + encodeURIComponent("../" + back); }, true], ["Clasificación y ligas", () => onlineTabla()], ["Cancelar", closeDlg]]);
 };
 function updateLocal() {
   const ok = !!localSources(), n = padCount();
@@ -12704,7 +12755,7 @@ const pinfo = k => PBY[k] || (CAR.gen && CAR.gen[k]);
 const cps = k => CAR.p[k];       // [club, media, edad, moral, forma, lesión(sem), sanción, goles, asist, pj, amarillas, potencial]
 const money = m => m >= 1 ? (Math.round(m * 10) / 10).toLocaleString("es-ES") + " M€" : Math.round(m * 1000).toLocaleString("es-ES") + " mil €";
 function pval(k) { const s = cps(k), ov = s[1], a = s[2]; const f = a <= 21 ? 1.45 : a <= 23 ? 1.3 : a <= 27 ? 1.1 : a <= 30 ? .8 : a <= 32 ? .55 : .3; return Math.max(.1, .8 * Math.pow(1.19, ov - 60) * f * (1 + Math.max(0, (s[11] || ov) - ov) * .02)); }
-function pwage(k) { const ov = cps(k)[1]; return Math.max(.05, .12 * Math.pow(1.17, ov - 60)); }   // M€/año
+function pwage(k) { const ov = cps(k)[1]; return Math.max(.05, .12 * Math.pow(1.17, ov - 60)) * ((CAR && CAR.sal && CAR.sal[k]) || 1); }   // M€/año
 function clubData(ci) { const n = CL(ci).nombre, d = (carD().clubs || {})[n]; const ov = CL(ci).ov || 70;
   const tb = d && d.transferBudgetM != null ? d.transferBudgetM : Math.round(Math.max(1, .6 * Math.pow(1.22, ov - 65)));
   const wb = d && d.wageBudgetM != null ? d.wageBudgetM : Math.round(Math.max(3, 2.2 * Math.pow(1.2, ov - 65)));
@@ -13011,7 +13062,12 @@ function userAfterMatch(r) {
   const d = win ? (exp < -2 ? 6 : 3) : draw ? (exp > 2 ? -2 : 1) : (exp > 2 ? -5 : -2);
   if (CAR.mode !== "jug") { CAR.junta = clamp(CAR.junta + d * .6, 0, 100); CAR.afi = clamp(CAR.afi + d, 0, 100); }
   ROST[CAR.club].forEach(k => { const s = cps(k); s[3] = clamp(s[3] + (win ? 4 : draw ? 0 : -4) + (xi.includes(k) ? 1 : -1), 10, 100); });
-  xi.forEach(k => { const s = cps(k); s[9]++; s[4] = clamp(s[4] - 14, 30, 100); if (rnd() < .035) { s[5] = 1 + Math.floor(rnd() * 6); carNews("lesion", `${pinfo(k).n} se lesiona`, `Estará de baja unas ${s[5]} semana${s[5] > 1 ? "s" : ""}.`); } });
+  xi.forEach(k => { const s = cps(k); s[9]++; const tired = s[4] < 62; s[4] = clamp(s[4] - 14, 30, 100);
+    // lesiones: más probables si juega cansado; tres gravedades
+    if (rnd() < .022 + (tired ? .045 : 0) + (s[2] > 31 ? .01 : 0)) { const r2 = rnd(), L = r2 < .6 ? ["molestias musculares", 1, 2] : r2 < .9 ? [rnd() < .5 ? "rotura de fibras" : "esguince de tobillo", 3, 6] : [rnd() < .5 ? "rotura de ligamento" : "fractura de peroné", 10, 22]; s[5] = L[1] + Math.floor(rnd() * (L[2] - L[1] + 1));
+      carNews("lesion", `${pinfo(k).n}: ${L[0]}`, `Estará de baja unas ${s[5]} semana${s[5] > 1 ? "s" : ""}.${tired ? " Jugó con poca forma física: cuidado con las rotaciones." : ""}`); } });
+  // moral: los titulares indiscutibles que se quedan en el banquillo se enfadan
+  ROST[CAR.club].forEach(k => { if (xi.includes(k)) return; const s = cps(k), rk = ROST[CAR.club].slice().sort((a, b) => cps(b)[1] - cps(a)[1]).indexOf(k); if (rk < 11 && !s[5] && !s[6]) s[3] = clamp(s[3] - 3, 10, 100); });
   ROST[CAR.club].forEach(k => { if (cps(k)[6] && !xi.includes(k)) cps(k)[6] = 0; });   // los sancionados cumplen
   (r.cards || []).forEach(c => { if (!c.k || !cps(c.k)) return; const s = cps(c.k); if (c.c === "R") { s[6] = 1; carNews("sancion", `${pinfo(c.k).n}, expulsado`, "Se perderá el próximo partido."); } else { s[10]++; if (s[10] % 5 === 0) { s[6] = 1; carNews("sancion", `${pinfo(c.k).n} cumple ciclo de amarillas`, "Sancionado un partido."); } } });
   CAR.money = (CAR.money || 0) + (win ? .4 : draw ? .15 : 0) * prizeMul(); CAR.bud[CAR.club] += (win ? .4 : draw ? .15 : 0) * prizeMul();
@@ -13022,7 +13078,9 @@ const prizeMul = () => { const lg = CAR.liga[CAR.club]; return lg === "Premier L
 /* ---------------- fin de semana: forma, lesiones, mercado, diario ---------------- */
 function endWeek() {
   const w = CAR.week;
-  for (const k of ROST[CAR.club]) { const s = cps(k); s[4] = clamp(s[4] + 12, 30, 100); if (s[5] > 0) s[5]--; s[3] = clamp(s[3] + (60 - s[3]) * .05, 10, 100); }
+  for (const k of ROST[CAR.club]) { const s = cps(k); s[4] = clamp(s[4] + 12, 30, 100); if (s[5] > 0) { s[5]--; if (!s[5] && CAR.mode !== "jug") carNews("lesion", `${pinfo(k).n} recibe el alta`, "Vuelve a estar disponible."); } s[3] = clamp(s[3] + (60 - s[3]) * .05, 10, 100);
+    // jugador descontento: pide salir (aparece en la lista de transferibles y baja el ambiente)
+    if (CAR.mode !== "jug" && s[3] < 28 && CAR.listed && !CAR.listed.includes(k) && rnd() < .3) { CAR.listed.push(k); carNews("moral", `${pinfo(k).n} pide salir`, "Está descontento con sus minutos. Habla con él dándole titularidad o véndelo."); ROST[CAR.club].forEach(q => { if (q !== k) cps(q)[3] = clamp(cps(q)[3] - 1, 10, 100); }); } }
   if (CAR_WIN(w)) { aiTransfers(w); if (CAR.mode === "jug") { jugOffers(); if (CAR.pendingMove) { const o = CAR.pendingMove; CAR.pendingMove = null; jugTransfer(o.club, o.amt, o.wage); } } else offersForMine(); }
   if (CAR.mode === "jug") jugCallUp(); else if ((w % 4 === 0 || w === 1) && w <= CAR_W) boardCheck();
   diarioEdition(w);
@@ -13199,13 +13257,28 @@ function tryBuy(k, amt) {
   if (amt > CAR.bud[CAR.club] + .001) return { ok: false, msg: "No tienes presupuesto suficiente." };
   if (payroll() + pwage(k) > CAR.wage[CAR.club] * 1.05) return { ok: false, msg: `Su sueldo (${money(pwage(k))}/año) supera tu masa salarial disponible.` };
   const key = ROST[from].slice().sort((a, b) => cps(b)[1] - cps(a)[1]).indexOf(k) < 3, need = v * (key ? 1.35 : 1.05) * (CL(from).ov > CL(CAR.club).ov ? 1.15 : 1);
-  if (amt < need * .92) return { ok: false, counter: Math.round(need * 10) / 10, msg: `El ${cname(from)} rechaza la oferta. Pide ${money(need)}.` };
+  // negociación con el club: tienen paciencia limitada; cada oferta baja les molesta y contraofertan
+  const N = (CAR.neg = CAR.neg || {})[k] || (CAR.neg[k] = { pat: 3, need: need * (.94 + rnd() * .14), win: CAR.week < 21 ? "v" : "i", s: CAR.season });
+  if (N.closed && N.s === CAR.season && N.win === (CAR.week < 21 ? "v" : "i")) return { ok: false, msg: `El ${cname(from)} no quiere volver a negociar hasta el próximo mercado.` };
+  if (amt < N.need) { N.pat -= amt < N.need * .75 ? 2 : 1; if (N.pat <= 0) { N.closed = true; carSave(); return { ok: false, msg: `El ${cname(from)} se cansa y rompe las negociaciones hasta el próximo mercado.` }; }
+    const cnt = Math.round((N.need + (N.need - amt) * (.35 * N.pat)) * 10) / 10; carSave(); return { ok: false, counter: cnt, msg: `El ${cname(from)} rechaza la oferta y contraoferta: ${money(cnt)}. (Paciencia: ${"●".repeat(N.pat)}${"○".repeat(3 - N.pat)})` }; }
   const rep = cstr(CAR.club), willing = s[1] <= rep + 6 || rnd() < .25 + CAR.afi / 400;
   if (!willing) return { ok: false, msg: `${pinfo(k).n} no quiere venir: prefiere un club de más nivel.` };
+  return { ok: false, contract: true, amt };
+}
+// segunda fase: el contrato con el jugador (sueldo y años)
+function contractAsk(k) { const s = cps(k), rep = cstr(CAR.club); return Math.max(.05, .12 * Math.pow(1.17, s[1] - 60)) * clamp(1.1 + (s[1] - rep) * .03 + (s[2] < 24 ? -.05 : s[2] > 30 ? .1 : 0), .9, 1.6); }
+function signPlayer(k, amt, sal, yrs) {
+  const s = cps(k), ask = contractAsk(k), base = Math.max(.05, .12 * Math.pow(1.17, s[1] - 60));
+  const pAcc = clamp((sal / ask - .82) / .2, 0, 1) * (yrs >= 4 && s[2] > 29 ? 1.1 : yrs <= 1 && s[2] < 26 ? .85 : 1);
+  if (rnd() > pAcc) { const N = CAR.neg[k] || {}; N.cp = (N.cp || 0) + 1; if (N.cp >= 3) { N.closed = true; carSave(); return { ok: false, msg: `${pinfo(k).n} rechaza el contrato y deja de negociar.` }; } carSave(); return { ok: false, msg: `${pinfo(k).n} rechaza el contrato. Pide al menos ${money(ask * (.92 + rnd() * .06))}/año.` }; }
+  if (payroll() + sal > CAR.wage[CAR.club] * 1.05) return { ok: false, msg: `Ese sueldo supera tu masa salarial disponible (${money(CAR.wage[CAR.club])}/año).` };
+  (CAR.sal = CAR.sal || {})[k] = sal / base; (CAR.con = CAR.con || {})[k] = CAR.season + yrs;
+  delete CAR.neg[k];
   movePlayer(k, CAR.club, amt); CAR.ord = (CAR.ord || []).concat(k);
   const g = gradeDeal(k, CAR.club, amt); CAR.wk.deals.push(k);
   carNews("fichaje", `¡${pinfo(k).n} ficha por el ${CL(CAR.club).nombre}!`, `Coste: ${money(amt)}. ${gradeTxt(g)}`);
-  CAR.afi = clamp(CAR.afi + (g - 5), 0, 100); carSave(); return { ok: true, msg: `Fichado por ${money(amt)}. ${gradeTxt(g)}` };
+  CAR.afi = clamp(CAR.afi + (g - 5), 0, 100); s[3] = 78; carSave(); return { ok: true, msg: `Fichado por ${money(amt)} con contrato hasta ${CAR.season + yrs}. ${gradeTxt(g)}` };
 }
 
 /* ---------------- interfaz ---------------- */
@@ -13291,7 +13364,7 @@ function carMarket() {
     <table class="tb"><tr><th class="l">Jugador</th><th>Pos</th><th>Edad</th><th>Media</th><th class="l">Club</th><th>Valor</th><th>Sueldo/año</th><th></th></tr>${res.map(k => { const p = pinfo(k), s = cps(k);
       return `<tr><td class="l">${esc(p.n)}</td><td>${p.pos}</td><td>${s[2]}</td><td class="pts">${s[1]}</td><td class="l">${esc(cname(s[0]))}</td><td>${money(pval(k))}</td><td>${money(pwage(k))}</td><td><button class="mbtn sm" data-nav data-a="carBid" data-k="${esc(k)}">Ofertar</button></td></tr>`; }).join("")}</table>
     <h4>Tu plantilla en venta</h4><div class="mute" style="margin-bottom:.6rem">Pon jugadores en la lista y recibirás más ofertas durante el mercado.</div>
-    <table class="tb">${ROST[CAR.club].slice().sort((a, b) => cps(b)[1] - cps(a)[1]).map(k => `<tr><td class="l">${esc(pinfo(k).n)}</td><td>${pinfo(k).pos}</td><td>${cps(k)[2]}</td><td class="pts">${cps(k)[1]}</td><td>${money(pval(k))}</td><td><button class="mbtn sm${CAR.listed.includes(k) ? " gold" : ""}" data-nav data-a="carList" data-k="${esc(k)}">${CAR.listed.includes(k) ? "En venta ✓" : "Poner en venta"}</button></td></tr>`).join("")}</table>`;
+    <table class="tb">${ROST[CAR.club].slice().sort((a, b) => cps(b)[1] - cps(a)[1]).map(k => `<tr><td class="l">${esc(pinfo(k).n)}</td><td>${pinfo(k).pos}</td><td>${cps(k)[2]}</td><td class="pts">${cps(k)[1]}</td><td>${money(pval(k))}</td><td title="Moral" style="color:${cps(k)[3] < 35 ? "#ff4d5e" : cps(k)[3] < 55 ? "#ffd23a" : "#3ddc84"}">M${Math.round(cps(k)[3])}</td><td><button class="mbtn sm${CAR.listed.includes(k) ? " gold" : ""}" data-nav data-a="carList" data-k="${esc(k)}">${CAR.listed.includes(k) ? "En venta ✓" : "Poner en venta"}</button></td></tr>`).join("")}</table>`;
 }
 function carDiario() {
   return `<div class="dhead">${DIARIO.toUpperCase()}</div>` + CAR.news.slice(0, 60).map(n => `<div class="cnews ${n.type}"><small>T${n.s}-${String(n.s + 1).slice(2)} · semana ${n.w}</small><b>${esc(n.title)}</b><span>${esc(n.body)}</span></div>`).join("");
@@ -13341,8 +13414,12 @@ ACT.carF = el => { const f = el.dataset.f, F = CT.f;
   renderCar(); reFocus(`[data-a="carF"][data-f="${f}"]`); };
 ACT.carBid = el => { const k = el.dataset.k, v = Math.round(pval(k) * 10) / 10; let amt = v;
   const show_ = (m) => dlg(`Oferta por ${pinfo(k).n}`, `${esc(cname(cps(k)[0]))} · media ${cps(k)[1]} · ${cps(k)[2]} años · valor ${money(v)} · sueldo ${money(pwage(k))}/año${m ? `<br><b>${esc(m)}</b>` : ""}`,
-    [["− 10%", () => { amt = Math.max(.1, Math.round(amt * .9 * 10) / 10); show_(); }], [`Ofrecer ${money(amt)}`, () => { const r = tryBuy(k, amt); if (r.ok) { closeDlg(); toast(r.msg); renderCar(); } else { if (r.counter) amt = r.counter; show_(r.msg); } }, true], ["+ 10%", () => { amt = Math.round(amt * 1.1 * 10) / 10; show_(); }], ["Cancelar", closeDlg]]);
+    [["− 10%", () => { amt = Math.max(.1, Math.round(amt * .9 * 10) / 10); show_(); }], [`Ofrecer ${money(amt)}`, () => { const r = tryBuy(k, amt); if (r.contract) return carContract(k, amt); if (r.ok) { closeDlg(); toast(r.msg); renderCar(); } else { if (r.counter) amt = r.counter; show_(r.msg); } }, true], ["+ 10%", () => { amt = Math.round(amt * 1.1 * 10) / 10; show_(); }], ["Cancelar", closeDlg]]);
   show_(); };
+function carContract(k, amt) { const ask = contractAsk(k); let sal = Math.round(ask * .95 * 100) / 100, yrs = cps(k)[2] > 31 ? 2 : 4;
+  const show_ = m => dlg(`Contrato de ${pinfo(k).n}`, `El ${esc(cname(cps(k)[0]))} acepta ${money(amt)}. Ahora negocia con el jugador.<br>Sueldo ofrecido: <b>${money(sal)}/año</b> · Duración: <b>${yrs} año${yrs > 1 ? "s" : ""}</b><br><span class="mute">Masa salarial: ${money(payroll())} de ${money(CAR.wage[CAR.club])}/año</span>${m ? `<br><b>${esc(m)}</b>` : ""}`,
+    [["Sueldo −5%", () => { sal = Math.round(sal * .95 * 100) / 100; show_(); }], ["Sueldo +5%", () => { sal = Math.round(sal * 1.05 * 100) / 100; show_(); }], [`Años: ${yrs}`, () => { yrs = yrs >= 5 ? 1 : yrs + 1; show_(); }], ["Ofrecer contrato", () => { const r = signPlayer(k, amt, sal, yrs); if (r.ok) { closeDlg(); toast(r.msg); renderCar(); } else show_(r.msg); }, true], ["Cancelar", closeDlg]]);
+  show_(); }
 ACT.carSL = el => { CT.setup.liga = el.dataset.l; CT.setup.ci = null; renderCarSetup(); };
 ACT.carSC = el => { CT.setup.ci = +el.dataset.i; renderCarSetup(); reFocus('[data-a="carStart"]'); };
 ACT.carSD = el => { CT.setup.diff = el.dataset.d; renderCarSetup(); };
