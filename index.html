@@ -7764,13 +7764,15 @@ const CFG = [
   { k: "cam", lab: "Cámara del partido", sub: "Televisión, cercana o lejana", type: "list", opts: ["Televisión", "Cercana", "Lejana"] },
   { k: "passAssist", lab: "Asistencia de pase", sub: "Manual: el pase va exactamente donde apuntas", type: "list", opts: ["Asistido", "Manual"] },
   { k: "narr", lab: "Narración en texto", sub: "Comentarios de las jugadas durante el partido", type: "bool" },
-  { k: "tut", lab: "Tutorial de controles", sub: "Práctica guiada adaptada a tu dispositivo y tu mando" }
+  { k: "tut", lab: "Tutorial de controles", sub: "Práctica guiada adaptada a tu dispositivo y tu mando" },
+  { k: "cred", lab: "Créditos", sub: "Equipo y recursos de terceros" }
 ];
 function renderCfg() {
   const list = $("#cfgList"); const keep = focused && focused.dataset.cfg;
   list.innerHTML = CFG.map(c => {
     let v = "";
     if (c.k === "tut") v = `<span>JUGAR</span><span class="arrow">▶</span>`;
+    else if (c.k === "cred") v = `<span class="arrow">VER ▶</span>`;
     else if (c.k === "cuenta") v = `<span>${esc((typeof SES !== "undefined" && SES && SES.u) || "—")}${IS_ADMIN ? " · ADMIN" : ""}</span><span class="arrow">CERRAR SESIÓN ▶</span>`;
     else if (c.k === "pads") {
       const ps = connectedPads();
@@ -7787,6 +7789,7 @@ ONSHOW.cfg = renderCfg;
 function cfgChange(k, d) {
   if (k === "pads") return padTest();
   if (k === "cuenta") return confirmDlg("Cerrar sesión", "¿Cerrar la sesión en este dispositivo? Tendrás que volver a entrar con tu usuario y contraseña.", "Cerrar sesión", () => cuentaSalir());
+  if (k === "cred") return dlg("Créditos", "MDG 27 · Rocket Jam (Antonio y Guille).<br><br>Estadio 3D: «Soccer Stadium» de R-LAB (@rakshaan) en Sketchfab, licencia CC BY 4.0 (creativecommons.org/licenses/by/4.0). Modificado: sin anuncios ni porterías, colores y geometría simplificados.", [["Cerrar", closeDlg, true, ""]]);
   if (k === "tut") { if (typeof startTutorial === "function") startTutorial(); return; }
   const c = CFG.find(x => x.k === k); if (!c || !c.type) return;
   if (c.type === "range") settings[k] = Math.max(0, Math.min(100, settings[k] + d * 10));
