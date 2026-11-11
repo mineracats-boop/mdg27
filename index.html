@@ -797,6 +797,23 @@ body.touch #mnarr{bottom:auto;top:calc(max(.8rem,env(safe-area-inset-top)) + 6.5
 .erabar .tab.on { background: linear-gradient(180deg, var(--gold2, #f3d27a), var(--gold, #d4a64a)); color: #1a1205; }
 .erabar .mute { flex: 1 1 18rem; font-size: 1.3rem; }
 
+/* ---------- alineación visual (partido rápido, carrera, torneos) ---------- */
+.luv{display:flex;flex-direction:column;flex:1;min-height:0}
+.luv .luavg{font-family:"BC";font-weight:800;letter-spacing:.1em;font-size:1.4rem;color:#9fb0d0}.luv .luavg b{font-size:2.6rem;color:var(--gold2);margin-left:.4rem}
+.luvg{display:grid;grid-template-columns:minmax(0,1fr) 30rem;gap:1.2rem;flex:1;min-height:0}
+.luvp{height:auto;width:100%;max-height:100%}
+.luvt{position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:.15rem;background:none;border:0;padding:0;cursor:pointer;color:#fff;font:inherit;min-width:7rem}
+.luvt b{display:grid;place-items:center;width:clamp(3.4rem,5.4vh,4.6rem);aspect-ratio:1;border-radius:50%;background:radial-gradient(circle at 35% 30%,#2a5bd7,#0b1d4f);border:.25rem solid #f3d27a;font-family:"BC";font-weight:900;font-size:clamp(1.5rem,2.3vh,2rem);box-shadow:0 .4rem 1rem #0009}
+.luvt .rl{font-family:"BC";font-weight:800;font-size:1.05rem;letter-spacing:.06em;padding:0 .5rem;border-radius:.3rem;background:rgba(5,11,28,.85)}.luvt .rl.bad{background:var(--red)}
+.luvt i{font-style:normal;font-weight:700;font-size:clamp(1.15rem,1.7vh,1.4rem);white-space:nowrap;text-shadow:0 0 .4rem #000,0 0 .2rem #000;max-width:11rem;overflow:hidden;text-overflow:ellipsis}
+.luvt small{font-size:1rem;color:#cfe0ff;text-shadow:0 0 .3rem #000}
+.luvt.out b{border-color:var(--red)}.luvt.warn b{background:radial-gradient(circle at 35% 30%,#a23,#4a0b14)}
+.luvt.on b,.luvt:focus-visible b,.luvt.focus b{transform:scale(1.15);box-shadow:0 0 0 .3rem #fff,0 0 1.4rem #f3d27a}
+.luvside{padding:1rem;min-height:0}.luvside h4{margin:.4rem 0 .6rem}
+#luEd{position:fixed;inset:0;z-index:900;background:radial-gradient(ellipse at 50% 20%,#12306e,#050b1c 70%);display:flex;padding:max(1.4rem,env(safe-area-inset-top)) max(2rem,env(safe-area-inset-right)) max(1.2rem,env(safe-area-inset-bottom)) max(2rem,env(safe-area-inset-left))}
+#luEd .luedin{display:flex;flex-direction:column;flex:1;min-height:0}
+@media (max-aspect-ratio:4/3){ .luvg{grid-template-columns:1fr;grid-template-rows:auto auto} .luvside{max-height:34vh} }
+
 .fl-de{background-image:url(data:image/webp;base64,UklGRlQCAABXRUJQVlA4WAoAAAAgAAAAPwAALwAASUNDUMgBAAAAAAHIAAAAAAQwAABtbnRyUkdCIFhZWiAH4AABAAEAAAAAAABhY3NwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAA9tYAAQAAAADTLQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAlkZXNjAAAA8AAAACRyWFlaAAABFAAAABRnWFlaAAABKAAAABRiWFlaAAABPAAAABR3dHB0AAABUAAAABRyVFJDAAABZAAAAChnVFJDAAABZAAAAChiVFJDAAABZAAAAChjcHJ0AAABjAAAADxtbHVjAAAAAAAAAAEAAAAMZW5VUwAAAAgAAAAcAHMAUgBHAEJYWVogAAAAAAAAb6IAADj1AAADkFhZWiAAAAAAAABimQAAt4UAABjaWFlaIAAAAAAAACSgAAAPhAAAts9YWVogAAAAAAAA9tYAAQAAAADTLXBhcmEAAAAAAAQAAAACZmYAAPKnAAANWQAAE9AAAApbAAAAAAAAAABtbHVjAAAAAAAAAAEAAAAMZW5VUwAAACAAAAAcAEcAbwBvAGcAbABlACAASQBuAGMALgAgADIAMAAxADZWUDggZgAAAFAFAJ0BKkAAMAA+LRCGQqGhDf+OAAwBYliAHYA/AD9jv5zyAXYD9gAK6ns+8ORK/4TEUAD+/w3bEiVP97K2D2Zy93I///8mObEJfumZQUNa/z86W5lajnRWmIEQv4mSE6/yGwYAAA==)}
 .fl-fr{background-image:url(data:image/webp;base64,UklGRooCAABXRUJQVlA4WAoAAAAgAAAAPwAALwAASUNDUMgBAAAAAAHIAAAAAAQwAABtbnRyUkdCIFhZWiAH4AABAAEAAAAAAABhY3NwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAA9tYAAQAAAADTLQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAlkZXNjAAAA8AAAACRyWFlaAAABFAAAABRnWFlaAAABKAAAABRiWFlaAAABPAAAABR3dHB0AAABUAAAABRyVFJDAAABZAAAAChnVFJDAAABZAAAAChiVFJDAAABZAAAAChjcHJ0AAABjAAAADxtbHVjAAAAAAAAAAEAAAAMZW5VUwAAAAgAAAAcAHMAUgBHAEJYWVogAAAAAAAAb6IAADj1AAADkFhZWiAAAAAAAABimQAAt4UAABjaWFlaIAAAAAAAACSgAAAPhAAAts9YWVogAAAAAAAA9tYAAQAAAADTLXBhcmEAAAAAAAQAAAACZmYAAPKnAAANWQAAE9AAAApbAAAAAAAAAABtbHVjAAAAAAAAAAEAAAAMZW5VUwAAACAAAAAcAEcAbwBvAGcAbABlACAASQBuAGMALgAgADIAMAAxADZWUDggnAAAAHAGAJ0BKkAAMAA+MRKHQqIhDKoAEAGCWIAzMKm/SBTgP6B+Ku9/5yB/VcgABBpttKkelUK/Mrxtnv2J8AD+/fuL//kB/bUvWD//Jsv5wFPXz3/Sk/+Nrn/zv7Ee+3+G0UFj//HAfNJejrRZepdrP//tcQ/8iZBh3cZZO7WWc5rL8MPEz/zPKKBhsNg34C9myuf9nlInlTaH84QAAA==)}
 .fl-es{background-image:url(data:image/webp;base64,UklGRtIDAABXRUJQVlA4WAoAAAAgAAAAPwAALwAASUNDUMgBAAAAAAHIAAAAAAQwAABtbnRyUkdCIFhZWiAH4AABAAEAAAAAAABhY3NwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAA9tYAAQAAAADTLQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAlkZXNjAAAA8AAAACRyWFlaAAABFAAAABRnWFlaAAABKAAAABRiWFlaAAABPAAAABR3dHB0AAABUAAAABRyVFJDAAABZAAAAChnVFJDAAABZAAAAChiVFJDAAABZAAAAChjcHJ0AAABjAAAADxtbHVjAAAAAAAAAAEAAAAMZW5VUwAAAAgAAAAcAHMAUgBHAEJYWVogAAAAAAAAb6IAADj1AAADkFhZWiAAAAAAAABimQAAt4UAABjaWFlaIAAAAAAAACSgAAAPhAAAts9YWVogAAAAAAAA9tYAAQAAAADTLXBhcmEAAAAAAAQAAAACZmYAAPKnAAANWQAAE9AAAApbAAAAAAAAAABtbHVjAAAAAAAAAAEAAAAMZW5VUwAAACAAAAAcAEcAbwBvAGcAbABlACAASQBuAGMALgAgADIAMAAxADZWUDgg5AEAAPAKAJ0BKkAAMAA+MRaJQyIhIRFXRCADBLUAPL35n+AH7AcdP2YswD8gMcB52foA3gDnr/Yk/a8myT+f8V/0n7ABdIk3BXwelooaVLGv0TPPW9ZuakZWv9TnmV+dLbZLYAD+/p9NH9kZv//mBF2U+xDx5sv0Bt82jzZf//9hlZ/2rSmNfLWHowy7pE/ZdItPrjtu9ceiLmd5mwo8vE42ORNinDty/FXyXk9cTzkkqH8cfUgDZ4rp1fFbyt8W5i8Nfw8O0PEXibQPf9QOt1//lhgPa5C5b406G1Mf2Hy7MRu7zgJEFyFpXxK0UY9Tvcx6PmKkfY6//MV2lUdVnwMG7N875ioIZnUK6342C7XMWXhss+frsbdJgmkvIdHZI5VMMGnd1zPjE5SJtzjN9fGIY5dYRMJnsE+BnsTSbz8/+onI1vs+2KyHx6qBbwstmQ0ushkZi/4x73/65heCXQf67pZ3bhcaz8P/8+dB6uRA1NnyXDhMzQ98uPj+CVcf7154uK9BJkjGRfp8E6EOGe/8dp5uE0SVPyocNV/kJB3OlU/NTO68ndao9K2/6qd/4st0sys+z+5a5CBQBWKPQ2yVJaRXt0PffkgryDC74Ochwe43Yukb+t48ZjkqjQD4dftYgDcAUAA=)}
@@ -11634,15 +11651,8 @@ function teamFromLU(s) {
   return { name: c.nombre, sh: c.sh, c1: c.c1, c2: c.c2, form: lu.form, pl: pl.map((p, i) => mk(p, F[i][0], luPen(p.pos, F[i][0]))), bench: lu.ord.slice(11, 20).map(byK).filter(Boolean).map(p => mk(p, p.pos, 0)) };
 }
 function renderLU() {
-  const s = PRE.edit, c = QT[PRE.sel[s]], lu = luOf(s), F = FORMS[lu.form], byK = k => c.pl.find(p => p.k === k);
-  const row = (k, i) => { const p = byK(k), role = i < 11 ? F[i][0] : i < 20 ? "SUP" : "—", pen = i < 11 ? luPen(p.pos, role) : 0;
-    return `<button class="lurow${PRE.pick === i ? " on" : ""}${i >= 20 ? " nc" : ""}" data-nav data-a="luPick" data-i="${i}"><span class="lr">${role}</span><span class="ln">${esc(shortName(p.n))}</span><span class="lp${pen < 0 ? " bad" : ""}">${p.pos}</span><span class="lo">${p.ov + pen}</span></button>`; };
-  $("#preBody").innerHTML = `<div class="luhead"><b>${esc(c.nombre)}</b>
-      <div class="stepper"><span class="lbl">Formación</span><button class="mbtn" data-nav data-a="luForm" data-d="-1">◀</button><div class="val">${lu.form}</div><button class="mbtn" data-nav data-a="luForm" data-d="1">▶</button></div>
-      <button class="mbtn" data-nav data-a="luAuto">Automática</button><button class="mbtn gold" data-nav data-a="luOk" data-first>Listo</button></div>
-    <p class="mute luhelp">Toca un jugador y luego otro para intercambiarlos. En rojo: fuera de su posición (rinde menos).</p>
-    <div class="lu"><div><h4>TITULARES</h4>${lu.ord.slice(0, 11).map((k, i) => row(k, i)).join("")}</div>
-      <div><h4>BANQUILLO</h4>${lu.ord.slice(11, 20).map((k, i) => row(k, i + 11)).join("")}${lu.ord.length > 20 ? `<h4>NO CONVOCADOS</h4>${lu.ord.slice(20).map((k, i) => row(k, i + 20)).join("")}` : ""}</div></div>`;
+  const s = PRE.edit, c = QT[PRE.sel[s]], lu = luOf(s), byK = k => c.pl.find(p => p.k === k);
+  $("#preBody").innerHTML = luView({ title: c.nombre, form: lu.form, rows: lu.ord.map(byK), pick: PRE.pick, act: "luPick", formAct: "luForm", autoAct: "luAuto", okAct: "luOk" });
   $("#preTitle").textContent = "ALINEACIÓN";
 }
 ACT.preLu = el => { PRE.edit = +el.dataset.s; PRE.pick = null; renderLU(); reFocus('[data-a="luOk"]'); };
@@ -13234,12 +13244,9 @@ function carHome() {
 }
 const carCrest = id => isNat(id) ? `<div class="crest sm">${crestSVG(natName(id), natName(id).slice(0, 3).toUpperCase(), (NAT[natName(id)] || {}).c1 || "#455a8a", (NAT[natName(id)] || {}).c2 || "#fff")}</div>` : typeof id === "number" ? `<div class="crest sm">${crestSVG(CL(id).nombre, CL(id).sh, CL(id).c1, CL(id).c2)}</div>` : `<div class="crest sm">${crestSVG(cname(id), cshort(id), "#455a8a", "#fff")}</div>`;
 function carSquad() {
-  const o = userSquad(), F = FORMS[CAR.form];
-  const row = (k, i) => { const p = pinfo(k), s = cps(k), role = i < 11 ? F[i][0] : i < 20 ? "SUP" : "—", pen = i < 11 ? luPen(p.pos, role) : 0, st = s[5] ? `<em class="bad">LES ${s[5]}s</em>` : s[6] ? `<em class="bad">SANC</em>` : "";
-    return `<button class="lurow cr${CT.pick === i ? " on" : ""}${i >= 20 ? " nc" : ""}" data-nav data-a="carPick" data-i="${i}"><span class="lr">${role}</span><span class="ln">${esc(shortName(p.n))} ${st}</span><span class="lp${pen < 0 ? " bad" : ""}">${p.pos}</span><span class="lo">${s[1]}</span><span class="cx">${s[2]}a · F${Math.round(s[4])} · M${Math.round(s[3])} · ${s[7]}g</span></button>`; };
-  return `<div class="luhead"><div class="stepper"><span class="lbl">Formación</span><button class="mbtn" data-nav data-a="carForm" data-d="-1">◀</button><div class="val">${CAR.form}</div><button class="mbtn" data-nav data-a="carForm" data-d="1">▶</button></div>
-      <button class="mbtn" data-nav data-a="carAuto">Automática</button><span class="mute">Toca dos jugadores para intercambiarlos. F = forma física · M = moral.</span></div>
-    <div class="lu"><div><h4>TITULARES</h4>${o.slice(0, 11).map((k, i) => row(k, i)).join("")}</div><div><h4>BANQUILLO</h4>${o.slice(11, 20).map((k, i) => row(k, i + 11)).join("")}${o.length > 20 ? `<h4>NO CONVOCADOS</h4>${o.slice(20).map((k, i) => row(k, i + 20)).join("")}` : ""}</div></div>`;
+  const o = userSquad();
+  return luView({ form: CAR.form, rows: o.map(k => { const p = pinfo(k), s = cps(k); return { n: p.n, pos: p.pos, ov: s[1], warn: s[5] ? "LES " + s[5] + "s" : s[6] ? "SANC" : "", sub: `F${Math.round(s[4])} · M${Math.round(s[3])}` }; }),
+    pick: CT.pick, act: "carPick", formAct: "carForm", autoAct: "carAuto", help: "Toca dos jugadores para cambiarlos (campo, banquillo o no convocados). F = forma física · M = moral. En rojo: fuera de su posición." });
 }
 function carComps() {
   const mine = CAR.comps.filter(c => (c.teams || c.alive || [c.a, c.b]).includes(CAR.club) || (c.type === "copa" && c.res.some(r => r.r.some(x => x.h === CAR.club || x.a === CAR.club))));
@@ -14334,10 +14341,11 @@ function torPlayRound(simAll) {
 }
 function torLive(m, ko, done) {
   const hh = isHum(m.h), ha = isHum(m.a);
-  const go = (side) => {   // side: equipo que controla la persona (0 casa, 1 fuera)
-    startMatch({ teams: [qtTeam(m.h), qtTeam(m.a)], humans: [{ t: side, src: "any" }], cpuTeams: [1 - side], diff: TR.diff, halfLen: TR.dur * 60, knockout: ko, tod: "Auto",
+  const go0 = (side) => {   // side: equipo que controla la persona (0 casa, 1 fuera)
+    startMatch({ teams: [side === 0 ? qtTeamLU(m.h) : qtTeam(m.h), side === 1 ? qtTeamLU(m.a) : qtTeam(m.a)], humans: [{ t: side, src: "any" }], cpuTeams: [1 - side], diff: TR.diff, halfLen: TR.dur * 60, knockout: ko, tod: "Auto",
       abandonTxt: "Si abandonas, el partido se simula.", onAbandon: () => { torSimMatch(m, ko); tSave(); done(); },
       onEnd: r => { torSetRes(m, r.score, r.pens); tSave(); setTimeout(done, 0); return ""; } }); };
+  const go = side => lineupEditor(side === 0 ? m.h : m.a, () => go0(side));   // antes de jugar: la alineación
   const nm = id => `${qtBy(id).nombre}${isHum(id) ? ` (Jugador ${TR.humans[id]})` : ""}`;
   if (hh && ha) return dlg("Partido entre amigos", `<b>${esc(nm(m.h))}</b> contra <b>${esc(nm(m.a))}</b>.<br>El motor 3D aún no admite dos personas en el mismo partido: elegid quién juega (el otro equipo lo lleva la máquina) o simuladlo.`,
     [[`Juega ${esc(qtBy(m.h).nombre)}`, () => { closeDlg(); go(0); }, true], [`Juega ${esc(qtBy(m.a).nombre)}`, () => { closeDlg(); go(1); }], ["Simular", () => { closeDlg(); torSimMatch(m, ko); tSave(); done(); }]]);
@@ -14495,6 +14503,54 @@ document.addEventListener("pointerdown", e => {
   else { if (d.items.length >= 40) return toast("Máximo 40 objetos"); d.items.push({ t: ED.tool, u: +u.toFixed(3), v: +v.toFixed(3) }); }
   const nm = $("#entName"); if (nm) d.n = nm.value; renderCiudad();
 });
+
+/* =====================================================================
+   ALINEACIÓN VISUAL — el once sobre el campo con su formación, nombres y
+   medias, y el banquillo al lado. Toca un jugador y luego otro para
+   cambiarlos (vale entre campo y banquillo). Se usa en partido rápido,
+   modo carrera y torneos (Ultimate Team ya tiene su campo con cartas).
+   ===================================================================== */
+// o: { title, form, rows:[{n,pos,ov,sub?,warn?}] en orden (0-10 titulares, 11-19 banquillo, 20+ no convocados), pick, act, formAct, autoAct, okAct?, okTxt?, help? }
+function luView(o) {
+  const F = FORMS[o.form], row = (r, i) => { const role = i < 11 ? F[i][0] : i < 20 ? "SUP" : "—", pen = i < 11 ? luPen(r.pos, role) : 0;
+    return `<button class="lurow luvr${o.pick === i ? " on" : ""}${i >= 20 ? " nc" : ""}" data-nav data-a="${o.act}" data-i="${i}"><span class="lr">${role}</span><span class="ln">${esc(shortName(r.n))}${r.warn ? ` <em class="bad">${esc(r.warn)}</em>` : ""}</span><span class="lp${pen < 0 ? " bad" : ""}">${r.pos}</span><span class="lo">${r.ov + pen}</span></button>`; };
+  const tok = (r, i) => { const [role, x, y] = F[i], pen = luPen(r.pos, role), sel = o.pick === i;
+    return `<button class="luvt${sel ? " on" : ""}${pen < 0 ? " out" : ""}${r.warn ? " warn" : ""}" data-nav data-a="${o.act}" data-i="${i}" style="left:${x}%;top:${y}%">
+      <b>${r.ov + pen}</b><span class="rl${pen < 0 ? " bad" : ""}">${role}</span><i>${esc(shortName(r.n))}</i>${r.sub ? `<small>${esc(r.sub)}</small>` : ""}</button>`; };
+  const xi = o.rows.slice(0, 11), avg = Math.round(xi.reduce((a, r, i) => a + r.ov + luPen(r.pos, F[i][0]), 0) / Math.max(1, xi.length));
+  return `<div class="luv"><div class="luhead">${o.title ? `<b>${esc(o.title)}</b>` : ""}
+      <div class="stepper"><span class="lbl">Formación</span><button class="mbtn" data-nav data-a="${o.formAct}" data-d="-1">◀</button><div class="val">${o.form}</div><button class="mbtn" data-nav data-a="${o.formAct}" data-d="1">▶</button></div>
+      <span class="luavg">MEDIA <b>${avg}</b></span>
+      <button class="mbtn" data-nav data-a="${o.autoAct}">Automática</button>${o.okAct ? `<button class="mbtn gold" data-nav data-a="${o.okAct}" data-first>${o.okTxt || "Listo"}</button>` : ""}</div>
+    <p class="mute luhelp">${o.help || "Toca un jugador y luego otro para cambiarlos: en el campo, del banquillo o de los no convocados. En rojo: fuera de su posición (rinde menos)."}</p>
+    <div class="luvg"><div class="pitchw"><div class="pitch luvp">${xi.map(tok).join("")}</div></div>
+      <div class="panel scroll luvside"><h4>BANQUILLO</h4>${o.rows.slice(11, 20).map((r, i) => row(r, i + 11)).join("")}${o.rows.length > 20 ? `<h4>NO CONVOCADOS</h4>${o.rows.slice(20).map((r, i) => row(r, i + 20)).join("")}` : ""}</div></div></div>`;
+}
+
+/* ---------- alineaciones guardadas por equipo (torneos y partido rápido) ---------- */
+let LUS = store.get("lus", {});
+const lusSave = () => store.set("lus", LUS);
+function lusOf(id) {   // { form, ord: [k…] } del equipo id (QT); si no hay, la automática
+  const c = qtBy(id); let lu = LUS[id];
+  if (!lu || !FORMS[lu.form] || lu.ord.some(k => !c.pl.find(p => p.k === k)) || lu.ord.length !== c.pl.length) {
+    const xi = pickXI(c.pl, "4-3-3").filter(Boolean), used = new Set(xi.map(p => p.k)); lu = { form: "4-3-3", ord: xi.map(p => p.k).concat(c.pl.filter(p => !used.has(p.k)).sort((a, b) => b.ov - a.ov).map(p => p.k)) }; }
+  return lu;
+}
+function qtTeamLU(id) {   // equipo para el partido según su alineación guardada
+  const c = qtBy(id), lu = lusOf(id), F = FORMS[lu.form], byK = k => c.pl.find(p => p.k === k);
+  const mk = (p, role, b) => ({ n: shortName(p.n), full: p.n, pos: p.pos, role, ov: Math.max(20, p.ov + b), st: Object.fromEntries(Object.entries(p.f).map(([k, v]) => [k, clamp(v + b, 20, 99)])) });
+  return { name: c.nombre, sh: c.sh, c1: c.c1, c2: c.c2, form: lu.form, pl: lu.ord.slice(0, 11).map(byK).map((p, i) => mk(p, F[i][0], luPen(p.pos, F[i][0]))), bench: lu.ord.slice(11, 20).map(byK).filter(Boolean).map(p => mk(p, p.pos, 0)) };
+}
+// editor a pantalla completa para un equipo (torneos): al terminar llama a then()
+const LUE = { id: null, pick: null, then: null };
+function lineupEditor(id, then) { LUE.id = id; LUE.pick = null; LUE.then = then; let d = $("#luEd"); if (!d) { d = document.createElement("div"); d.id = "luEd"; document.body.appendChild(d); } renderLUE(); }
+function renderLUE() { const d = $("#luEd"), c = qtBy(LUE.id), lu = lusOf(LUE.id), byK = k => c.pl.find(p => p.k === k);
+  d.innerHTML = `<div class="luedin">${luView({ title: c.nombre, form: lu.form, rows: lu.ord.map(byK), pick: LUE.pick, act: "lueP", formAct: "lueF", autoAct: "lueA", okAct: "lueOk", okTxt: "¡A jugar!" })}</div>`;
+  if (navMode()) ensureFocus(); }
+ACT.lueP = el => { const i = +el.dataset.i, lu = lusOf(LUE.id); if (LUE.pick == null) LUE.pick = i; else { [lu.ord[i], lu.ord[LUE.pick]] = [lu.ord[LUE.pick], lu.ord[i]]; LUE.pick = null; LUS[LUE.id] = lu; lusSave(); } renderLUE(); reFocus(`[data-a="lueP"][data-i="${i}"]`); };
+ACT.lueF = el => { const lu = lusOf(LUE.id), ks = Object.keys(FORMS); lu.form = ks[(ks.indexOf(lu.form) + +el.dataset.d + ks.length) % ks.length]; LUS[LUE.id] = lu; lusSave(); renderLUE(); reFocus(`[data-a="lueF"][data-d="${el.dataset.d}"]`); };
+ACT.lueA = () => { const lu = lusOf(LUE.id), c = qtBy(LUE.id), xi = pickXI(c.pl, lu.form).filter(Boolean), used = new Set(xi.map(p => p.k)); lu.ord = xi.map(p => p.k).concat(lu.ord.filter(k => !used.has(k))); LUS[LUE.id] = lu; lusSave(); renderLUE(); };
+ACT.lueOk = () => { const f = LUE.then; $("#luEd").remove(); LUE.then = null; if (f) f(); };
 
 /* =====================================================================
    MENÚ PRINCIPAL — lista de modos a la izquierda y fondo (vídeo o foto)
