@@ -141,7 +141,7 @@ function buildBarrio() {
   // edificios al norte de la calle (tres son tiendas)
   // fachadas en orden de oeste a este (las 4 primeras son la zona nueva del barrio); alto según la proporción de la imagen
   const ORD = ["fachada_polideportivo.webp", "st_grafiti1.webp", "fachada_bloque.webp", "fachada_cadiz_blanca.webp", "fachada_portal.webp", "fachada_azulejos.webp", "fachada_ladrillo.webp", "fachada_cadiz_blanca.webp", "fachada_bar.webp", "fachada_colores.webp", "fachada_bloque.webp", "st_grafiti2.webp", "fachada_tienda_deportes.webp", "fachada_azulejos.webp", "fachada_desconchada.webp", "fachada_persiana.webp", "fachada_naves.webp", "fachada_mural.webp"];
-  const AR = { "fachada_polideportivo.webp": .46, "st_grafiti1.webp": .5, "st_grafiti2.webp": .5, "fachada_bloque.webp": 1.04, "fachada_cadiz_blanca.webp": 1.2, "fachada_azulejos.webp": .64, "fachada_tienda_deportes.webp": .66 };
+  const AR = { "fachada_polideportivo.webp": .46, "st_grafiti1.webp": .5, "st_grafiti2.webp": .5, "fachada_bloque.webp": .8, "fachada_cadiz_blanca.webp": 1.2, "fachada_azulejos.webp": .64, "fachada_tienda_deportes.webp": .66 };
   const plan = []; let k = 0; for (let x = X0 + 13; x < X1 - 6; x += 13.5) { const f = ORD[k % ORD.length]; plan.push([x, 13, AR[f] ? Math.round(13 * AR[f] * 10) / 10 : 9 + (k * 5) % 7, f, { 8: "bar", 12: "equip", 15: "sobres" }[k]]); k++; }
   plan.forEach(([x, w, h, f, shop]) => { const zf = -8, d = 12; box(w - .3, h, d, [side, side, roof, roof, mat(f, null), side], x, h / 2, zf - d / 2);
     if (shop) { SHOPS.push({ k: shop, x, z: zf }); DOORS.push({ k: shop, x, z: zf + .9 }); } });
