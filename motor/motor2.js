@@ -175,13 +175,13 @@
   // diseños de camiseta (atlas 5x4: diseño k → delante 2k, detrás 2k+1); el rojo es el color 1 del club, el azul el 2 y el blanco los ribetes
   const PATT = await loadTex("camisetas").catch(() => null); if (PATT) { PATT.generateMipmaps = true; PATT.minFilter = THREE.LinearMipmapLinearFilter; }
   const CAL = Object.assign({ y0: .815, y1: .5, hw: .14, sl: .13 }, window.KITCAL || {});
-  function kitMat(src, c1, c2, num, geo, des) {
+  function kitMat(src, c1, c2, num, geo, des, c3) {
     const m = src.clone(); if (geo && !geo.boundingBox) geo.computeBoundingBox(); const bb = geo ? geo.boundingBox : null;
-    const U = { k1: { value: new THREE.Color(c1) }, k2: { value: new THREE.Color(c2) }, pT: { value: PATT }, des: { value: PATT && des != null ? des : -1 }, cal: { value: new THREE.Vector4(CAL.y0, CAL.y1, CAL.hw, CAL.sl) }, nuT: { value: num != null ? numTex(num, c1) : null }, hasN: { value: num != null ? 1 : 0 },
+    const U = { k1: { value: new THREE.Color(c1) }, k2: { value: new THREE.Color(c2) }, k3: { value: new THREE.Color(c3 || c2) }, pT: { value: PATT }, des: { value: PATT && des != null ? des : -1 }, cal: { value: new THREE.Vector4(CAL.y0, CAL.y1, CAL.hw, CAL.sl) }, nuT: { value: num != null ? numTex(num, c1) : null }, hasN: { value: num != null ? 1 : 0 },
       bmin: { value: bb ? bb.min.clone() : new THREE.Vector3() }, bsz: { value: bb ? bb.getSize(new THREE.Vector3()) : new THREE.Vector3(1, 1, 1) } };
     m.onBeforeCompile = sh => { Object.assign(sh.uniforms, U);
       sh.vertexShader = "varying vec3 vB; varying vec3 vBN;\n" + sh.vertexShader.replace("#include <begin_vertex>", "#include <begin_vertex>\n vB = position; vBN = normal;");
-      sh.fragmentShader = "uniform sampler2D pT; uniform float des; uniform vec4 cal; uniform vec3 k1; uniform vec3 k2; uniform sampler2D nuT; uniform float hasN; uniform vec3 bmin; uniform vec3 bsz; varying vec3 vB; varying vec3 vBN; float kShirt = 0.;\n" + sh.fragmentShader
+      sh.fragmentShader = "uniform sampler2D pT; uniform float des; uniform vec4 cal; uniform vec3 k1; uniform vec3 k2; uniform vec3 k3; uniform sampler2D nuT; uniform float hasN; uniform vec3 bmin; uniform vec3 bsz; varying vec3 vB; varying vec3 vBN; float kShirt = 0.;\n" + sh.fragmentShader
         .replace("#include <roughnessmap_fragment>", "#include <roughnessmap_fragment>\n roughnessFactor = kShirt > .5 ? .72 : max(roughnessFactor, .62);")
         .replace("#include <opaque_fragment>", "{ float fr = 1. - max(dot(normalize(normal), normalize(vViewPosition)), 0.); outgoingLight += vec3(.85, .92, 1.) * pow(fr, 3.) * .2; }\n#include <opaque_fragment>")
         .replace("#include <map_fragment>", `#include <map_fragment>
@@ -202,7 +202,7 @@
           vec3 pc = texture2D(pT, vec2((cell.x * 256. + px.x / 1254. * 256.) / 1280., 1. - (cell.y * 256. + px.y / 1254. * 256.) / 1024.)).rgb;
           kc = pc.b > .6 && pc.r < .4 ? k2 : pc.r > .6 && pc.g > .6 && pc.b > .6 ? vec3(.92) : k1; }
         kShirt = max(shirt, shorts); diffuseColor.rgb = mix(c, kc * lum, max(shirt, am * (1. - shorts)));
-        diffuseColor.rgb = mix(diffuseColor.rgb, k2 * lum, shorts);
+        diffuseColor.rgb = mix(diffuseColor.rgb, k3 * lum, shorts);
         if (hasN > .5 && shirt > .5) { float H = bsz.y; vec2 q = vec2((vB.x - (bmin.x + bsz.x * .5)) / H, (vB.y - bmin.y) / H);
           float bk = smoothstep(.15, .45, -vBN.z); vec2 nu = vec2(1. - (q.x + .075) / .15, (q.y - .58) / .13);
           if (bk > 0. && nu.x > 0. && nu.x < 1. && nu.y > 0. && nu.y < 1.) { vec4 t = texture2D(nuT, nu); diffuseColor.rgb = mix(diffuseColor.rgb, t.rgb, t.a * bk); } }
@@ -222,7 +222,7 @@
         if (im && im.width > TEXMAX) { const c = document.createElement("canvas"); c.width = c.height = TEXMAX; c.getContext("2d").drawImage(im, 0, 0, TEXMAX, TEXMAX); if (im.close) im.close(); mp.image = c; mp.needsUpdate = true; } } }); }
     const g = MODELS[modelName], wrap = new THREE.Group(), inner = THREE.SkeletonUtils ? THREE.SkeletonUtils.clone(g.scene) : SkeletonUtils.clone(g.scene);
     const bb = new THREE.Box3().setFromObject(g.scene), k = 1.82 / (bb.max.y - bb.min.y); inner.scale.setScalar(k); inner.position.y = -bb.min.y * k;
-    inner.traverse(o => { if (o.isMesh) { o.castShadow = true; o.frustumCulled = false; if (kit) o.material = kitMat(o.material, kit[0], kit[1], num, o.geometry, des); } }); wrap.add(inner); S.add(wrap);
+    inner.traverse(o => { if (o.isMesh) { o.castShadow = true; o.frustumCulled = false; if (kit) o.material = kitMat(o.material, kit[0], kit[1], num, o.geometry, des, kit[2]); } }); wrap.add(inner); S.add(wrap);
     const mixer = new THREE.AnimationMixer(inner), acts = {};
     const act = n => acts[n] || (acts[n] = mixer.clipAction(CLIPS[modelName][n] || (CLIPS[modelName][n] = clipOne(MODELS[modelName], n))));
     const toes = { R: inner.getObjectByName("RightToeBase"), L: inner.getObjectByName("LeftToeBase") }, hands = [inner.getObjectByName("RightHand"), inner.getObjectByName("LeftHand")], head = inner.getObjectByName("Head");
@@ -328,15 +328,20 @@
   const DR = DRK ? { k: DRK, cnt: 0, tries: 0, t: 0, state: "play", props: [], spots: new Map() } : null; window.DR = DR;
   const hex = c => { const m = /^#?([0-9a-f]{6})$/i.exec(c || ""); return m ? "#" + m[1] : null; };
   const lum = c => { const n = parseInt(c.slice(1), 16); return ((n >> 16) * .3 + ((n >> 8) & 255) * .59 + (n & 255) * .11) / 255; };
-  if (EMB) { EMB.teams.forEach((td, t) => { TEAMS[t].name = td.name; TEAMS[t].short = (td.sh || td.name.slice(0, 3)).toUpperCase(); const k1 = hex(td.c1) || TEAMS[t].kit[0], k2 = hex(td.c2) || TEAMS[t].kit[1]; TEAMS[t].kit = [k1, k2]; });
+  if (EMB) { EMB.teams.forEach((td, t) => { TEAMS[t].name = td.name; TEAMS[t].short = (td.sh || td.name.slice(0, 3)).toUpperCase(); const k1 = hex(td.c1) || TEAMS[t].kit[0], k2 = hex(td.c2) || TEAMS[t].kit[1]; TEAMS[t].kit = [k1, k2];
+      const K = td.kits; if (K && K[0] && hex(K[0].c1)) { const kk = o => [hex(o.c1), hex(o.c2) || hex(o.c1), hex(o.sh) || hex(o.c2) || hex(o.c1)]; TEAMS[t].kit = kk(K[0]); TEAMS[t].des = K[0].d; if (K[1] && hex(K[1].c1)) { TEAMS[t].away = kk(K[1]); TEAMS[t].awayD = K[1].d; } } });
+    // color dominante de cada camiseta (con rayas o mitades cuenta también el 2º color)
+    const domC = T => { const a = new THREE.Color(T.kit[0]); if ([0, 1, 2, 4, 7].includes(T.des)) a.lerp(new THREE.Color(T.kit[1]), .5); return a; };
+    const near = () => { const a = domC(TEAMS[0]), b = domC(TEAMS[1]); return Math.abs(a.r - b.r) + Math.abs(a.g - b.g) + Math.abs(a.b - b.b) < .55; };
+    if (TEAMS[1].away && near()) { TEAMS[1].kit = TEAMS[1].away; TEAMS[1].des = TEAMS[1].awayD; }
     // si las camisetas se parecen, el visitante cambia a su segunda equipación
-    const c0 = new THREE.Color(TEAMS[0].kit[0]), c1 = new THREE.Color(TEAMS[1].kit[0]); if (Math.abs(c0.r - c1.r) + Math.abs(c0.g - c1.g) + Math.abs(c0.b - c1.b) < .55) TEAMS[1].kit = lum(TEAMS[0].kit[0]) > .55 ? ["#1f2937", "#111827"] : ["#f4f4f4", TEAMS[1].kit[0]]; }
+    if (near()) { TEAMS[1].kit = lum(TEAMS[0].kit[0]) > .55 ? ["#1f2937", "#111827", "#111827"] : ["#f4f4f4", TEAMS[1].kit[0], "#f4f4f4"]; TEAMS[1].des = -1; } }
   if (STREET && !EMB) { const q = new URLSearchParams(location.search), c1 = hex(q.get("c1")), c2 = hex(q.get("c2"));   // Street: tu equipo con tu ropa contra la banda del barrio
     TEAMS[0].name = "TU EQUIPO"; TEAMS[0].short = "TÚ"; if (c1) TEAMS[0].kit = [c1, c2 || "#111111"]; TEAMS[1].name = "LOS DEL PUERTO"; TEAMS[1].short = "PTO"; { const c = new THREE.Color(TEAMS[0].kit[0]), red = c.r > c.b + .15 && c.r > c.g; TEAMS[1].kit = red || lum(TEAMS[0].kit[0]) > .6 ? ["#1e6bff", "#f4f7ff"] : ["#d3202c", "#f4f7ff"]; }
     // reto del barrio (Rey de la pista): nombre, ropa y nivel de la banda rival
     const rn = (q.get("rn") || "").slice(0, 22), r1 = hex(q.get("r1")), r2 = hex(q.get("r2")); if (rn) { TEAMS[1].name = rn.toUpperCase(); TEAMS[1].short = (q.get("rs") || rn).slice(0, 3).toUpperCase(); } if (r1) TEAMS[1].kit = [r1, r2 || "#111111"];
     window.ST_RD = clamp(+(q.get("rd") || 0), -12, 14); }
-  { const hs = n => [...String(n)].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7); TEAMS.forEach(T => T.des = window.KITDES != null ? window.KITDES : hs(T.name) % 9); if (TEAMS[1].des === TEAMS[0].des) TEAMS[1].des = (TEAMS[1].des + 4) % 9; }
+  { const hs = n => [...String(n)].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7); TEAMS.forEach(T => { if (window.KITDES != null) T.des = window.KITDES; else if (T.des == null) T.des = hs(T.name) % 9; }); }
   setLoad("jugadores");
   const P = [], NP = STREET ? 4 : 11;
   for (let t = 0; t < 2; t++) {
