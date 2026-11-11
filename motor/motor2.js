@@ -741,8 +741,8 @@
     flushPose(p); const toe = left ? p.toes.L : p.toes.R; toe.getWorldPosition(tv);
     const miss = Math.hypot(tv.x + L / 2 - ball.x, tv.z + W / 2 - ball.y), q = clamp(1 - Math.max(0, miss - .35) * 1.4, .25, 1);
     const weak = left ? .86 : 1, run = p.v > 5.5 ? .1 : 0, st = r.k === "shot" ? p.st.sho : p.st.pas;
-    const err0 = r.pen ? .03 + (100 - st) * .0015 + (r.tz > 2.15 ? .32 : 0) : (1 - q) * .35 + (1 - weak) * .3 + run + (r.fin ? -.05 : 0) + (100 - st) * .004 + (r.press || 0) + (r.k === "shot" ? (p === M.human ? .15 : .26) + Math.max(0, Math.hypot(r.tx - ball.x, r.ty - ball.y) - 11) * .016 + (nearestOpp(p) < 1.6 ? .08 : 0) : 0) + (r.pow ? .07 : 0);
-    const err = r.perf ? err0 * .35 : r.chip ? err0 * .5 : err0;
+    const err0 = r.pen ? .03 + (100 - st) * .0015 + (r.tz > 2.15 ? .32 : 0) : (1 - q) * .35 + (1 - weak) * .3 + run + (r.fin ? -.05 : 0) + (100 - st) * .004 + (r.press || 0) + (r.k === "shot" ? (p === M.human ? .21 : .26) + Math.max(0, Math.hypot(r.tx - ball.x, r.ty - ball.y) - 11) * .016 + (nearestOpp(p) < 1.6 ? .08 : 0) : 0) + (r.pow ? .07 : 0);
+    const err = r.perf ? err0 * .55 : r.chip ? err0 * .6 : err0;
     const pw = r.p != null ? r.p : .6;
     if (ball.hold && ball.hold !== p) return;                     // el portero ya la tiene en las manos
     if (miss > 1.6 && !(M.set && M.set.taker === p)) return;      // el balón ya no está ahí: patada al aire
@@ -766,7 +766,8 @@
       else if (r.fin && !left && p.st.sho > 76 && Math.random() < .3) { wz *= -1.1; const s2 = -(Math.sign(W / 2 - r.ty) || 1), curl2 = .5 * .0042 * 28 * sp * t * t; a = Math.atan2(ty + s2 * curl2 - ball.y, r.tx - ball.x); M.shot.tri = true; if (!window.STEP) msg("¡CON EL EXTERIOR!", 1); }
     } else if (r.k === "pass" || r.k === "thru") {
       const T = clamp(D / (r.k === "thru" ? 20 : 24.5), .26, 2.1) * (1.1 - pw * .25);   // pases rasos tensos, como en DLS
-      sp = clamp(rollV0(D, T), 10.5, 33) * (.94 + q * .06); vz = 0; a = aimH(r) + (Math.random() - .5) * err * .22; topspin = 6;
+      sp = clamp(rollV0(D, T), 10.5, r.soft ? 15 : 33) * (.94 + q * .06); vz = 0;   // pase al vacío: más suave
+      a = aimH(r) + (Math.random() - .5) * err * .22; topspin = 6;
       TEAMS[p.t].stats.pa++; registerPass(p, r);
     } else { // centro, pase alto, despeje, vaselina
       const T = clamp(.55 + D * .033, .8, 2.6) * (r.k === "clear" ? .9 : 1), apex = r.k === "lob" ? 1 : 0;
@@ -774,6 +775,8 @@
       a = aimH(r) + (Math.random() - .5) * err * .18; topspin = -8;
       if (r.k !== "clear") { TEAMS[p.t].stats.pa++; registerPass(p, r); }
     }
+    // un pase que va a puerta cuenta como tiro: el portero reacciona y puede pararlo (antes entraba solo)
+    if (r.k !== "shot" && !r.pen) { const gx = opp(p.t), ca = Math.cos(a); if (Math.sign(gx - ball.x) === Math.sign(ca) && Math.abs(ca) > .05) { const tl = (gx - ball.x) / ca, yy = ball.y + Math.sin(a) * tl; if (Math.abs(yy - W / 2) < GW / 2 + .6 && tl < 45) { doGk = true; M.shot = { p, t: simT, pas: 1 }; } } }
     ball.vx = Math.cos(a) * sp; ball.vy = Math.sin(a) * sp; ball.vz = vz; ball.z = Math.max(ball.z, .02); ball.wz = wz; ball.wx = -Math.sin(a) * topspin; ball.wy = Math.cos(a) * topspin;
     kickSnd(sp); M.last = p;
     if (doGk) { gkReact(1 - p.t); (M.shotLog = M.shotLog || []).push({ d: +Math.hypot(r.tx - ball.x, r.ty - ball.y).toFixed(1), sp: +sp.toFixed(1), gk: gkS[1 - p.t].mode, gkd: +Math.hypot(GKP(1 - p.t).x - ball.x, GKP(1 - p.t).y - ball.y).toFixed(1), ty: +(r.ty - W / 2).toFixed(1), gy: +(GKP(1 - p.t).y - W / 2).toFixed(1), gl: +Math.abs(GKP(1 - p.t).x - own(1 - p.t)).toFixed(1), by: +(ball.y - W / 2).toFixed(1), g1: GKP(1 - p.t).one ? GKP(1 - p.t).one.n : '', down: GKP(1 - p.t).down > 0 }); }
@@ -969,7 +972,7 @@
       // vaselina: centro (L / X) mantenido al tirar, o tiro flojo con el portero adelantado
       const g = GKP(1 - t), gOff = Math.abs(g.x - own(1 - t)), dG = Math.hypot(opp(t) - ball.x, W / 2 - ball.y);
       if ((I.lob || (c.p < .3 && gOff > 4)) && dG > 7 && dG < 32) { requestKick(p, { k: "shot", chip: true, p: .5, tx: opp(t) + M.dirOf[t] * .2, ty: W / 2 + side * 1.2, tz: 1.7 }); return; }
-      const perf = c.p >= .6 && c.p <= .78;   // punto dulce de la barra: tiro perfecto
+      const perf = c.p >= .63 && c.p <= .73;   // punto dulce de la barra: tiro perfecto
       requestKick(p, { k: "shot", p: Math.max(.12, c.p), fin: c.fin, pow, perf, tx: opp(t) + M.dirOf[t] * .2, ty: W / 2 + side * (GW / 2 - (c.fin ? .4 : pow ? .7 : .5)), tz: pow ? .35 + c.p * .9 : undefined }); return; }
     let k = c.k;
     if (k === "pass" || k === "thru") {   // desde la banda en el último tercio hacia el área: centro
@@ -978,7 +981,7 @@
       if (c.p > .82 && !c.inst) k = k === "pass" ? "lob" : "thrulob"; }   // botón mantenido: en largo / al hueco por alto
     if (k === "thrulob") { const q = assistTarget(p, dirH, "thru", I.dir != null); if (q) { const sp = thruSpot(p, q) || { x: q.x + M.dirOf[t] * 6, y: q.y }; requestKick(p, { k: "cross", p: .7, to: q, tx: clamp(sp.x, 1, L - 1), ty: clamp(sp.y, 1, W - 1), tz: .6 }); q.ai.recv = { at: simT, x: sp.x, y: sp.y }; return; } k = "lob"; }
     const mate = assistTarget(p, dirH, k, I.dir != null);
-    if (!mate) { const D = k === "lob" ? 15 + c.p * 30 : 8 + c.p * 30; requestKick(p, { k: k === "lob" ? "lob" : "pass", p: c.p, tx: p.x + Math.cos(dirH) * D, ty: p.y + Math.sin(dirH) * D }); return; }
+    if (!mate) { const D = k === "lob" ? 15 + c.p * 30 : 8 + c.p * 30; requestKick(p, { k: k === "lob" ? "lob" : "pass", p: c.p, soft: true, tx: p.x + Math.cos(dirH) * D, ty: p.y + Math.sin(dirH) * D }); return; }
     passTo(p, mate, k, c.p);
   }
   const nearestDef = p => team(1 - p.t).filter(q => !q.gk && q.down <= 0).sort((a, b) => dist(a, p) - dist(b, p))[0];
@@ -1081,6 +1084,8 @@
     if (DR) return drAI(p, dt, C);
     const goTo = (x, y, spr, face, slow) => { const d = Math.hypot(x - p.x, y - p.y); if (d < (p.v < .5 ? 1.1 : .6)) { C.m = 0; if (face != null) C.face = face; return; } C.dir = Math.atan2(y - p.y, x - p.x); C.m = d < 2.5 ? .5 : d < 6 && !spr ? .7 : 1; C.spr = spr && d > 4; if (slow) C.m = Math.min(C.m, .62); if (face != null) C.face = face; };
     const owner = M.owner, mineBall = owner && owner.t === t, loose = !owner;
+    { const og = GKP(1 - t), gm = gkS[1 - t] && gkS[1 - t].mode; if (ball.hold === og || gm === "hold" || gm === "throw") { const gx = own(1 - t), dx = Math.abs(p.x - gx);
+        if (dx < 19 && Math.abs(p.y - W / 2) < 23) { goTo(gx + M.dirOf[1 - t] * 21, clamp(p.y, 6, W - 6), true); return C; } } }
     // con el balón
     if (owner === p) return carrierAI(p, dt, C);
     // balón suelto: el más rápido de cada equipo va a por él
@@ -1129,7 +1134,9 @@
         goTo(tx, ty, d > 5, d < 5 ? Math.atan2(owner.y - p.y, owner.x - p.x) : null);
         const db = Math.hypot(ball.x - p.x, ball.y - p.y);
         const dk = EMB && EMB.cpu && EMB.cpu.includes(t) ? ({ "Fácil": .6, "Normal": 1, "Difícil": 1.25, "Leyenda": 1.45 }[EMB.diff] || 1) : 1;
-        if (db < 1.5 && Math.random() < dt * (1.6 + (p.st.def - 70) * .04) * dk) tackle(p, false);
+        // DLS: si el que conduce viene lanzado hacia él o se deja el balón largo, el defensa entra con decisión
+        const dbo = Math.hypot(ball.x - owner.x, ball.y - owner.y), atMe = owner.v > 4.5 && Math.cos(angD(owner.mh, Math.atan2(p.y - owner.y, p.x - owner.x))) > .6, longT = dbo > .9 && db < dbo + .2;
+        if (db < (longT ? 2.2 : 1.6) && Math.random() < dt * (1.6 + (p.st.def - 70) * .04 + (atMe ? 3.2 : 0) + (longT ? 4 : 0)) * dk) tackle(p, longT && db > 1.4);
         else if (db < 3 && db > 1.6 && Math.random() < dt * .08 && prog(t, p.x) < .35) tackle(p, true);
         return C;
       }
@@ -1216,11 +1223,11 @@
       if (!onT && Math.abs(b.y - W / 2) > GW / 2 + .4) return;
       // decisión de parada (como en FIFA): según el tiempo que tiene, lo que tiene que estirarse, la altura y la calidad del portero
       const reach = Math.abs(bg.y - g.y), sp0 = Math.hypot(ball.vx, ball.vy, ball.vz), react = .12 - (g.st.gk - 80) * .003;
-      const need = react + Math.max(0, reach - .9) / (4.1 + (g.st.gk - 80) * .06), margin = tg - need;
+      const need = react + Math.max(0, reach - .9) / (5.3 + (g.st.gk - 80) * .06), margin = tg - need;
       let pS = 1 / (1 + Math.exp(-margin * 4.5)); if (bg.z > 1.95) pS *= .8; if (bg.z < .35 && reach > 1.6) pS *= .88; if (tg < .3) pS = Math.max(pS, reach < .8 ? .72 : reach < 1.6 ? .38 : .1); if (g.one || g.down > 0) pS *= .35; if (!onT) pS = 1;
-      pS = clamp(pS * (.92 + (g.st.gk - 80) * .012) * (1 - clamp((reach - 1) * .27, 0, .55) * clamp((1.25 - tg) / .6, 0, 1)) + (sp0 < 18 ? .08 : 0), .02, .985);   // tiro pegado al palo: mucho más difícil de parar
+      pS = clamp(pS * (.92 + (g.st.gk - 80) * .012) * (1 - clamp((reach - 1) * .16, 0, .32) * clamp((1.25 - tg) / .6, 0, 1)) + (sp0 < 18 ? .08 : 0), .02, .985);   // tiro pegado al palo: mucho más difícil de parar
       if (onT && !g.one && g.down <= 0) { if (reach < .9 && tg > .14) pS = Math.max(pS, .94); else if (reach < 1.5 && tg > .3) pS = Math.max(pS, .78); }   // un tiro al cuerpo casi siempre se para
-      const sh = M.shot; if (sh && sh.p.t !== t && simT - sh.t < .1) { if (sh.perf && reach > 1.4) pS *= .5; if (sh.fin && reach > 1.8) pS *= .78; if (sh.chip) pS *= Math.abs(g.x - gl) > 3 ? .25 : .7; }   // golazos: tiro perfecto a la escuadra, rosca al palo largo, vaselina
+      const sh = M.shot; if (sh && sh.p.t !== t && simT - sh.t < .1) { if (sh.perf && reach > 1.6) pS *= .72; if (sh.fin && reach > 2) pS *= .88; if (sh.chip) pS *= Math.abs(g.x - gl) > 3 ? .25 : .7; }   // golazos: tiro perfecto a la escuadra, rosca al palo largo, vaselina
       gkS[t] = { mode: "dive", react: .1 + Math.random() * .07 - (g.st.gk - 80) * .002, t: tg, by: bg.y, bz: bg.z, ws: Math.random() < pS, pS }; return; } }
   }
   function gkStep(t, dt) {
@@ -1339,8 +1346,10 @@
   function gkDistribute(t, o0) {
     const g = GKP(t), dirH = o0 && o0.dir != null ? o0.dir : (M.dirOf[t] > 0 ? 0 : Math.PI);
     const pick = o0 ? assistTarget(g, dirH, o0.k === "lob" ? "lob" : "pass", o0.dir != null) : null;
-    const mate = (o0 && o0.k !== "lob" && pick) || team(t).filter(q => !q.gk && openness(q, t) > 5 && dist(q, g) < 40).sort((a, b) => (prog(t, b.x) - prog(t, a.x)) * 10 + openness(b, t) - openness(a, t))[0] || mid(t);
-    if (META.GoalkeeperDropKick && (o0 ? o0.k === "lob" : (dist(mate, g) > 30 || Math.random() < .35))) { const fw = (o0 && pick) || team(t).filter(q => !q.gk).sort((a, b) => prog(t, b.x) - prog(t, a.x))[Math.floor(Math.random() * 3)];
+    const safe = q => q && openness(q, t) > 4.5 && passRisk(g, q.x, q.y) < .8;
+    const auto = team(t).filter(q => !q.gk && !q.sent && dist(q, g) < 40 && safe(q)).sort((a, b) => (prog(t, b.x) - prog(t, a.x)) * 10 + openness(b, t) - openness(a, t))[0];
+    const mate = (o0 && o0.k !== "lob" && pick && safe(pick) && pick) || auto || mid(t), longK = !auto && !(o0 && o0.k !== "lob" && safe(pick));
+    if (META.GoalkeeperDropKick && (o0 ? o0.k === "lob" || longK : (longK || dist(mate, g) > 30 || Math.random() < .35))) { const fw = (o0 && pick) || team(t).filter(q => !q.gk).sort((a, b) => prog(t, b.x) - prog(t, a.x))[Math.floor(Math.random() * 3)];
       g.h = g.mh = Math.atan2(fw.y - g.y, fw.x - g.x); const o = startOne(g, "GoalkeeperDropKick", { ts: 1.35, end: 3.2, h0: g.h, rootScale: .5 }); gkS[t] = { mode: "throw" };
       if (o) { o.hold = true; o.during = () => { if (!o.fired && o.t < META.GoalkeeperDropKick.kick.t - .05) handsBall(g); }; o.onT = META.GoalkeeperDropKick.kick.t; o.after = () => { if (!o.fired) { o.fired = true; o.on(); } };
         o.on = () => { o.hold = false; ball.hold = null; const tx = fw.x + (Math.random() - .5) * 6, ty = fw.y + (Math.random() - .5) * 6, d = Math.hypot(tx - ball.x, ty - ball.y), a = Math.atan2(ty - ball.y, tx - ball.x), T = 1.6 + d * .022, sp = d / T;
