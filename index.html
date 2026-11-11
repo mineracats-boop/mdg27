@@ -239,6 +239,7 @@ body.touch .hints .h{display:none}
 #login .lggo:disabled{opacity:.6}
 #login .lgnote{font-size:1.2rem;color:#9fb0d0;line-height:1.45;margin:.2rem 0 0}
 body.nolog #home,body.nolog .screen{visibility:hidden}
+#login .lgoff{font:inherit;font-family:"BC",system-ui;font-style:italic;font-weight:800;font-size:1.7rem;padding:.9rem;border-radius:.9rem;border:2px solid #ffffff33;background:#0a1430;color:#dfe6f5;cursor:pointer}
 
 /* =====================================================================
    ULTIMATE TEAM · estilos
@@ -7968,10 +7969,11 @@ function cuentaPantalla() {
     <form autocomplete="on"><label>Usuario<input name="u" autocomplete="username" autocapitalize="none" spellcheck="false" maxlength="20" required></label>
       <label>Contraseña<input name="p" type="password" autocomplete="current-password" maxlength="64" required></label>
       <label class="lgp2" style="display:none">Repite la contraseña<input name="p2" type="password" autocomplete="new-password" maxlength="64"></label>
-      <div class="lgerr"></div><button class="lggo" type="submit">ENTRAR</button>
+      <div class="lgerr"></div><button class="lggo" type="submit">ENTRAR</button><button class="lgoff" type="button" style="display:none">JUGAR SIN CONEXIÓN</button>
       <p class="lgnote">Necesitas una cuenta para jugar. El usuario: de 3 a 20 letras o números, sin espacios. La contraseña: 6 caracteres como mínimo.</p></form></div>`;
   document.body.appendChild(d);
-  let mode = "in"; const f = d.querySelector("form"), err = d.querySelector(".lgerr"), go = d.querySelector(".lggo");
+  let mode = "in"; const f = d.querySelector("form"), err = d.querySelector(".lgerr"), go = d.querySelector(".lggo"), off = d.querySelector(".lgoff");
+  off.onclick = () => { d.remove(); document.body.classList.remove("nolog"); toast("Modo sin conexión: el online no está disponible"); cuentaReintento(); };
   const setMode = m => { mode = m; d.querySelectorAll(".lgtabs button").forEach(b => b.classList.toggle("on", b.dataset.m === m)); d.querySelector(".lgp2").style.display = m === "up" ? "" : "none";
     f.p.autocomplete = m === "up" ? "new-password" : "current-password"; go.textContent = m === "up" ? "CREAR CUENTA" : "ENTRAR"; err.textContent = ""; };
   d.querySelectorAll(".lgtabs button").forEach(b => b.onclick = () => setMode(b.dataset.m));
@@ -7981,11 +7983,13 @@ function cuentaPantalla() {
     go.disabled = true; go.textContent = "…";
     const j = await cuentaApi(mode === "up" ? "/cuenta/registro" : "/cuenta/entrar", { u, p });
     go.disabled = false; go.textContent = mode === "up" ? "CREAR CUENTA" : "ENTRAR";
-    if (!j || !j.ok) { err.textContent = (j && j.error) || "No se ha podido entrar."; return; }
+    if (!j || !j.ok) { err.textContent = (j && j.error) || "No se ha podido entrar."; if (j && j.red) { err.textContent += " Puedes jugar sin conexión mientras tanto (sin online); cuando vuelva el servidor te pedirá entrar."; off.style.display = ""; } return; }
     if (cuentaGuardar(j)) { location.reload(); return; }
     d.remove(); document.body.classList.remove("nolog"); toast("¡Hola, " + (j.nombre || j.u) + "!"); };
   setTimeout(() => f.u.focus(), 50);
 }
+// sin conexión: se vuelve a probar cada minuto; en cuanto haya servidor, se pide iniciar sesión
+function cuentaReintento() { setTimeout(async () => { if (SES && SES.tok) return; const j = await cuentaApi("/cuenta/yo", { tok: "00" }); if (j && !j.red) { document.body.classList.add("nolog"); cuentaPantalla(); } else cuentaReintento(); }, 60000); }
 // al arrancar: sin sesión, pantalla de inicio de sesión; con sesión, se comprueba en segundo plano
 (function cuentaInicio() {
   if (!SES || !SES.tok) { document.body.classList.add("nolog"); cuentaPantalla(); return; }
