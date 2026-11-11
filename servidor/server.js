@@ -17,12 +17,16 @@ function serveFile(req, res, pathname) {
       h["Content-Encoding"] = "gzip"; h["Content-Length"] = z.length; res.writeHead(200, h); return res.end(req.method === "HEAD" ? undefined : z); }
     h["Content-Length"] = st.size; res.writeHead(200, h); if (req.method === "HEAD") return res.end(); fs.createReadStream(f).pipe(res); }); }
 const ABC = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789", code = () => Array.from(crypto.randomBytes(5), b => ABC[b % ABC.length]).join("");
-const CORS = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Methods": "GET, OPTIONS", "Access-Control-Allow-Headers": "*", "Content-Type": "application/json" };
+const CORS = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Methods": "GET, POST, OPTIONS", "Access-Control-Allow-Headers": "*", "Content-Type": "application/json" };
 const salas = new Map();
 const srv = http.createServer((req, res) => { const u = new URL(req.url, "http://x");
   if (req.method === "OPTIONS") { res.writeHead(204, CORS); return res.end(); }
   if (u.pathname === "/ping") { res.writeHead(200, CORS); return res.end(JSON.stringify({ ok: true, juego: "MDG 27", reserva: true, t: Date.now() })); }
   if (u.pathname === "/plaza") { let i = 1; while ((salas.get("PLAZA" + i) || new Set()).size >= 25 && i < 40) i++; res.writeHead(200, CORS); return res.end(JSON.stringify({ sala: "PLAZA" + i, n: (salas.get("PLAZA" + i) || new Set()).size })); }
+  // cuentas: el servidor de reserva reenvía al de Cloudflare (allí están guardadas); así el inicio de sesión funciona aunque LaLiga bloquee Cloudflare
+  if (u.pathname.startsWith("/cuenta/")) { const chunks = []; req.on("data", c => { chunks.push(c); if (chunks.reduce((a, b) => a + b.length, 0) > 4096) req.destroy(); });
+    req.on("end", async () => { try { const r = await fetch("https://mdg27-online.guidavilagri.workers.dev" + u.pathname + u.search, { method: req.method, headers: { "content-type": "application/json" }, body: req.method === "POST" ? Buffer.concat(chunks) : undefined });
+        res.writeHead(r.status, Object.assign({}, CORS, { "Access-Control-Allow-Methods": "GET, POST, OPTIONS" })); res.end(await r.text()); } catch (e) { res.writeHead(502, CORS); res.end(JSON.stringify({ ok: false, error: "Sin conexión con el servidor de cuentas." })); } }); return; }
   if (u.pathname === "/nueva") { res.writeHead(200, CORS); return res.end(JSON.stringify({ sala: code() })); }
   if (req.method === "GET" || req.method === "HEAD") return serveFile(req, res, u.pathname);
   res.writeHead(404, CORS); res.end("{}"); });
