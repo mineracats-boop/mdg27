@@ -572,12 +572,12 @@
     let want = 0, wantH = p.mh;
     if (C.dir != null && C.m > .02) { wantH = C.dir; want = C.speed != null ? C.speed : C.m < .45 ? C.m / .45 * 1.6 : lerp(2.4, C.spr ? vSpr(p) : vRun(p), (C.m - .45) / .55); if (hasBall(p)) want = Math.min(want, C.spr ? vSpr(p) * .93 : 5.2); }
     const faceMode = C.face != null && want < 4.2;
-    const agi = .8 + (p.st.agi - 70) * .008, wMax = lerp(9.5, 2.6, clamp(p.v / 7.5, 0, 1)) * agi;
+    const hum = p === M.human || (R2 && R2.human === p), agi = .8 + (p.st.agi - 70) * .008, wMax = (hum ? lerp(16, 6.2, clamp(p.v / 7.5, 0, 1)) : lerp(9.5, 2.6, clamp(p.v / 7.5, 0, 1))) * agi;   // el tuyo gira al momento (DLS)
     const dh = angD(p.mh, wantH), adh = Math.abs(dh);
     p.mh += clamp(dh, -(faceMode ? 9 : wMax) * dt, (faceMode ? 9 : wMax) * dt);
     if (faceMode) p.h += clamp(angD(p.h, C.face), -8 * dt, 8 * dt); else p.h += clamp(angD(p.h, p.mh), -wMax * 1.6 * dt, wMax * 1.6 * dt);
-    const tgt = want * (adh > .5 && !faceMode ? clamp(1 - (adh - .5) * .35, .45, 1) : 1) * (faceMode ? Math.min(1, 3.3 / Math.max(want, .1)) : 1);
-    const accel = tgt > p.v ? (p.v < 3 ? 6 : 3.6) * (.85 + (p.st.acc - 70) * .01) : (p.v > 5 ? 7 : 8.5);
+    const tgt = want * (adh > .5 && !faceMode ? clamp(1 - (adh - .5) * (hum ? .22 : .35), hum ? .6 : .45, 1) : 1) * (faceMode ? Math.min(1, 3.3 / Math.max(want, .1)) : 1);
+    const accel = (tgt > p.v ? (p.v < 3 ? 6 : 3.6) * (.85 + (p.st.acc - 70) * .01) : (p.v > 5 ? 7 : 8.5)) * (hum ? 1.75 : 1);
     p.v += clamp(tgt - p.v, -accel * dt, accel * dt);
     p.x += Math.cos(p.mh) * p.v * dt; p.y += Math.sin(p.mh) * p.v * dt;
     const om = clamp(dh, -wMax * dt, wMax * dt) / Math.max(dt, 1e-3); p.lean = lerp(p.lean, clamp(-om * p.v * .016, -.22, .22), Math.min(1, dt * 6));
@@ -765,8 +765,8 @@
       // trivela: rosca con el exterior (los buenos tiradores, a veces, al tirar cruzado con el pie bueno)
       else if (r.fin && !left && p.st.sho > 76 && Math.random() < .3) { wz *= -1.1; const s2 = -(Math.sign(W / 2 - r.ty) || 1), curl2 = .5 * .0042 * 28 * sp * t * t; a = Math.atan2(ty + s2 * curl2 - ball.y, r.tx - ball.x); M.shot.tri = true; if (!window.STEP) msg("¡CON EL EXTERIOR!", 1); }
     } else if (r.k === "pass" || r.k === "thru") {
-      const T = clamp(D / (r.k === "thru" ? 18 : 21), .3, 2.4) * (1.1 - pw * .25);   // pases rasos tensos, como en DLS
-      sp = clamp(rollV0(D, T), 9, 32) * (.94 + q * .06); vz = 0; a = aimH(r) + (Math.random() - .5) * err * .22; topspin = 6;
+      const T = clamp(D / (r.k === "thru" ? 20 : 24.5), .26, 2.1) * (1.1 - pw * .25);   // pases rasos tensos, como en DLS
+      sp = clamp(rollV0(D, T), 10.5, 33) * (.94 + q * .06); vz = 0; a = aimH(r) + (Math.random() - .5) * err * .22; topspin = 6;
       TEAMS[p.t].stats.pa++; registerPass(p, r);
     } else { // centro, pase alto, despeje, vaselina
       const T = clamp(.55 + D * .033, .8, 2.6) * (r.k === "clear" ? .9 : 1), apex = r.k === "lob" ? 1 : 0;
@@ -927,7 +927,11 @@
     if (hasBall(p) && !p.one && !charge && (I.spinD || I.stopD || I.feintD || I.nutD || I.stepD)) { skillMove(p, I.spinD ? "spin" : I.stopD ? "stop" : I.feintD ? "feint" : I.nutD ? "nut" : "step", I); return { dir: null, m: 0 }; }
     const keys = { shot: I.shoot, pass: I.pass, lob: I.lob, thru: I.thru };
     if (hasBall(p) || (!M.owner && Math.hypot(ball.x - p.x, ball.y - p.y) < 2.2 && ball.z < .6)) {
-      if (!charge) { for (const k in keys) if (I[k === "shot" ? "shootD" : k + "D"]) { charge = { k, p: 0 }; break; } }
+      if (!charge) {
+        // DLS: pase, al hueco y bombeado salen al pulsar, con la fuerza justa según la distancia
+        const pk = I.passD ? "pass" : I.thruD ? "thru" : I.lobD ? "lob" : null;
+        if (pk) { humanKick(p, { k: pk, p: .6, inst: true }, I); }
+        else if (I.shootD) charge = { k: "shot", p: 0 }; }
       else { if (I.fin) charge.fin = true; charge.p = Math.min(1, charge.p + dt / (charge.k === "pass" ? .9 : 1.05)); if (!keys[charge.k]) { humanKick(p, charge, I); charge = null; } }
     } else {
       charge = null;
@@ -971,7 +975,7 @@
     if (k === "pass" || k === "thru") {   // desde la banda en el último tercio hacia el área: centro
       const wide = prog(t, p.x) > .7 && Math.abs(p.y - W / 2) > 14, q = wide ? assistTarget(p, dirH, "lob", I.dir != null) : null;
       if (q && inArea(1 - t, q.x, q.y, 3)) { passTo(p, q, "cross", .7 + c.p * .25); return; }
-      if (c.p > .82) k = k === "pass" ? "lob" : "thrulob"; }   // botón mantenido: en largo / al hueco por alto
+      if (c.p > .82 && !c.inst) k = k === "pass" ? "lob" : "thrulob"; }   // botón mantenido: en largo / al hueco por alto
     if (k === "thrulob") { const q = assistTarget(p, dirH, "thru", I.dir != null); if (q) { const sp = thruSpot(p, q) || { x: q.x + M.dirOf[t] * 6, y: q.y }; requestKick(p, { k: "cross", p: .7, to: q, tx: clamp(sp.x, 1, L - 1), ty: clamp(sp.y, 1, W - 1), tz: .6 }); q.ai.recv = { at: simT, x: sp.x, y: sp.y }; return; } k = "lob"; }
     const mate = assistTarget(p, dirH, k, I.dir != null);
     if (!mate) { const D = k === "lob" ? 15 + c.p * 30 : 8 + c.p * 30; requestKick(p, { k: k === "lob" ? "lob" : "pass", p: c.p, tx: p.x + Math.cos(dirH) * D, ty: p.y + Math.sin(dirH) * D }); return; }
@@ -1877,12 +1881,12 @@
       if (M.owner && !M.owner.gk) dribble(M.owner, dt, M.owner._C || {});
       updatePossession(dt);
       // cambio automático al defender: el más cercano al balón
-      if (M.owner && M.owner.t !== M.humanTeam && M.human && dist(M.human, ball) > 9 && simT - (M.swT || 0) > 1.2) { const c = nearestTo(M.humanTeam, ball.x, ball.y); if (c && c !== M.human) { setHuman(c); M.swT = simT; } }
+      if (M.owner && M.owner.t !== M.humanTeam && M.human && dist(M.human, ball) > 6.5 && simT - (M.swT || 0) > .7) { const c = nearestTo(M.humanTeam, ball.x, ball.y); if (c && c !== M.human) { setHuman(c); M.swT = simT; } }
       if (!M.owner && M.human && !(M.pass && M.pass.t === M.humanTeam) && simT - (M.swT || 0) > .8) { const ch = (() => { let b = null, bt = 1e9; for (const p of team(M.humanTeam)) { if (p.gk) continue; const ip = interceptPt(p), tt = Math.hypot(ip.x - p.x, ip.y - p.y) / vSpr(p); if (tt < bt) { bt = tt; b = p; } } return b; })(); if (ch && ch !== M.human && dist(M.human, ball) > 6) { setHuman(ch); M.swT = simT; } }
       if (M.pass && M.pass.to && M.pass.to.t === M.humanTeam && simT - M.pass.at < .2) setHuman(M.pass.to);
       if (R2 && NET.peer) withR2(() => {
       // cambio automático al defender: el más cercano al balón
-      if (M.owner && M.owner.t !== M.humanTeam && M.human && dist(M.human, ball) > 9 && simT - (M.swT || 0) > 1.2) { const c = nearestTo(M.humanTeam, ball.x, ball.y); if (c && c !== M.human) { setHuman(c); M.swT = simT; } }
+      if (M.owner && M.owner.t !== M.humanTeam && M.human && dist(M.human, ball) > 6.5 && simT - (M.swT || 0) > .7) { const c = nearestTo(M.humanTeam, ball.x, ball.y); if (c && c !== M.human) { setHuman(c); M.swT = simT; } }
       if (!M.owner && M.human && !(M.pass && M.pass.t === M.humanTeam) && simT - (M.swT || 0) > .8) { const ch = (() => { let b = null, bt = 1e9; for (const p of team(M.humanTeam)) { if (p.gk) continue; const ip = interceptPt(p), tt = Math.hypot(ip.x - p.x, ip.y - p.y) / vSpr(p); if (tt < bt) { bt = tt; b = p; } } return b; })(); if (ch && ch !== M.human && dist(M.human, ball) > 6) { setHuman(ch); M.swT = simT; } }
       if (M.pass && M.pass.to && M.pass.to.t === M.humanTeam && simT - M.pass.at < .2) setHuman(M.pass.to);
       });
