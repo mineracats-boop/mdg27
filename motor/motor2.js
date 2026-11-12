@@ -766,8 +766,8 @@
       // trivela: rosca con el exterior (los buenos tiradores, a veces, al tirar cruzado con el pie bueno)
       else if (r.fin && !left && p.st.sho > 76 && Math.random() < .3) { wz *= -1.1; const s2 = -(Math.sign(W / 2 - r.ty) || 1), curl2 = .5 * .0042 * 28 * sp * t * t; a = Math.atan2(ty + s2 * curl2 - ball.y, r.tx - ball.x); M.shot.tri = true; if (!window.STEP) msg("¡CON EL EXTERIOR!", 1); }
     } else if (r.k === "pass" || r.k === "thru") {
-      const T = clamp(D / (r.k === "thru" ? 20 : 24.5), .26, 2.1) * (1.1 - pw * .25);   // pases rasos tensos, como en DLS
-      sp = clamp(rollV0(D, T), 10.5, r.soft ? 15 : 33) * (.94 + q * .06); vz = 0;   // pase al vacío: más suave
+      const T = clamp(D / (r.k === "thru" ? 16 : 18.5), .32, 2.4) * (1.1 - pw * .2);   // pases rasos firmes pero controlables
+      sp = clamp(rollV0(D, T), 8.5, r.soft ? 13 : 25) * (.94 + q * .06); vz = 0;   // pase al vacío: más suave
       a = aimH(r) + (Math.random() - .5) * err * .22; topspin = 6;
       TEAMS[p.t].stats.pa++; registerPass(p, r);
     } else { // centro, pase alto, despeje, vaselina
