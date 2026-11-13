@@ -7628,7 +7628,7 @@ const store = {
   get(k, d) { try { const v = localStorage.getItem("mdg27." + k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
   set(k, v) { try { localStorage.setItem("mdg27." + k, JSON.stringify(v)); } catch (e) {} }
 };
-const settings = Object.assign({ music: 70, sfx: 80, vibra: true, quality: "Alta", vista: "3D", lang: "Español", cam: "Televisión", passAssist: "Asistido", narr: true, voz: true }, store.get("settings", {}));
+const settings = Object.assign({ music: 70, sfx: 80, vibra: true, quality: "Alta", vista: "3D", lang: "Español", cam: "Televisión", passAssist: "Asistido", narr: true, voz: true, padTipo: "Automático" }, store.get("settings", {}));
 const ACT = {};            // acciones: data-a="nombre"
 const ONSHOW = {};         // al entrar en una pantalla
 
@@ -7646,9 +7646,10 @@ const device = (() => {
 let mode = device === "Ordenador" ? "mouse" : "touch";
 let padType = "xbox";
 function padKind(id) {
+  const fx = { Xbox: "xbox", PlayStation: "ps", Nintendo: "nin" }[settings.padTipo]; if (fx) return fx;   // elegido a mano en Configuración
   id = (id || "").toLowerCase();
   if (/054c|playstation|dualshock|dualsense|ps4|ps5|wireless controller/.test(id)) return "ps";
-  if (/057e|nintendo|pro controller|joy-con|switch/.test(id)) return "nin";
+  if (/057e|nintendo|pro controller|joy-con|switch|nsw|0f0d|20d6|2dc8|8bitdo|hori|powera/.test(id)) return "nin";
   if (/045e|xbox|xinput/.test(id)) return "xbox";
   return "gen";
 }
@@ -7673,6 +7674,7 @@ const PADNAME = { ps: "Mando PlayStation", xbox: "Mando Xbox", nin: "Mando Ninte
 function renderHints() {
   const g = mode === "pad" ? GLYPH[padType] : mode === "kb" ? GLYPH.kb : GLYPH.mouse;
   const src = mode === "pad" ? PADNAME[padType] : mode === "kb" ? "Teclado" : mode === "mouse" ? "Ratón" : "Táctil";
+  { const k = $(".hmplay kbd"); if (k) k.innerHTML = mode === "pad" ? ({ ps: "✕", nin: "A", xbox: "A", gen: "A" })[padType] : mode === "kb" ? "ENTER" : "CLIC"; }
   $$(".hints").forEach(h => {
     const scr = h.closest(".screen");
     const isHome = scr && scr.id === "home";
@@ -7857,6 +7859,7 @@ function toast(t) { const el = $("#toast"); el.textContent = t; el.classList.add
 const CFG = [
   { k: "cuenta", lab: "Cuenta", sub: "Sesión iniciada · progreso guardado en la nube" },
   { k: "pads", lab: "Mandos", sub: "Mandos detectados en este dispositivo" },
+  { k: "padTipo", lab: "Botones del mando", sub: "Si las letras no coinciden con tu mando, elige el tuyo (Nintendo: A acepta, B atrás)", type: "list", opts: ["Automático", "Xbox", "PlayStation", "Nintendo"] },
   { k: "music", lab: "Música", sub: "Volumen de la música de menús", type: "range" },
   { k: "sfx", lab: "Efectos", sub: "Volumen de los efectos de sonido", type: "range" },
   { k: "vibra", lab: "Vibración", sub: "Vibración del mando y del móvil", type: "bool" },
@@ -7896,6 +7899,7 @@ function cfgChange(k, d) {
   if (c.type === "range") settings[k] = Math.max(0, Math.min(100, settings[k] + d * 10));
   if (c.type === "bool") settings[k] = !settings[k];
   if (c.type === "list") { const i = c.opts.indexOf(settings[k]); settings[k] = c.opts[(i + d + c.opts.length) % c.opts.length]; }
+  if (k === "padTipo") { const ps = connectedPads(); if (ps[0]) padType = padKind(ps[0].id); else if (settings.padTipo !== "Automático") padType = padKind(""); renderHints(); }
   store.set("settings", settings); renderCfg(); rumble(25, .3);
 }
 $("#cfgList").addEventListener("click", e => {
@@ -9735,7 +9739,7 @@ function startNew(cfg) {
   fr.style.cssText = "position:fixed;inset:0;width:100%;height:100%;border:0;z-index:9999;background:#050a14"; document.body.appendChild(fr);
   document.body.classList.add("inmatch"); MATCH_ON = true;
   const data = { teams: cfg.teams.map(T => ({ name: T.name, sh: T.sh, c1: T.c1, c2: T.c2, kits: teamKits(T), pl: T.pl.map(d => ({ n: d.n, role: d.role, st: d.st, ov: d.ov, u: d.u, num: d.num })), bench: (T.bench || []).map(d => ({ n: d.n, role: d.role, st: d.st, ov: d.ov, u: d.u, num: d.num })) })).map(dorsalesRellenar),
-    human: cfg.humans && cfg.humans[0] ? cfg.humans[0].t : 0, cpu: cfg.cpuTeams || [], diff: cfg.diff, halfLen: cfg.halfLen, tod: cfg.tod || "Auto", padmap: store.get("padmap", {}), weather: cfg.weather === undefined ? undefined : cfg.weather, drill: cfg.drill || null, drillSpec: cfg.drillSpec || null, knockout: !!cfg.knockout, lock: cfg.lock || null };
+    human: cfg.humans && cfg.humans[0] ? cfg.humans[0].t : 0, cpu: cfg.cpuTeams || [], diff: cfg.diff, halfLen: cfg.halfLen, tod: cfg.tod || "Auto", padmap: store.get("padmap", {}), weather: cfg.weather === undefined ? undefined : cfg.weather, padKind: typeof padType !== "undefined" ? padType : "xbox", drill: cfg.drill || null, drillSpec: cfg.drillSpec || null, knockout: !!cfg.knockout, lock: cfg.lock || null };
   const onMsg = e => { if (e.source !== fr.contentWindow) return; const d = e.data || {};
     if (d.type === "mdg27ready") fr.contentWindow.postMessage({ type: "mdg27cfg", cfg: data }, "*");
     if (d.type === "mdg27end" || d.type === "mdg27quit") { removeEventListener("message", onMsg); fr.remove(); document.body.classList.remove("inmatch"); MATCH_ON = false; setTimeout(() => fr.focus && window.focus(), 0);

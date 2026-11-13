@@ -574,7 +574,10 @@
   function crowdOoh(k = 1) { if (window.STEP || !ACX()) return; if (SND.grada_grita) { play("grada_grita", clamp(.35 * k, .2, .6), .95 + Math.random() * .1); return; } const t = AC.currentTime, f = nz(t, 1.8, .5 * k, "bandpass", 380, 2.5); f.frequency.setValueAtTime(330, t); f.frequency.linearRampToValueAtTime(520, t + .5); f.frequency.linearRampToValueAtTime(300, t + 1.7); }
   function applause(dur = 2.5, k = 1) { if (window.STEP || !ACX()) return; if (SND.grada) { play("grada", clamp(.3 * k, .2, .6), .95 + Math.random() * .1); return; } const t = AC.currentTime; for (let i = 0; i < dur * 28; i++) nz(t + Math.random() * dur, .05, (.05 + Math.random() * .08) * k * (1 - i / (dur * 28) * .6), "bandpass", 1400 + Math.random() * 1600, 1.4); }
   function chant() { if (window.STEP || !ACX()) return; if (SND.grada_grita) { play("grada_grita", .45, 1.03); return; } const t = AC.currentTime; for (let r = 0; r < 3; r++) for (const o of [0, .32, .64]) { const tt = t + r * 1.4 + o; for (let i = 0; i < 18; i++) nz(tt + Math.random() * .04, .06, .05 + Math.random() * .05, "bandpass", 1300 + Math.random() * 1200, 1.3); } }
-  const msg = (t, d = 1.8) => { if (NET && NET.host && NET.peer) NET.ev.push(["m", t, d]); const e = $("#msg"); e.textContent = t; e.style.opacity = 1; M.msgT = d; };
+  // mando Nintendo: A y B (y X e Y) están cambiados respecto al Xbox; los textos muestran la letra de tu mando
+  const NIN = !!(EMB && EMB.padKind === "nin"), NINSW = { A: "B", B: "A", X: "Y", Y: "X" }, ninTxt = t => NIN ? String(t).replace(/(^|[^A-Za-z])([ABXY])(?![A-Za-z])/g, (m, a, l) => a + NINSW[l]) : t;
+  if (NIN) { const h = document.querySelector("#help .cols > div:nth-child(2)"); if (h) h.querySelectorAll("kbd, span").forEach(e => { e.textContent = ninTxt(e.textContent); }); }
+  const msg = (t, d = 1.8) => { t = ninTxt(t); if (NET && NET.host && NET.peer) NET.ev.push(["m", t, d]); const e = $("#msg"); e.textContent = t; e.style.opacity = 1; M.msgT = d; };
   let hitT = -9; function hit(w) { if (simT - hitT < .4) return; hitT = simT; M.crowdEx = Math.max(M.crowdEx || 0, .55); postSnd(); crowdOoh(1); msg(w, 1.2); }
 
   /* ---------- entrada humana ---------- */
@@ -802,6 +805,8 @@
     o.after = () => { p.kickLock = false; p.v = Math.min(p.v, 3.5); };
   }
   function strike(p, r, left) {
+    if (r.pen && M.penGK) { const G0 = M.penGK, gy = G0.gy, side = G0.side, hgt = G0.hgt; M.penGK = null;
+      gkS[G0.t] = { mode: "dive", react: 0, t: .3, by: W / 2 + gy * 2.4, bz: hgt, pen: true, ws: gy !== 0 && gy === Math.sign(side) && Math.abs(side) < .92 && hgt < 2 ? Math.random() < .7 : gy === 0 && side === 0 }; }
     flushPose(p); const toe = left ? p.toes.L : p.toes.R; toe.getWorldPosition(tv);
     const miss = Math.hypot(tv.x + L / 2 - ball.x, tv.z + W / 2 - ball.y), q = clamp(1 - Math.max(0, miss - .35) * 1.4, .25, 1);
     const weak = left ? .86 : 1, run = p.v > 5.5 ? .1 : 0, st = r.k === "shot" ? p.st.sho : p.st.pas;
@@ -1526,7 +1531,7 @@
     M.set = { type, t: atk, taker, at: simT, indirect, done: false }; M.sets = M.sets || {}; M.sets[type] = (M.sets[type] || 0) + 1;
     if (taker && taker.t === M.humanTeam && !taker.gk) setHuman(taker); else if (R2 && taker && taker.t === R2.team && !taker.gk) R2.human = taker;
     const names = { kick: "SAQUE DE CENTRO", corner: "CÓRNER", throw: "SAQUE DE BANDA", goalkick: "SAQUE DE PUERTA", fk: indirect ? "FALTA (INDIRECTA)" : "FALTA", pen: "PENALTI" };
-    msg(names[type] + (taker && taker.t === M.humanTeam && !taker.gk && type === "pen" ? "  ·  Stick: mueve la diana · mantén Espacio/B: potencia" : type === "pen" && (1 - atk) === M.humanTeam ? "  ·  Tu portero: apunta con el stick hacia dónde tirarse" : taker && taker.t === M.humanTeam && !taker.gk ? (type === "fk" && !indirect && Math.hypot(gd - ball.x, W / 2 - ball.y) < 35 ? "  ·  Stick: diana · Espacio/B: potencia · al tirar, stick = efecto" : type === "pen" || type === "fk" ? "  ·  Espacio/B tirar · J/A pasar" : "  ·  J/A sacar") : type === "goalkick" && atk === M.humanTeam ? "  ·  J/A en corto · L/X en largo" : ""), type === "kick" ? 2.2 : 1.8); camSnap = true;
+    msg(names[type] + (taker && taker.t === M.humanTeam && !taker.gk && type === "pen" ? "  ·  Stick: mueve la diana · mantén Espacio/B: potencia" : type === "pen" && (1 - atk) === M.humanTeam ? "  ·  Tu portero: stick a izquierda o derecha (vale hasta que golpea)" : taker && taker.t === M.humanTeam && !taker.gk ? (type === "fk" && !indirect && Math.hypot(gd - ball.x, W / 2 - ball.y) < 35 ? "  ·  Stick: diana · Espacio/B: potencia · al tirar, stick = efecto" : type === "pen" || type === "fk" ? "  ·  Espacio/B tirar · J/A pasar" : type === "corner" ? "  ·  J/A en corto · L/X o Espacio/B: centro al área" : "  ·  J/A sacar") : type === "goalkick" && atk === M.humanTeam ? "  ·  J/A en corto · L/X en largo" : ""), type === "kick" ? 2.2 : 1.8); camSnap = true;
     if (type !== "kick" && type !== "throw" && type !== "goalkick") whistle(1);
   }
   // ejecutar el balón parado: humano con los botones, IA tras una pausa
@@ -1549,7 +1554,7 @@
         if (I.shootD) charge = { k: "shot", p: 0 }; if (I.passD) charge = { k: "pass", p: 0 }; if (I.lobD) charge = { k: "lob", p: 0 };
         if (charge) { if (I.fin) charge.fin = true; charge.p = Math.min(1, charge.p + dt / 1.05); const held = charge.k === "shot" ? I.shoot : charge.k === "pass" ? I.pass : I.lob; if (!held) { go = { k: charge.k, p: charge.p, fin: charge.fin, dir: I.dir, my: I.my, mx: I.mx, curl: I.dir != null && I.m > .3 ? I.mx * M.dirOf[p.t] : 0, aim: aimOn && charge.k === "shot" ? Object.assign({}, s.aim) : null }; charge = null; } }
         $("#pw").style.display = charge ? "block" : "none"; if (charge) $("#pw i").style.width = (charge.p * 100) + "%";
-      } else if (I.passD || I.lobD || I.shootD || I.thruD) go = { k: I.lobD ? "lob" : I.thruD ? "thru" : "pass", p: .6, dir: I.dir, my: I.my, mx: I.mx };
+      } else if (I.passD || I.lobD || I.shootD || I.thruD) go = { k: I.lobD || I.shootD ? "lob" : I.thruD ? "thru" : "pass", p: .6, dir: I.dir, my: I.my, mx: I.mx };   // PASE = en corto · CENTRO o TIRO = centro al área
     } else if (humanGK && wait > .5 && wait < 6) { if (I.passD || I.thruD) go = { k: "pass", dir: I.dir }; else if (I.lobD || I.shootD) go = { k: "lob", dir: I.dir }; }
     else if (!human && wait > (s.type === "kick" ? .9 : s.type === "throw" ? 1.9 : s.type === "goalkick" ? 1.6 : 1.4)) go = { ai: true };
     if (!go) return;
@@ -1578,6 +1583,7 @@
       requestKick(p, { k: "shot", pen: true, p: .55 + pw * .4, tx: gx + M.dirOf[t] * .2, ty: go.aim ? W / 2 + go.aim.y : W / 2 + side * (GW / 2 - .45), tz: hgt });
       // portero: si es tuyo, se tira hacia donde apuntes con el stick (suelto = se queda en el centro); la máquina adivina (35 %)
       const sd = Math.sign(side) || (Math.random() < .5 ? -1 : 1), hd = (1 - t) === M.humanTeam && !M.lockP;
+      if (hd) { M.penGK = { t: 1 - t, sd, side, hgt, gy: 0 }; return; }   // tu portero: se tira al golpear el balón, hacia donde tengas el stick (en cualquier momento antes)
       later(.3, () => { const gy = hd ? (lastI.dir != null && Math.abs(lastI.mx) > .3 ? Math.sign(lastI.mx * M.dirOf[t]) : 0) : (Math.random() < .35 ? sd : -sd); gkS[1 - t] = { mode: "dive", react: 0, t: .3, by: W / 2 + gy * 2.4, bz: hgt, pen: true, ws: gy !== 0 && gy === Math.sign(side) && Math.abs(side) < .92 && hgt < 2 ? Math.random() < .7 : gy === 0 && side === 0 }; });
       return; }
     if (s.type === "fk") { const dG = Math.hypot(gx - ball.x, W / 2 - ball.y);
@@ -1589,6 +1595,9 @@
     if (s.type === "corner" || (s.type === "fk" && (go.k === "lob" || go.ai))) { const tgts = team(t).filter(q => q !== p && !q.gk && prog(t, q.x) > .78).sort(() => Math.random() - .5);
       const sh = s.type === "corner" ? team(t).find(q => q !== p && !q.gk && dist(q, p) < 11) : null;
       if (sh && go.ai && Math.random() < .25) { passTo(p, sh, "pass", .45); return; }
+      if (s.type === "corner" && !go.ai && (go.k === "pass" || go.k === "thru")) {   // córner en corto: PASE (o al hueco) = pase raso al compañero más cercano en esa dirección
+        const near = team(t).filter(q => q !== p && !q.gk).sort((a, b) => dist(a, p) - dist(b, p)), q = (go.dir != null ? mateInDir(p, go.dir, 30) : null) || sh || near[0];
+        if (q) { passTo(p, q, go.k === "thru" ? "thru" : "pass", .5); return; } }
       const q = go.ai ? tgts[0] : (go.dir != null ? mateInDir(p, go.dir, 60) : null) || tgts[0];
       if (q) { passTo(p, q, "cross", .75); for (const a of tgts) a.ai.run = { x: lerp(a.x, fx(t, .94), .5), y: lerp(a.y, W / 2, .4), until: simT + 1.6 }; return; } }
     const mate = go.ai ? bestMate(p, 30) : (go.dir != null ? mateInDir(p, go.dir, 40) : null) || bestMate(p, 30);
@@ -1868,6 +1877,26 @@
     if (M.human) { ring.visible = true; ring.position.copy(P3(M.human.x, M.human.y, .03)); } else ring.visible = false;
     if (TS.btn) { const def = !!(M.owner && M.owner.t !== M.humanTeam && M.phase === "play"); if (TS.def !== def) { TS.def = def; for (const [b, a, d] of TS.btn) b.textContent = def ? d : a; } }   // botones táctiles: cambian al defender
     crowdSound(); if (CROWD) { CROWD.U.uT.value += dt; CROWD.U.uEx.value = M.crowdEx; const gk = M.goalTeam != null && simT - M.goalT < 14, e = M.crowdEx; CROWD.U.uExT.value.set(gk ? (M.goalTeam === 0 ? e : Math.min(e, .08)) : e, gk ? (M.goalTeam === 1 ? e : Math.min(e, .08)) : e); } camera(dt); }
+  // menús del partido con el mando (pausa, cambios, controles, salir): stick o cruceta para moverse, aceptar y atrás
+  const UIP = { prev: [], sel: null, rep: 0, dir: null };
+  function uiLayer() { const vis = e => e && e.style.display !== "none" && getComputedStyle(e).display !== "none";
+    const ask = document.getElementById("ask"), help = document.getElementById("help");
+    if (vis(ask)) return ask; if (vis(help)) return help; if (PADCFG.on || vis(pcBox)) return null; if (vis(sp)) return sp; if (vis(pz)) return pz; return null; }
+  function uiFocus(b) { if (UIP.sel && UIP.sel !== b) { UIP.sel.style.outline = ""; UIP.sel.style.transform = ""; } UIP.sel = b; if (b) { b.style.outline = "3px solid #ffd23a"; b.style.outlineOffset = "2px"; b.style.transform = "scale(1.04)"; try { b.scrollIntoView({ block: "nearest" }); } catch (e) {} } }
+  function uiPad() { const L0 = uiLayer(); let gp = null; try { gp = navigator.getGamepads && [...navigator.getGamepads()].find(q => q && q.connected); } catch (e) {}
+    if (!gp) return; const now = gp.buttons.map(x => x.pressed || x.value > .5), was = UIP.prev; UIP.prev = now; if (!L0) { if (UIP.sel) uiFocus(null); return; }
+    const nin = (EMB && EMB.padKind === "nin") || /057e|nintendo|pro controller|joy-con/i.test(gp.id), OK = nin ? 1 : 0, BK = nin ? 0 : 1, pr = i => now[i] && !was[i];
+    const btns = [...L0.querySelectorAll("button")].filter(b => b.offsetParent !== null && !b.disabled);
+    if (!btns.length) return; if (!UIP.sel || !btns.includes(UIP.sel)) uiFocus(btns[0]);
+    let dir = null; const ax = gp.axes[0] || 0, ay = gp.axes[1] || 0;
+    if (now[12] || ay < -.55) dir = "up"; else if (now[13] || ay > .55) dir = "down"; else if (now[14] || ax < -.55) dir = "left"; else if (now[15] || ax > .55) dir = "right";
+    const t = performance.now(); if (dir && (dir !== UIP.dir || t > UIP.rep)) { UIP.rep = t + (dir !== UIP.dir ? 320 : 140); const a = UIP.sel.getBoundingClientRect(), ax0 = a.left + a.width / 2, ay0 = a.top + a.height / 2; let best = null, bs = 1e9;
+      for (const b of btns) { if (b === UIP.sel) continue; const r = b.getBoundingClientRect(), dx = r.left + r.width / 2 - ax0, dy = r.top + r.height / 2 - ay0;
+        const main = dir === "right" ? dx : dir === "left" ? -dx : dir === "down" ? dy : -dy, cross = dir === "right" || dir === "left" ? Math.abs(dy) : Math.abs(dx); if (main <= 4) continue; const sc = main + cross * 2.2; if (sc < bs) { bs = sc; best = b; } }
+      if (best) uiFocus(best); }
+    UIP.dir = dir;
+    if (pr(OK) && UIP.sel) { const b = UIP.sel; uiFocus(null); b.click(); }
+    else if (pr(BK)) { if (L0.id === "help" || L0.id === "ask") L0.style.display = "none"; else if (L0 === sp) sp.style.display = "none"; else setPause(false); uiFocus(null); } }
   function setPause(on) { M.paused = on && !NET; pz.style.display = on ? "grid" : "none"; if (!on) sp.style.display = "none"; subB.textContent = `Cambios (${TEAMS[HT()].subs}/5)`; try { if (AC) on ? AC.suspend() : AC.resume(); } catch (e) {} }
   addEventListener("keydown", e => { if (e.code === "Escape" || e.code === "KeyP") setPause(!M.paused); });
   let padStartPrev = false;
@@ -2006,6 +2035,7 @@
   const TRK = { t: 0, f: [], ev: [] };
   function tick(dt) {
     { let gp = null; try { gp = navigator.getGamepads && [...navigator.getGamepads()].find(q => q && q.connected); } catch (e) {} const pi = gp ? padMapFor(gp).pause : 9, st = !!(gp && gp.buttons[pi] && gp.buttons[pi].pressed) && !PADCFG.on; if (st && !padStartPrev) setPause(!M.paused); padStartPrev = st; }
+    uiPad();
     if (M.paused) return;
     if (NET && NET.guest) { guestTick(dt); return; }
     if (NET && (!NET.ready || NET.ended)) { if (NET.ended && M.phase !== "end") { M.phase = "end"; showEnd(); } return; }
@@ -2016,6 +2046,7 @@
     if (EMB && !DR && M.phase !== "end" && !M.replay && (TRK.t += dt) >= .5) { TRK.t = 0; if (TRK.f.length < 2400) { const fr = [Math.round(ball.x * 10), Math.round(ball.y * 10)]; for (const p of P) fr.push(Math.round(p.x * 10), Math.round(p.y * 10)); TRK.f.push(fr); TRK.ev.push(TEAMS[0].score * 100 + TEAMS[1].score); } }
     for (let i = TIMERS.length - 1; i >= 0; i--) if (TIMERS[i].at <= simT) { const f = TIMERS[i].fn; TIMERS.splice(i, 1); f(); }
     const I = input(); lastI = I; const I2 = R2 && NET.peer ? remoteInput() : null;
+    if (M.penGK && I.dir != null && I.m > .25 && Math.abs(I.mx) > .2) M.penGK.gy = Math.sign(I.mx * M.dirOf[1 - M.penGK.t]);   // la última dirección que marques es la buena
     if (M.aft) { M.aft.dt = dt; aftStep(I); }
     if (M.msgT > 0) { M.msgT -= dt; if (M.msgT <= 0) $("#msg").style.opacity = 0; }
     clockStep(dt);
