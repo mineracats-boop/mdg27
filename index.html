@@ -7893,7 +7893,7 @@ ONSHOW.cfg = renderCfg;
 function cfgChange(k, d) {
   if (k === "pads") return padTest();
   if (k === "cuenta") return confirmDlg("Cerrar sesión", "¿Cerrar la sesión en este dispositivo? Tu progreso se guarda antes en la nube y se recupera al volver a entrar con tu usuario y contraseña.", "Cerrar sesión", () => cuentaSalir());
-  if (k === "cred") return dlg("Créditos", "MDG 27 · Rocket Jam (Antonio y Guille).<br><br>Estadio 3D: «Soccer Stadium» de R-LAB (@rakshaan) en Sketchfab, licencia CC BY 4.0 (creativecommons.org/licenses/by/4.0). Modificado: sin anuncios ni porterías, colores y geometría simplificados.", [["Cerrar", closeDlg, true, ""]]);
+  if (k === "cred") return dlg("Créditos", "MDG 27 · Rocket Jam (Antonio y Guille).<br><br>Estadio 3D: «Soccer Stadium» de R-LAB (@rakshaan) en Sketchfab, licencia CC BY 4.0 (creativecommons.org/licenses/by/4.0). Modificado: sin anuncios ni porterías, colores y geometría simplificados.<br><br>Street Football: «Skateboard» de Jamoues y «Counter» de gorzi (Sketchfab, CC BY 4.0), con texturas reducidas.", [["Cerrar", closeDlg, true, ""]]);
   if (k === "tut") { if (typeof startTutorial === "function") startTutorial(); return; }
   const c = CFG.find(x => x.k === k); if (!c || !c.type) return;
   if (c.type === "range") settings[k] = Math.max(0, Math.min(100, settings[k] + d * 10));

@@ -64,11 +64,33 @@ html,body{background:var(--bg)}
 #power{border:1px solid #d4a64a88}#power i{background:linear-gradient(90deg,#1e6bff,#7fc2ff,#f3d27a)}
 #chat b{color:var(--gold2)}#chat i{color:#7fc2ff}
 .coin{height:1.1em;vertical-align:-.2em}
+#tel{z-index:40}#telcaja{width:min(370px,94vw);height:min(740px,90vh);border-radius:44px;background:#0b0b0e;padding:12px;box-shadow:0 30px 80px #000c,0 0 0 2px #333 inset,0 0 0 1px #d4a64a66}
+#telpant{position:relative;width:100%;height:100%;border-radius:34px;overflow:hidden;color:#fff;font:500 15px system-ui,sans-serif;display:flex;flex-direction:column}
+.tsb{display:flex;justify-content:space-between;padding:10px 22px 4px;font:700 13px system-ui;text-shadow:0 1px 3px #000a}
+.tgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:22px 10px;padding:46px 18px 10px}.tgrid button{position:relative;background:none;border:0;color:#fff;font:600 13px system-ui;display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;text-shadow:0 1px 4px #000}
+.tgrid img{width:68px;height:68px;border-radius:18px;box-shadow:0 6px 16px #0008}.tgrid em,#bTel em,.tcol em{background:#ff3355;color:#fff;font:800 12px system-ui;border-radius:99px;padding:1px 7px;font-style:normal}.tgrid em{position:absolute;top:-6px;right:14px}
+.tcl{margin:auto auto 18px;background:#ffffff26;border:0;color:#fff;border-radius:99px;padding:10px 22px;font:700 14px system-ui;cursor:pointer;backdrop-filter:blur(8px)}
+.thd{display:flex;align-items:center;gap:10px;padding:6px 12px;background:#000a;backdrop-filter:blur(10px)}.thd button{background:none;border:0;color:#7fb2ff;font:400 30px system-ui;line-height:1;cursor:pointer;padding:0 6px}.thd b{font-size:17px}
+.tbody{flex:1;overflow:auto;padding:10px 12px 14px;background:#000000b0;display:flex;flex-direction:column;gap:8px}
+.tnote{background:#ffffff14;border-radius:12px;padding:10px 12px;line-height:1.35}.tcol{display:flex;flex-direction:column;gap:6px}
+.tcol button{text-align:left;background:#ffffff1c;border:0;border-radius:14px;color:#fff;padding:11px 14px;font:600 15px system-ui;cursor:pointer;display:flex;flex-direction:column;gap:2px}.tcol button small{opacity:.7;font-weight:400}.tcol button:hover{background:#ffffff30}
+.ttabs{display:flex;gap:6px}.ttabs button{flex:1;background:#ffffff1c;border:0;border-radius:99px;color:#fff;padding:8px;font:700 14px system-ui;cursor:pointer}.ttabs button.on{background:#2d7bff}
+.tmsgs{flex:1;min-height:200px;overflow:auto;display:flex;flex-direction:column;gap:6px;padding:4px 0}.tmsgs>div{max-width:80%;background:#ffffff22;border-radius:14px 14px 14px 4px;padding:7px 10px;align-self:flex-start;word-wrap:break-word}
+.tmsgs>div.yo{align-self:flex-end;background:#2d7bff;border-radius:14px 14px 4px 14px}.tmsgs b{display:block;font-size:12px;color:#ffd23a}.tmsgs small{display:block;font-size:10px;opacity:.6;text-align:right}
+.tin{display:flex;gap:6px}.tin input{flex:1;min-width:0;background:#ffffff20;border:0;border-radius:99px;color:#fff;padding:10px 14px;font:15px system-ui;outline:none}.tin button{background:#2d7bff;border:0;border-radius:99px;color:#fff;width:42px;font-size:17px;cursor:pointer}
+.tbig{background:#ffffff14;border-radius:14px;padding:12px;font:800 28px system-ui;display:flex;flex-direction:column}.tbig small{font:400 13px system-ui;opacity:.7}
+.tlist>div{display:flex;justify-content:space-between;padding:6px 4px;border-bottom:1px solid #ffffff14}.trow{display:flex;gap:10px}.trow button{width:56px;height:96px;border-radius:12px;border:2px solid #fff3;cursor:pointer}.trow button.on{border-color:#ffd23a}
+.tpost{background:#ffffff12;border-radius:14px;padding:8px;display:flex;flex-direction:column;gap:6px}.tph{display:flex;justify-content:space-between}.tph small{opacity:.6}.tmed{min-height:120px;display:grid;place-items:center;background:#0006;border-radius:10px;overflow:hidden}.tmed img,.tmed video{width:100%;display:block}
+.tact{display:flex;gap:6px;align-items:center}.tact button{background:#ffffff1c;border:0;border-radius:99px;color:#fff;padding:5px 12px;cursor:pointer}.tcoms{font-size:13px;opacity:.9}.tcoms b{color:#ffd23a}
+#tmap{width:100%;border-radius:12px}#tcap{position:fixed;top:64px;left:50%;transform:translateX(-50%);z-index:35;display:flex;gap:8px}#tcap button{font:800 16px system-ui;padding:12px 20px;border-radius:99px;border:2px solid #fff;background:#d3202c;color:#fff;cursor:pointer;box-shadow:0 6px 20px #0008}#tcap button+button{background:#222a}
+.tsw{display:flex;align-items:center;gap:6px}.tsw i{width:18px;height:18px;border-radius:50%;background:var(--c);border:2px solid #fff8;display:inline-block}.tsw i.dos{background:linear-gradient(180deg,var(--c) 50%,var(--d) 50%)}#panel button.on,#bSk.on{border-color:var(--gold2);color:var(--gold2)}
+#panel{max-height:82vh;overflow:auto}#panel button.tsw{background:#ffffff14!important;border:1px solid #ffffff33!important;border-radius:99px!important;padding:6px 11px!important;font:700 12px system-ui!important;box-shadow:none!important;min-height:0!important;text-transform:none!important;letter-spacing:0!important}#panel .row{flex-wrap:wrap}
+#bTel em{margin-left:4px}#bTel em:empty{display:none}
 </style></head><body>
 <div id="load"><img id="loadLogo" alt="Street"><div>Cargando el <b style="color:#f3d27a">barrio</b>…</div><div class="lbar"><i></i></div></div>
-<div id="hud"></div><div id="msg"></div><div id="tip"></div><div id="power"><i></i></div><div id="panel"></div>
+<div id="hud"></div><div id="msg"></div><div id="tip"></div><div id="power"><i></i></div><div id="panel"></div><div id="tel" class="modal" style="display:none" onclick="if(event.target===this)telCerrar()"><div id="telcaja"><div id="telpant"></div></div></div><div id="tcap" style="display:none"></div>
 <div id="nbst"></div><div id="chat"></div><input id="chatin" maxlength="120" placeholder="Escribe y pulsa Enter" style="display:none" enterkeyhint="send">
-<div id="tb"><button id="bChat" onclick="chatOpen()" style="display:none"><img data-ui="ico_chat" alt="">Chat</button><button id="bRet" onclick="retosPanel()"><img data-ui="ico_moneda" alt=""><span id="bRetT">0</span></button><button id="bOn" onclick="nbMenu(true)"><img data-ui="ico_online" alt="">Online</button><button id="bMenu" onclick="hubMenu(true)"><img data-ui="ico_ajustes" alt="">Menú</button></div>
+<div id="tb"><button id="bChat" onclick="chatOpen()" style="display:none"><img data-ui="ico_chat" alt="">Chat</button><button id="bRet" onclick="retosPanel()"><img data-ui="ico_moneda" alt=""><span id="bRetT">0</span></button><button id="bOn" onclick="nbMenu(true)"><img data-ui="ico_online" alt="">Online</button><button id="bSk" onclick="skateToggle()" style="display:none" title="Skate (T)">🛹</button><button id="bTel" onclick="telAbrir()" style="display:none" title="Móvil (M)">📱 Móvil<em></em></button><button id="bMenu" onclick="hubMenu(true)"><img data-ui="ico_ajustes" alt="">Menú</button></div>
 <div id="nbon" class="modal" style="display:none" onclick="if(event.target===this)nbMenu(false)"><div class="card"><h3><img data-ui="ico_online" alt="" style="height:64px;width:auto;margin:0 auto 6px">Barrio online</h3><div class="col">
 <div class="sub">Tu nombre en el barrio</div><input id="nbname" class="nbi" maxlength="14" placeholder="NOMBRE">
 <button class="pri" onclick="nbNameOk()&&nbJoin('global').then(ok=>ok&&nbMenu(false))">Barrio global · entra todo el mundo</button>
@@ -142,7 +164,9 @@ function buildBarrio() {
   // fachadas en orden de oeste a este (las 4 primeras son la zona nueva del barrio); alto según la proporción de la imagen
   const ORD = ["fachada_polideportivo.webp", "st_grafiti1.webp", "fachada_bloque.webp", "fachada_cadiz_blanca.webp", "fachada_portal.webp", "fachada_azulejos.webp", "fachada_ladrillo.webp", "fachada_cadiz_blanca.webp", "fachada_bar.webp", "fachada_colores.webp", "fachada_bloque.webp", "st_grafiti2.webp", "fachada_tienda_deportes.webp", "fachada_azulejos.webp", "fachada_desconchada.webp", "fachada_persiana.webp", "fachada_naves.webp", "fachada_mural.webp"];
   const AR = { "fachada_polideportivo.webp": .46, "st_grafiti1.webp": .5, "st_grafiti2.webp": .5, "fachada_bloque.webp": .8, "fachada_cadiz_blanca.webp": 1.2, "fachada_azulejos.webp": .64, "fachada_tienda_deportes.webp": .66 };
-  const plan = []; let k = 0; for (let x = X0 + 13; x < X1 - 6; x += 13.5) { const f = ORD[k % ORD.length]; plan.push([x, 13, AR[f] ? Math.round(13 * AR[f] * 10) / 10 : 9 + (k * 5) % 7, f, { 8: "bar", 12: "equip", 15: "sobres" }[k]]); k++; }
+  const SHOPK = { 3: "ropa", 5: "moviles", 8: "bar", 10: "skates", 12: "equip", 15: "sobres" }, SHOPF = { ropa: "fachada_tienda_ropa.webp", moviles: "fachada_tienda_moviles.webp", skates: "fachada_tienda_skates.webp" };
+  Object.assign(AR, { "fachada_tienda_ropa.webp": .67, "fachada_tienda_moviles.webp": .67, "fachada_tienda_skates.webp": .67 });
+  const plan = []; let k = 0; for (let x = X0 + 13; x < X1 - 6; x += 13.5) { const sh = SHOPK[k], f = SHOPF[sh] || ORD[k % ORD.length]; plan.push([x, 13, AR[f] ? Math.round(13 * AR[f] * 10) / 10 : 9 + (k * 5) % 7, f, sh]); k++; }
   plan.forEach(([x, w, h, f, shop]) => { const zf = -8, d = 12; box(w - .3, h, d, [side, side, roof, roof, mat(f, null), side], x, h / 2, zf - d / 2);
     if (shop) { SHOPS.push({ k: shop, x, z: zf }); DOORS.push({ k: shop, x, z: zf + .9 }); } });
   // farolas a lo largo del paseo y de la calle, bancos y papeleras
@@ -171,7 +195,8 @@ window.STREET_IMG = window.STREET_IMG || ["mar.webp", "paseo.webp", "muro.webp",
 function SA_has(n) { return !!(window.SA && SA[n]) || !!(window.STREET_IMG && STREET_IMG.includes(n)); }
 // ---------- tiendas por dentro (cajas con texturas) ----------
 const INT = { bar: ["tienda_bar_suelo.webp", "tienda_bar_pared.webp", "tienda_bar_fondo.webp", "Bar deportivo"], equip: ["tienda_equip_suelo.webp", "tienda_equip_pared.webp", "tienda_equip_fondo.webp", "Tienda de equipaciones"], sobres: ["tienda_sobres_suelo.webp", "tienda_sobres_pared.webp", "tienda_sobres_fondo.webp", "Tienda de sobres"] };
-const INTPOS = { bar: -150, equip: -180, sobres: -210 };
+Object.assign(INT, { ropa: ["tienda_ropa_suelo.webp", "tienda_ropa_pared.webp", "tienda_ropa_fondo.webp", "Tienda de ropa"], moviles: ["tienda_moviles_suelo.webp", "tienda_moviles_pared.webp", "tienda_moviles_fondo.webp", "Tienda de móviles"], skates: ["tienda_skates_suelo.webp", "tienda_skates_pared.webp", "tienda_skates_fondo.webp", "Tienda de skates"] });
+const INTPOS = { bar: -150, equip: -180, sobres: -210, ropa: -240, moviles: -270, skates: -300 }, MOSTR = { ropa: "madera", moviles: "blanco", skates: "madera" };   // el blanco es el mismo mostrador lacado en blanco
 const INTG = new THREE.Group(); INTG.visible = false;
 function buildInteriors() { const S0 = S; { const S = INTG; S0.add(INTG);
   for (const [k, [fl, wa, bk]] of Object.entries(INT)) {
@@ -254,7 +279,7 @@ function loco(a, sp, own) { if (a.lock > 0) return; if (sp < .45) play(a, a.gk ?
 function once(a, n, t, ts = 1.4) { play(a, n, .08, true, ts); a.lock = t; }
 // ---------- entrada ----------
 const keys = {}; let joy = { x: 0, y: 0, id: null }, touchRun = 0, charge = -1;
-addEventListener("keydown", e => { if (e.target && e.target.tagName === "INPUT") { if (e.target.id === "chatin" && e.code === "Enter") chatSend(); if (e.code === "Escape") e.target.blur(); return; } if (e.code === "Enter" && mode === "hub") { chatOpen(); return; } if (e.code === "Escape" && mode === "mini") { mgEnd(); return; } if (e.code === "Escape") { hubMenu($("#hmenu").style.display === "none"); return; } if (keys[e.code]) return; keys[e.code] = 1; onBtn(e.code); });
+addEventListener("keydown", e => { if (e.target && e.target.tagName === "INPUT") { if (e.target.id === "chatin" && e.code === "Enter") chatSend(); if (e.code === "Escape") e.target.blur(); return; } if (e.code === "Enter" && mode === "hub") { chatOpen(); return; } if (e.code === "Escape" && mode === "mini") { mgEnd(); return; } if (e.code === "Escape" && $("#tel").style.display === "") { telCerrar(); return; } if (e.code === "Escape") { hubMenu($("#hmenu").style.display === "none"); return; } if (keys[e.code]) return; keys[e.code] = 1; onBtn(e.code); });
 function hubMenu(on) { $("#hmenu").style.display = on ? "" : "none"; if (!on) $("#hhelp").style.display = "none"; }
 function hubHelp(on) { $("#hhelp").style.display = on ? "" : "none"; }
 addEventListener("keyup", e => { keys[e.code] = 0; if (e.code === "KeyK") release(); });
@@ -268,7 +293,7 @@ function input() { let x = (keys.KeyD || keys.ArrowRight ? 1 : 0) - (keys.KeyA |
   if (g) { const dz = v => Math.abs(v) < .15 ? 0 : v; if (dz(g.axes[0]) || dz(g.axes[1])) { x = dz(g.axes[0]); y = dz(g.axes[1]); } padBtns(g); }
   const m = Math.hypot(x, y); if (m > 1) { x /= m; y /= m; } return { x, y, run: keys.ShiftLeft || keys.ShiftRight || touchRun || (g && g.buttons[7] && g.buttons[7].value > .3) }; }
 let padPrev = [];
-function padBtns(g) { const b = i => g.buttons[i] && g.buttons[i].pressed; if (b(9) && !padPrev[9]) hubMenu($("#hmenu").style.display === "none"); padPrev[9] = b(9); [[0, mode === "hub" ? "KeyE" : "KeyJ"], [1, "KeyK"], [2, "KeyL"], [4, "KeyQ"]].forEach(([i, c]) => { if (b(i) && !padPrev[i]) onBtn(c); if (!b(i) && padPrev[i] && c === "KeyK") release(); padPrev[i] = b(i); }); }
+function padBtns(g) { const b = i => g.buttons[i] && g.buttons[i].pressed; if (b(9) && !padPrev[9]) hubMenu($("#hmenu").style.display === "none"); padPrev[9] = b(9); [[0, mode === "hub" ? "KeyE" : "KeyJ"], [1, "KeyK"], [2, "KeyL"], [4, "KeyQ"], [3, "KeyT"], [8, "KeyM"]].forEach(([i, c]) => { if (b(i) && !padPrev[i]) onBtn(c); if (!b(i) && padPrev[i] && c === "KeyK") release(); padPrev[i] = b(i); }); }
 // cámara relativa: arriba en el mando = hacia el fondo de la pantalla
 function camDir(ix, iy) { const f = new THREE.Vector3(); cam.getWorldDirection(f); f.y = 0; f.normalize(); const r = new THREE.Vector3(-f.z, 0, f.x); return { x: r.x * ix - f.x * iy, z: r.z * ix - f.z * iy }; }
 // ---------- girar la cámara ----------
@@ -284,7 +309,7 @@ const tip = t => { const e = $("#tip"); e.innerHTML = t || ""; e.style.opacity =
 function onBtn(c) {
   if (mode === "mini") { if (c === "KeyK" && MG.state === "aim" && charge < 0) charge = 0; return; }
   if (mode === "toques") { if (["KeyJ", "KeyE", "Space", "KeyK"].includes(c)) toqueHit(); return; }
-  if (mode === "hub") { if (c === "KeyE") interact(); if (c === "KeyR" && NB.ws) { const p = nbNear(); if (p) nbReto(p); } return; }
+  if (mode === "hub") { if ($("#tel").style.display === "") return; if (c === "KeyT") skateToggle(); if (c === "KeyM") telAbrir(); if (c === "KeyE") interact(); if (c === "KeyR" && NB.ws) { const p = nbNear(); if (p) nbReto(p); } return; }
   if (mode !== "match") return;
   if (c === "KeyJ") { if (G.owner === G.human) pass(G.human); else switchHuman(); }
   if (c === "KeyQ") switchHuman();
@@ -299,12 +324,14 @@ function interact() {
   if (!d && place === "calle") { const mk = mgNear(); if (mk) return mgStart(mk); if (Math.hypot(me.x - REY.x, me.z - REY.z) < 2.2) return reyPanel(); }
   if (!d && place === "calle" && Math.hypot(me.x - TOQ.x, me.z - TOQ.z) < 1.6) return startToques();
   if (!d && place === "calle" && me.x > BEACH.x0 && me.x < BEACH.x1 && me.z > BEACH.z0 && me.z < BEACH.z1) return goMatch("playa");
+  if (d && me.skate) skateToggle(false);
   if (d) { if (d.k === "salir") { const s = SHOPS.find(s => s.k === d.from); me.x = s.dx; me.z = s.z + 2.2; place = "calle"; INTG.visible = false; $("#panel").style.display = "none"; S.fog = FOG; S.background = new THREE.Color(0xf2a86a); SNAP = 1; return; }
     me.x = INTPOS[d.k]; me.z = 62.5; me.dir = -Math.PI / 2; place = d.k; INTG.visible = true; S.fog = null; S.background = new THREE.Color(0x0b0b10); SNAP = 1; tip(INT[d.k][3] + " · acércate al mostrador y pulsa E"); return; }
   if (place !== "calle" && Math.hypot(me.x - INTPOS[place], me.z - 59.2) < 2.6) shopPanel(place);
 }
 const KITC = ["#f4d21c", "#d3202c", "#1e6bff", "#14161c", "#f4f7ff", "#2e9e44", "#ff7a1a", "#7a2bd6", "#e83e8c", "#19c7c0"];
 function shopPanel(k) {
+  if (MOSTR[k]) return tiendaPanel(k);
   const P = $("#panel"); let h = "";
   if (k === "sobres") h = `<h3>Tienda de sobres</h3><div>Los sobres se abren en tu Ultimate Team de MDG 27, con tus monedas.</div><div class="row"><a href="index.html">Ir a abrir sobres</a><button onclick="this.closest('#panel').style.display='none'">Cerrar</button></div>`;
   if (k === "equip") { const C = KITC, own = store.get("colores", []), lk = c => C.indexOf(c) >= 5 && !own.includes(c) ? "outline:2px dashed #fff8;opacity:.55" : "";
@@ -402,15 +429,15 @@ function stepNPCs(dt) {
   }
 }
 function stepHub(dt) {
-  const inp = input(), d = camDir(inp.x, inp.y), m = Math.hypot(d.x, d.z), sp = m * (inp.run ? 6.8 : 3.4);
+  let inp = input(); if ($("#tel").style.display === "") inp = { x: 0, y: 0, run: 0 }; const d = camDir(inp.x, inp.y), m = Math.hypot(d.x, d.z), sp = m * (me.skate ? (inp.run ? 10.5 : 7) : (inp.run ? 6.8 : 3.4));
   me.spd += (sp - me.spd) * Math.min(1, dt * 6); if (m > .1) { let a = Math.atan2(d.z, d.x) - me.dir; a = Math.atan2(Math.sin(a), Math.cos(a)); me.dir += a * Math.min(1, dt * 10); }
   me.x += Math.cos(me.dir) * me.spd * dt; me.z += Math.sin(me.dir) * me.spd * dt;
   if (place === "calle") { me.x = clamp(me.x, X0, CX + CW / 2 - 1); const inCage = me.x > CX - CW / 2 + .5; me.z = inCage ? clamp(me.z, -CH / 2 + .5, CH / 2 - .5) : me.x > X1 - 1 ? clamp(me.z, -7.6, 7.6) : clamp(me.z, -7.6, SEA_Z - .8);
     if (!inCage && me.x > CX - CW / 2 - 1 && Math.abs(me.z) > 1.6) me.x = Math.min(me.x, CX - CW / 2 - 1);
     if (inCage && me.x > CX - CW / 2 + 3) { goMatch(); return; } }
-  else { const ox = INTPOS[place]; me.x = clamp(me.x, ox - 4.5, ox + 4.5); me.z = clamp(me.z, 57.2, 63.4); }
+  else { const ox = INTPOS[place]; me.x = clamp(me.x, ox - 4.5, ox + 4.5); me.z = clamp(me.z, MOSTR[place] ? 59.85 : 57.2, 63.4); }
   if (place === "calle") for (const [ox, oz, r] of OBST) { const dx = me.x - ox, dz = me.z - oz, d = Math.hypot(dx, dz); if (d < r && d > .001) { me.x = ox + dx / d * r; me.z = oz + dz / d * r; } }
-  me.a.wrap.position.set(me.x, gy(me.x, me.z), me.z); me.a.wrap.rotation.y = -me.dir + Math.PI / 2; me.a.lock = 0; loco(me.a, me.spd, false); me.a.mixer.update(dt);
+  me.a.wrap.position.set(me.x, gy(me.x, me.z), me.z); me.a.wrap.rotation.y = -me.dir + Math.PI / 2; me.a.lock = 0; loco(me.a, me.skate ? 0 : me.spd, false); me.a.mixer.update(dt);
   const dd = nearDoor(), inBeach = me.x > BEACH.x0 && me.x < BEACH.x1 && me.z > BEACH.z0 && me.z < BEACH.z1, nearToq = Math.hypot(me.x - TOQ.x, me.z - TOQ.z) < 1.6;
   const np = NB.ws && place === "calle" ? nbNear() : null;
   const mk = place === "calle" ? mgNear() : null, nRey = place === "calle" && Math.hypot(me.x - REY.x, me.z - REY.z) < 2.2;
@@ -683,7 +710,7 @@ let ballM, ring;
   let hb = null; an.scene.traverse(o => { if (o.name) animRest[o.name] = o.quaternion.clone(); if (!hb && o.name === "Hips") hb = o; }); hipsRestY = hb ? hb.position.y : 1;
   for (const c of an.animations) { c.tracks = c.tracks.filter(t => !t.name.endsWith(".scale") && (!t.name.endsWith(".position") || t.name === "Hips.position")); baseClips[c.name] = c; }
   const g = await loadModel("pj18"); me = { a: actor(g, kit.c1, kit.c2), x: -40, z: 3, dir: 0, spd: 0 };
-  spawnNPCs(); addProps(); mgSetup(); updCoins();
+  spawnNPCs(); addProps(); addTiendas(); mgSetup(); updCoins();
   loadModel("entrenador1").then(g => { const a = actor(g, null, null); a.wrap.position.set(REY.x, gy(REY.x, REY.z), REY.z); a.wrap.rotation.y = -Math.PI + Math.PI / 2; play(a, "Idle"); const l = nbLabel("REY DE LA PISTA"); a.wrap.add(l); NPCS.push({ a, x: REY.x, z: REY.z, dir: Math.PI, walk: false, spd: 0, keeper: false, rey: 1 }); }).catch(() => {});
   $("#load").remove(); try { const nb = JSON.parse(sessionStorage.getItem("street_nb") || "null"); if (nb && nbName()) nbJoin(nb.k, nb.sala); } catch (e) {} tip("Bienvenido al barrio. Entra en las tiendas o ve a la jaula del fondo para jugar.");
   { const rs = new URLSearchParams(location.search).get("res"); if (rs && /^\d+-\d+$/.test(rs)) { const [a, b] = rs.split("-").map(Number); me.x = CX - CW / 2 - 4; me.z = 0; me.dir = Math.PI; SNAP = 1; applyResult(a, b); setTimeout(() => say(a > b ? "¡Ganaste " + a + "-" + b + "!" : a === b ? "Empate " + a + "-" + b : "Has perdido " + a + "-" + b, 2800), 300); history.replaceState(null, "", location.pathname); } }
@@ -694,4 +721,159 @@ let ballM, ring;
     if (me) stepNet(dt);
     R.render(S, cam); requestAnimationFrame(loop); })(last);
 })();
+/* ---------- tiendas nuevas: ropa (BARRIO WEAR), móviles (MÓVILES DEL BARRIO) y skates (SKATE CALETA) ---------- */
+// mostradores de Sketchfab (CC BY: «Counter» de gorzi); detrás está el dependiente
+let SKATE_P = null, me_gorra = null;
+async function addTiendas() {
+  const load = n => (window.SA && SA["prop_" + n + ".glb"] ? Promise.resolve(SA["prop_" + n + ".glb"]) : fetch("street/prop_" + n + ".txt").then(r => r.text())).then(t => loader.parseAsync(b64buf(t), ""));
+  for (const [k, tipo] of Object.entries(MOSTR)) {
+    try { const g = await load("mostrador_madera"), parts = bakeProp(g.scene, 3.2, "len"); if (tipo === "blanco") parts.forEach(p => { p.m = new THREE.MeshStandardMaterial({ color: 0xf1f0ec, roughness: .35, metalness: .05 }); });
+      for (const p of parts) { const m = new THREE.Mesh(p.g, p.m); m.position.set(INTPOS[k], 0, 58.95); m.castShadow = m.receiveShadow = true; INTG.add(m); } } catch (e) { console.warn("mostrador", e); }
+  }
+  try { const g = await load("skate"); SKATE_P = bakeProp(g.scene, .82, "len"); } catch (e) { console.warn("skate", e); }
+  ropaAplicar(); skateUI();
+}
+const ROPA = {
+  gorras: [["negra", "#15161a", 80], ["roja", "#c8202c", 80], ["azul", "#1e5bd6", 80], ["blanca", "#f2f2ee", 80], ["amarilla", "#f4c81c", 100], ["verde", "#1f8a45", 100], ["rosa", "#e83e8c", 120], ["morada", "#6c2bd6", 120]],
+  conjuntos: [["Chándal Caleta", "#1e6bff", "#f4f7ff", 150], ["Negro total", "#14161c", "#14161c", 150], ["Barrio naranja", "#ff7a1a", "#14161c", 150], ["Verde playa", "#2e9e44", "#f4d21c", 200], ["Retro morado", "#7a2bd6", "#f4f7ff", 200], ["Rosa neón", "#e83e8c", "#14161c", 250], ["Blanco Cádiz", "#f4f7ff", "#1e3a8a", 250], ["Rojo pista", "#d3202c", "#f4f7ff", 300]]
+};
+const inv = () => store.get("inv", { gorras: [], conj: [], gorra: "", skate: false, movil: false });
+const invSet = o => store.set("inv", Object.assign(inv(), o));
+function pagar(n, que) { if (coins() < n) { say("Te faltan monedas (" + n + ")", 1600); return false; } store.set("monedas", coins() - n); updCoins();
+  const h = store.get("banco", []); h.unshift([Date.now(), -n, que]); store.set("banco", h.slice(0, 60)); return true; }
+function ropaAplicar() {
+  if (!me) return; const g = inv().gorra, c = (ROPA.gorras.find(x => x[0] === g) || [])[1];
+  if (me_gorra) { me_gorra.parent && me_gorra.parent.remove(me_gorra); me_gorra = null; } if (!c) return;
+  let head = null; me.a.wrap.traverse(o => { if (!head && o.isBone && /head$/i.test(o.name)) head = o; }); if (!head) return;
+  me.a.wrap.updateMatrixWorld(true); const ws = new THREE.Vector3(); head.getWorldScale(ws); const s = 1 / (ws.y || 1);
+  const m = new THREE.MeshStandardMaterial({ color: c, roughness: .7 }), cap = new THREE.Group();
+  const dome = new THREE.Mesh(new THREE.SphereGeometry(.118, 20, 12, 0, Math.PI * 2, 0, Math.PI / 2), m); dome.scale.set(1, .78, 1.08);
+  const vis = new THREE.Mesh(new THREE.CylinderGeometry(.11, .11, .012, 20, 1, false, -Math.PI / 2, Math.PI), m); vis.scale.set(1, 1, .95); vis.position.set(0, .004, .08);
+  const bt = new THREE.Mesh(new THREE.SphereGeometry(.014, 8, 6), m); bt.position.y = .092; cap.add(dome, vis, bt); cap.traverse(o => o.castShadow = true);
+  cap.scale.setScalar(s); cap.position.set(0, .135 * s, .012 * s); head.add(cap); me_gorra = cap;
+}
+function tiendaPanel(k) {
+  const P = $("#panel"), I = inv(); let h = "";
+  const btn = (txt, on, act, off) => `<button ${off ? "disabled" : ""} class="${on ? "on" : ""}" onclick="${act}">${txt}</button>`;
+  if (k === "ropa") {
+    h = `<h3>BARRIO WEAR</h3><div>Gorras y conjuntos para tu jugador. Tienes <b>${coins()}</b> monedas.</div><div style="margin-top:10px"><b>Gorras</b></div><div class="row">` +
+      ROPA.gorras.map(([n, c, pr]) => { const mia = I.gorras.includes(n), puesta = I.gorra === n; return `<button class="tsw" style="--c:${c}" onclick="ropaGorra('${n}')"><i></i>${puesta ? "Puesta" : mia ? "Ponerte" : pr + " 🪙"}</button>`; }).join("") +
+      `<button class="tsw" onclick="ropaGorra('')">${I.gorra ? "Quitar" : "Sin gorra"}</button></div><div style="margin-top:10px"><b>Conjuntos</b> (camiseta y pantalón)</div><div class="row">` +
+      ROPA.conjuntos.map(([n, c1, c2, pr]) => { const mia = I.conj.includes(n), puesto = kit.c1 === c1 && kit.c2 === c2; return `<button class="tsw" style="--c:${c1};--d:${c2}" onclick="ropaConj('${n}')"><i class="dos"></i>${esc(n)} · ${puesto ? "Puesto" : mia ? "Ponerte" : pr + " 🪙"}</button>`; }).join("") +
+      `</div><div class="row"><button onclick="this.closest('#panel').style.display='none'">Listo</button></div>`;
+  }
+  if (k === "skates") h = `<h3>SKATE CALETA</h3><div>Con el skate vas mucho más rápido por el barrio. Súbete y bájate con <b>T</b>, el botón <b>Y</b> del mando o el botón 🛹.</div>
+    <div class="row" style="margin-top:10px">${I.skate ? `<button onclick="skateToggle();this.closest('#panel').style.display='none'">${me.skate ? "Bajarme" : "Subirme"} al skate</button>` : `<button onclick="skateComprar()">Comprar skate · 400 🪙</button>`}<button onclick="this.closest('#panel').style.display='none'">Cerrar</button></div><div style="opacity:.7;margin-top:6px">Tienes ${coins()} monedas.</div>`;
+  if (k === "moviles") h = `<h3>MÓVILES DEL BARRIO</h3><div>Un móvil de verdad para el barrio: chat con los jugadores del servidor, vídeos y fotos, juegos, mapa con viaje rápido, retos y banco. Ábrelo con <b>M</b>, el botón <b>Select</b> del mando o el botón 📱.</div>
+    <div class="row" style="margin-top:10px">${I.movil ? `<button onclick="this.closest('#panel').style.display='none';telAbrir()">Abrir mi móvil</button>` : `<button onclick="movilComprar()">Comprar móvil · 600 🪙</button>`}<button onclick="this.closest('#panel').style.display='none'">Cerrar</button></div><div style="opacity:.7;margin-top:6px">Tienes ${coins()} monedas.</div>`;
+  P.innerHTML = h; P.style.display = "block";
+}
+function ropaGorra(n) { const I = inv(); if (n && !I.gorras.includes(n)) { const g = ROPA.gorras.find(x => x[0] === n); if (!pagar(g[2], "Gorra " + n)) return; I.gorras.push(n); say("¡Gorra " + n + " comprada!", 1400); }
+  invSet({ gorras: I.gorras, gorra: n }); ropaAplicar(); tiendaPanel("ropa"); }
+function ropaConj(n) { const I = inv(), c = ROPA.conjuntos.find(x => x[0] === n); if (!I.conj.includes(n)) { if (!pagar(c[3], n)) return; I.conj.push(n); invSet({ conj: I.conj }); say("¡" + n + " comprado!", 1400); }
+  kit.c1 = c[1]; kit.c2 = c[2]; store.set("kit", kit); me.a.mats.forEach(m => { m.userData.U.k1.value.set(c[1]); m.userData.U.k2.value.set(c[2]); }); misEv("kit"); tiendaPanel("ropa"); }
+function skateComprar() { if (!pagar(400, "Skate")) return; invSet({ skate: true }); skateUI(); say("¡Skate comprado! Pulsa T para subirte", 2200); tiendaPanel("skates"); }
+function movilComprar() { if (!pagar(600, "Móvil")) return; invSet({ movil: true }); skateUI(); say("¡Móvil comprado! Pulsa M para abrirlo", 2200); tiendaPanel("moviles"); }
+function skateUI() { const I = inv(); $("#bSk").style.display = I.skate ? "" : "none"; $("#bTel").style.display = I.movil ? "" : "none"; }
+let skMesh = null;
+function skateToggle(force) {
+  if (!me || !inv().skate) return; const on = force != null ? force : !me.skate; if (on && (place !== "calle" || mode !== "hub")) return say("El skate solo en la calle", 1200);
+  me.skate = on; if (on && !skMesh && SKATE_P) { skMesh = new THREE.Group(); for (const p of SKATE_P) { const m = new THREE.Mesh(p.g, p.m); m.castShadow = true; skMesh.add(m); } skMesh.rotation.y = Math.PI / 2; }
+  if (skMesh) { if (on) me.a.wrap.add(skMesh); else me.a.wrap.remove(skMesh); }
+  const inner = me.a.wrap.children[0]; if (inner) inner.position.y += on ? .11 : -.11; $("#bSk").classList.toggle("on", on);
+}
+
+/* ---------- el móvil ---------- */
+const TEL_SRV = (new URLSearchParams(location.search).get("srv") ? [new URLSearchParams(location.search).get("srv")] : []).concat(["https://mdg27-online.guidavilagri.workers.dev", "https://mdg27-online.onrender.com"]);
+const telSes = () => { try { return JSON.parse(localStorage.getItem("mdg27_ses") || "null"); } catch (e) { return null; } };
+async function telOp(op, o) { const ses = telSes(); if (!ses || !ses.tok) return { ok: false, error: "login" };
+  for (const base of TEL_SRV) { try { const c = new AbortController(), tm = setTimeout(() => c.abort(), 15000);
+    const r = await fetch(base + "/cuenta/srv", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(Object.assign({ tok: ses.tok, op }, o || {})), signal: c.signal }); clearTimeout(tm); return await r.json(); } catch (e) {} }
+  return { ok: false, error: "Sin conexión con el servidor" }; }
+const APPS = [["chat", "Chat"], ["videos", "Vídeos"], ["juegos", "Juegos"], ["mapa", "Mapa"], ["retos", "Retos"], ["banco", "Banco"], ["fichajes", "Fichajes"], ["camara", "Cámara"], ["ajustes", "Ajustes"]];
+const TEL = { app: "", poll: 0, dm: "", grpT: 0, grp: [], unread: 0, cap: null };
+const FONDOS = { playa: () => `url(${UI("movil_fondo")}) center/cover`, noche: () => "linear-gradient(170deg,#0b1430,#2a1050 60%,#05060c)", oro: () => "linear-gradient(160deg,#3a2a08,#d4a64a 55%,#1b1306)", calle: () => "linear-gradient(170deg,#f2a86a,#7a3f2a 60%,#1b1020)" };
+function telAbrir() { if (!inv().movil) return say("Necesitas un móvil (tienda de móviles)", 1600); if (mode !== "hub") return; $("#panel").style.display = "none"; $("#tel").style.display = ""; telApp(""); }
+function telCerrar() { $("#tel").style.display = "none"; clearInterval(TEL.poll); TEL.app = ""; }
+function telHora() { const d = new Date(); return String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0"); }
+function telPinta(tit, body, back = "") { const T = $("#telpant"); T.style.background = FONDOS[store.get("telFondo", "playa")]();
+  T.innerHTML = `<div class="tsb"><span>${telHora()}</span><span>MDG 27 · 5G ▮▮▮</span></div>` + (tit ? `<div class="thd"><button onclick="${back || "telApp('')"}">‹</button><b>${tit}</b></div><div class="tbody">${body}</div>` : body); }
+function telApp(a) {
+  clearInterval(TEL.poll); TEL.app = a; const nolog = !telSes() || !telSes().tok, NL = `<div class="tnote">Para usar esta app inicia sesión en MDG 27 (menú principal → Cuenta) y vuelve al barrio.</div>`;
+  if (!a) return telPinta("", `<div class="tgrid">${APPS.map(([k, n]) => `<button onclick="telApp('${k}')"><img src="${UI("app_" + k)}" alt="">${n}${k === "chat" && TEL.unread ? `<em>${TEL.unread}</em>` : ""}</button>`).join("")}</div><button class="tcl" onclick="telCerrar()">Guardar el móvil</button>`);
+  if (a === "chat") { if (nolog) return telPinta("Chat", NL); return telChat(); }
+  if (a === "videos") { if (nolog) return telPinta("Vídeos", NL); return telFeed(); }
+  if (a === "camara") { if (nolog) return telPinta("Cámara", NL); return telPinta("Cámara", `<div class="tnote">Guarda el móvil, encuadra con la cámara del juego (arrastra o usa Z / X) y dispara. Después puedes publicarlo en Vídeos.</div><div class="tcol"><button onclick="telCaptura('foto')">📸 Hacer una foto</button><button onclick="telCaptura('video')">⏺ Grabar un vídeo (6 s)</button></div>`); }
+  if (a === "juegos") { const J = [["larg", "Larguero", "Dale al larguero en 5 tiros"], ["pen", "Penaltis", "5 penaltis contra el portero"], ["sla", "Slalom", "Conduce por los aros"], ["toq", "Toques", "Récord: " + store.get("toques", 0)], ["rey", "Rey de la pista", "Las bandas del barrio"], ["jaula", "La jaula", "4 contra 4 en la cancha"], ["playa", "Cancha de la playa", "4 contra 4 en la arena"]];
+    return telPinta("Juegos", `<div class="tcol">${J.map(([k, n, d]) => `<button onclick="telJuego('${k}')"><b>${n}</b><small>${d}</small></button>`).join("")}</div>`); }
+  if (a === "mapa") return telPinta("Mapa", `<canvas id="tmap" width="600" height="260"></canvas><div class="tcol">${telSitios().map((s, i) => `<button onclick="telIr(${i})"><b>${s[0]}</b><small>Viaje rápido</small></button>`).join("")}</div>`), telMapa();
+  if (a === "retos") { telCerrar(); return retosPanel(); }
+  if (a === "fichajes") return telPinta("Fichajes", `<div class="tnote">El mercado de fichajes de tu Ultimate Team: compra y vende cartas con otros jugadores.</div><div class="tcol"><button onclick="location.href='index.html'"><b>Abrir Ultimate Team</b><small>Sales del barrio</small></button></div>`);
+  if (a === "banco") { const h = store.get("banco", []); telPinta("Banco", `<div class="tbig">${coins()} 🪙<small>Monedas del barrio</small></div><div class="tbig" id="tut">…<small>Monedas de Ultimate Team</small></div><div class="tlist">${h.length ? h.map(([t, n, q]) => `<div><span>${esc(q)}</span><b style="color:${n < 0 ? "#ff8a8a" : "#9dff9d"}">${n > 0 ? "+" : ""}${n}</b></div>`).join("") : `<div class="tnote">Aún no has gastado nada.</div>`}</div>`);
+    if (nolog) $("#tut").innerHTML = "—<small>Inicia sesión para verlas</small>"; else telOp("saldo").then(j => { const e = $("#tut"); if (e) e.innerHTML = (j.ok ? (j.coins != null ? j.coins : (j.w && j.w.coins) || 0) : "—") + " 🪙<small>Monedas de Ultimate Team</small>"; }); return; }
+  if (a === "ajustes") { const f = store.get("telFondo", "playa"), ses = telSes();
+    return telPinta("Ajustes", `<div class="tnote">Cuenta: <b>${ses && ses.nombre ? esc(ses.nombre) : "sin iniciar sesión"}</b></div><div><b>Fondo de pantalla</b></div><div class="trow">${Object.keys(FONDOS).map(k => `<button class="${k === f ? "on" : ""}" style="background:${FONDOS[k]()}" onclick="store.set('telFondo','${k}');telApp('ajustes')"></button>`).join("")}</div>
+      <div class="tnote" style="margin-top:12px">Créditos: skate «Skateboard» de Jamoues, mostrador «Counter» de gorzi (Sketchfab, CC BY 4.0).</div>`); }
+}
+// mapa y viaje rápido
+function telSitios() { const L = [["La jaula", CX - CW / 2 - 3, 0], ["Cancha de la playa", (BEACH.x0 + BEACH.x1) / 2, BEACH.z0 - 1.5], ["Rey de la pista", REY.x - 2, REY.z + 2], ["Toques", TOQ.x + 2, TOQ.z]];
+  for (const s of SHOPS) L.push([INT[s.k][3], s.dx, s.z + 2.2]); return L; }
+function telIr(i) { const s = telSitios()[i]; if (!s) return; telCerrar(); if (place !== "calle") { place = "calle"; INTG.visible = false; S.fog = FOG; S.background = new THREE.Color(0xf2a86a); }
+  me.x = s[1]; me.z = s[2]; SNAP = 1; say("Has viajado a: " + s[0], 1500); }
+function telMapa() { const c = $("#tmap"); if (!c) return; const g = c.getContext("2d"), x0 = X0 - 4, x1 = CX + CW / 2 + 4, z0 = -10, z1 = SEA_Z + 2, sx = x => (x - x0) / (x1 - x0) * 600, sz = z => (z - z0) / (z1 - z0) * 260;
+  g.fillStyle = "#1c6a86"; g.fillRect(0, 0, 600, 260); g.fillStyle = "#d9c9a8"; g.fillRect(sx(X0), sz(5), sx(X1 + 42) - sx(X0), sz(SEA_Z) - sz(5)); g.fillStyle = "#555"; g.fillRect(sx(X0), sz(-5), sx(X1) - sx(X0), sz(5) - sz(-5));
+  g.fillStyle = "#8a6d55"; g.fillRect(sx(X0), 0, sx(X1) - sx(X0), sz(-5)); g.fillStyle = "#3a8a3a"; g.fillRect(sx(CX - CW / 2), sz(-CH / 2), sx(CX + CW / 2) - sx(CX - CW / 2), sz(CH / 2) - sz(-CH / 2));
+  g.fillStyle = "#e8d08c"; g.fillRect(sx(BEACH.x0), sz(BEACH.z0), sx(BEACH.x1) - sx(BEACH.x0), sz(BEACH.z1) - sz(BEACH.z0)); g.font = "bold 13px sans-serif"; g.textAlign = "center";
+  telSitios().forEach(([n, x, z]) => { g.fillStyle = "#ffd23a"; g.beginPath(); g.arc(sx(x), sz(z), 5, 0, 7); g.fill(); });
+  if (place === "calle") { g.fillStyle = "#ff3355"; g.beginPath(); g.arc(sx(me.x), sz(me.z), 7, 0, 7); g.fill(); g.fillStyle = "#fff"; g.fillText("TÚ", sx(me.x), sz(me.z) - 10); } }
+function telJuego(k) { telCerrar(); if (place !== "calle") telIr(0);
+  if (k === "jaula") return telIr(0); if (k === "playa") { place = "calle"; return goMatch("playa"); } if (k === "rey") return telIr(2), reyPanel();
+  if (k === "toq") { me.x = TOQ.x; me.z = TOQ.z; SNAP = 1; return startToques(); } const s = SPOTS[k]; me.x = s.x; me.z = s.z; SNAP = 1; mgStart(k); }
+// chat: grupo del barrio y privados
+function telChat(tab) { tab = tab || TEL.tab || "grupo"; TEL.tab = tab; TEL.dm = "";
+  const tabs = `<div class="ttabs"><button class="${tab === "grupo" ? "on" : ""}" onclick="telChat('grupo')">Barrio</button><button class="${tab === "priv" ? "on" : ""}" onclick="telChat('priv')">Privados${TEL.unread ? " (" + TEL.unread + ")" : ""}</button></div>`;
+  if (tab === "grupo") { telPinta("Chat", tabs + `<div class="tmsgs" id="tmsgs"></div><div class="tin"><input id="tmin" maxlength="200" placeholder="Escribe al barrio…" onkeydown="if(event.key==='Enter')telGrpEnv()"><button onclick="telGrpEnv()">➤</button></div>`); TEL.grpT = 0; TEL.grp = []; telGrpVer(); TEL.poll = setInterval(telGrpVer, 4000); return; }
+  telPinta("Chat", tabs + `<div class="tin"><input id="tbus" placeholder="Buscar jugador por usuario…" onkeydown="if(event.key==='Enter')telBuscar()"><button onclick="telBuscar()">🔍</button></div><div class="tcol" id="tdms"><div class="tnote">Cargando…</div></div>`);
+  telOp("dmLista").then(j => { const e = $("#tdms"); if (!e) return; const l = j.lista || []; TEL.unread = l.reduce((a, x) => a + (x.n || 0), 0); telBadge();
+    e.innerHTML = l.length ? l.map(x => `<button onclick="telDm('${esc(x.a)}','${esc(x.nom || x.a).replace(/'/g, "")}')"><b>${esc(x.nom || x.a)}${x.n ? ` <em>${x.n}</em>` : ""}</b><small>${esc(x.last || "")}</small></button>`).join("") : `<div class="tnote">${j.ok === false && j.error ? esc(j.error) : "Aún no tienes conversaciones. Busca a un jugador por su usuario."}</div>`; }); }
+function telBuscar() { const q = $("#tbus").value.trim(); if (q.length < 2) return; telOp("buscarJug", { q }).then(j => { const e = $("#tdms"); if (!e) return; const me_ = (telSes() || {}).u;
+  e.innerHTML = (j.lista || []).filter(x => x.u !== me_).map(x => `<button onclick="telDm('${esc(x.u)}','${esc(x.nombre).replace(/'/g, "")}')"><b>${esc(x.nombre)}</b><small>@${esc(x.u)} · escribir</small></button>`).join("") || `<div class="tnote">Nadie con ese usuario.</div>`; }); }
+const telMsgHTML = (l, yo) => l.map(m => `<div class="${m.de === yo ? "yo" : ""}">${m.de !== yo && m.nom ? `<b>${esc(m.nom)}</b>` : ""}${esc(m.m)}<small>${new Date(m.at).toLocaleTimeString().slice(0, 5)}</small></div>`).join("");
+async function telGrpVer() { if (TEL.app !== "chat" || TEL.dm) return; const j = await telOp("grpVer", { desde: TEL.grpT }); const e = $("#tmsgs"); if (!e || !j.ok) return;
+  if (j.msgs.length) { TEL.grp = TEL.grp.concat(j.msgs).slice(-150); TEL.grpT = TEL.grp[TEL.grp.length - 1].at; const abajo = e.scrollTop + e.clientHeight > e.scrollHeight - 30; e.innerHTML = telMsgHTML(TEL.grp, (telSes() || {}).u) || ""; if (abajo || TEL.grp.length === j.msgs.length) e.scrollTop = 1e6; }
+  else if (!TEL.grp.length) e.innerHTML = `<div class="tnote">Nadie ha escrito todavía. ¡Saluda al barrio!</div>`; }
+async function telGrpEnv() { const i = $("#tmin"), m = i.value.trim(); if (!m) return; i.value = ""; const j = await telOp("grpEnviar", { m }); if (!j.ok) return say(j.error || "No se pudo enviar", 1400); telGrpVer(); }
+function telDm(a, nom) { TEL.dm = a; telPinta(esc(nom), `<div class="tmsgs" id="tmsgs" style="height:calc(100% - 52px)"></div><div class="tin"><input id="tmin" maxlength="300" placeholder="Mensaje…" onkeydown="if(event.key==='Enter')telDmEnv()"><button onclick="telDmEnv()">➤</button></div>`, "telChat('priv')");
+  const ver = async () => { if (TEL.dm !== a) return; const j = await telOp("dmVer", { a }); const e = $("#tmsgs"); if (!e || !j.ok) return; e.innerHTML = telMsgHTML(j.msgs, (telSes() || {}).u) || `<div class="tnote">Escribe el primer mensaje.</div>`; e.scrollTop = 1e6; };
+  ver(); clearInterval(TEL.poll); TEL.poll = setInterval(ver, 4000); }
+async function telDmEnv() { const i = $("#tmin"), m = i.value.trim(); if (!m || !TEL.dm) return; i.value = ""; const j = await telOp("dmEnviar", { a: TEL.dm, m }); if (!j.ok) return say(j.error || "No se pudo enviar", 1600); const a = TEL.dm; TEL.dm = ""; TEL.dm = a; const r = await telOp("dmVer", { a }); const e = $("#tmsgs"); if (e && r.ok) { e.innerHTML = telMsgHTML(r.msgs, (telSes() || {}).u); e.scrollTop = 1e6; } }
+function telBadge() { const b = $("#bTel em"); if (b) { b.textContent = TEL.unread || ""; b.style.display = TEL.unread ? "" : "none"; } }
+setInterval(() => { if (!inv().movil || !telSes() || document.hidden) return; telOp("telEstado").then(j => { if (j.ok) { const nuevo = j.sinLeer > TEL.unread; TEL.unread = j.sinLeer; telBadge(); if (nuevo && TEL.app !== "chat") say("📱 Tienes mensajes nuevos", 1800); } }); }, 45000);
+// vídeos y fotos del barrio
+function telFeed() { telPinta("Vídeos", `<div class="tcol"><button onclick="telApp('camara')"><b>＋ Publicar foto o vídeo</b><small>Con la cámara del móvil</small></button></div><div id="tfeed"><div class="tnote">Cargando…</div></div>`);
+  telOp("feed").then(j => { const e = $("#tfeed"); if (!e) return; const yo = (telSes() || {}).u; if (!j.ok) { e.innerHTML = `<div class="tnote">${esc(j.error || "No se pudo cargar")}</div>`; return; }
+    e.innerHTML = j.feed.length ? j.feed.map(p => `<div class="tpost" id="tp_${p.id}"><div class="tph"><b>${esc(p.nom)}</b><small>${new Date(p.at).toLocaleDateString()}</small></div><div class="tmed" data-id="${p.id}" data-t="${p.tipo}">…</div>${p.txt ? `<div>${esc(p.txt)}</div>` : ""}
+      <div class="tact"><button onclick="telLike('${p.id}',this)">${p.yo ? "❤️" : "🤍"} <span>${p.likes}</span></button><button onclick="telCom('${p.id}')">💬 ${p.com.length}</button>${p.u === yo || p.den != null ? `<button onclick="telBorrar('${p.id}')">🗑</button>` : `<button onclick="telDen('${p.id}')">⚑</button>`}${p.den ? `<small style="color:#ff8a8a">${p.den} denuncias</small>` : ""}</div>
+      <div class="tcoms">${p.com.map(c => `<div><b>${esc(c.nom)}</b> ${esc(c.m)}</div>`).join("")}</div></div>`).join("") : `<div class="tnote">Nadie ha publicado todavía. ¡Sé el primero!</div>`;
+    const io = new IntersectionObserver(es => es.forEach(en => { if (!en.isIntersecting) return; io.unobserve(en.target); const d = en.target; telOp("feedMedia", { id: d.dataset.id }).then(r => { if (!r.ok) { d.textContent = "Ya no está"; return; } d.innerHTML = d.dataset.t === "video" ? `<video src="${r.d}" controls loop playsinline></video>` : `<img src="${r.d}" alt="">`; }); }), { root: $("#telpant .tbody") });
+    e.querySelectorAll(".tmed").forEach(d => io.observe(d)); }); }
+async function telLike(id, b) { const j = await telOp("feedLike", { id }); if (j.ok) b.innerHTML = `${j.yo ? "❤️" : "🤍"} <span>${j.likes}</span>`; }
+async function telCom(id) { const m = prompt("Escribe un comentario"); if (!m || !m.trim()) return; const j = await telOp("feedCom", { id, m: m.trim() }); if (j.ok) { const e = $("#tp_" + id + " .tcoms"); if (e) e.innerHTML = j.com.map(c => `<div><b>${esc(c.nom)}</b> ${esc(c.m)}</div>`).join(""); } }
+async function telDen(id) { if (!confirm("¿Denunciar esta publicación? Un moderador la revisará.")) return; const j = await telOp("feedDen", { id }); say(j.ok ? "Denuncia enviada" : "No se pudo denunciar", 1400); }
+async function telBorrar(id) { if (!confirm("¿Borrar esta publicación?")) return; const j = await telOp("feedBorrar", { id }); if (j.ok) { const e = $("#tp_" + id); if (e) e.remove(); } else say(j.error || "No se pudo borrar", 1400); }
+// cámara: se guarda el móvil, se encuadra con la cámara del juego y se dispara
+function telCaptura(tipo) { telCerrar(); const b = $("#tcap"); b.style.display = ""; b.innerHTML = tipo === "foto" ? `<button onclick="telFoto()">📸 Disparar</button><button onclick="telCapFin()">Cancelar</button>` : `<button id="trec" onclick="telVideo()">⏺ Grabar 6 s</button><button onclick="telCapFin()">Cancelar</button>`; }
+function telCapFin() { $("#tcap").style.display = "none"; }
+function telEncoge(src, w = 720) { const c = document.createElement("canvas"), k = Math.min(1, w / src.width); c.width = Math.round(src.width * k); c.height = Math.round(src.height * k); c.getContext("2d").drawImage(src, 0, 0, c.width, c.height); return c.toDataURL("image/jpeg", .8); }
+function telFoto() { R.render(S, cam); const d = telEncoge(R.domElement); telCapFin(); telPublicar(d, "foto"); }
+function telVideo() { if (!window.MediaRecorder || !R.domElement.captureStream) return say("Tu navegador no puede grabar vídeo", 1800);
+  const st = R.domElement.captureStream(24), mt = ["video/webm;codecs=vp9", "video/webm;codecs=vp8", "video/webm", "video/mp4"].find(t => MediaRecorder.isTypeSupported(t)) || "";
+  const rec = new MediaRecorder(st, { mimeType: mt, videoBitsPerSecond: 1.1e6 }), ch = []; rec.ondataavailable = e => e.data.size && ch.push(e.data);
+  rec.onstop = () => { const bl = new Blob(ch, { type: (mt || "video/webm").split(";")[0] }), fr = new FileReader(); fr.onload = () => { telCapFin(); telPublicar(fr.result, "video"); }; fr.readAsDataURL(bl); };
+  rec.start(); let t = 6; const b = $("#trec"); b.disabled = true; b.textContent = "● Grabando… 6"; const iv = setInterval(() => { t--; b.textContent = "● Grabando… " + t; if (t <= 0) { clearInterval(iv); rec.stop(); } }, 1000); }
+function telPublicar(d, tipo) { TEL.cap = d; $("#tel").style.display = ""; TEL.app = "pub";
+  telPinta(tipo === "foto" ? "Tu foto" : "Tu vídeo", `<div class="tmed">${tipo === "foto" ? `<img src="${d}" alt="">` : `<video src="${d}" controls autoplay loop playsinline></video>`}</div><div class="tin"><input id="ttxt" maxlength="140" placeholder="Escribe algo (opcional)"></div>
+    <div class="tcol"><button id="tpub" onclick="telSubir()"><b>Publicar en Vídeos</b><small>Lo verán todos los jugadores del barrio</small></button><button onclick="telApp('camara')"><b>Repetir</b></button></div>`); }
+async function telSubir() { const b = $("#tpub"); b.disabled = true; b.innerHTML = "<b>Subiendo…</b>"; const j = await telOp("feedSubir", { d: TEL.cap, txt: ($("#ttxt").value || "").trim() });
+  if (!j.ok) { b.disabled = false; b.innerHTML = "<b>Publicar en Vídeos</b>"; return say(j.error || "No se pudo publicar", 1800); } TEL.cap = null; say("¡Publicado!", 1400); telApp("videos"); }
 </script></body></html>
