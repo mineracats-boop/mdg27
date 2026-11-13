@@ -12,16 +12,23 @@
   const AC_ = {}, asset = n => { if (window.MA && window.MA[n]) { const v = window.MA[n]; if (n !== "meta") delete window.MA[n]; return Promise.resolve(v); } return AC_[n] || (AC_[n] = fetch("m3d/" + n + ".txt").then(r => r.text())); };
   if (!window.MA) (window.PREF || []).forEach(n => asset(n).catch(() => {}));
   // calidad gráfica: alta / media / baja (se guarda en el navegador); por defecto media en tabletas, móviles y equipos con poca memoria
-  const QUAL = (() => { let q = null; try { q = localStorage.getItem("mdg27q"); } catch (e) {} if (q) return q; const touch = matchMedia("(pointer: coarse)").matches, mem = navigator.deviceMemory || 8; return touch || mem <= 4 ? "baja" : "media"; })();
+  const QUAL = (() => { let q = (location.search.match(/[?&]q=(alta|media|baja)/) || [])[1] || null; try { q = q || localStorage.getItem("mdg27q"); } catch (e) {} if (q) return q; const touch = matchMedia("(pointer: coarse)").matches, mem = navigator.deviceMemory || 8; return touch || mem <= 4 ? "baja" : "media"; })();
   let REAL = (() => { try { const v = localStorage.getItem("mdg27real"); return v == null ? QUAL === "alta" : v === "1"; } catch (e) { return false; } })();
   window.QUAL = QUAL; const TEXMAX = QUAL === "alta" ? 2048 : QUAL === "media" ? 1024 : 768;   // descargas en paralelo desde el principio
   const T0_ = performance.now(); window.__LT0 = Math.round(T0_); let TL_ = T0_; window.__LT = []; const setLoad = t => { const n = performance.now(); window.__LT.push([t, Math.round(n - TL_)]); TL_ = n; const e = $("#load b"); if (e) e.textContent = t; };
 
   /* ---------- render ---------- */
   const cv = $("#cv"), Rn = new THREE.WebGLRenderer({ canvas: cv, antialias: true, powerPreference: "high-performance" });
-  window.__RN = Rn; Rn.domElement.addEventListener("webglcontextlost", e => { e.preventDefault(); try { localStorage.setItem("mdg27q", "baja"); } catch (er) {} const d = document.createElement("div"); Object.assign(d.style, { position: "fixed", inset: "0", display: "grid", placeItems: "center", background: "#050a14", color: "#fff", zIndex: 99, textAlign: "center", padding: "16px", font: "600 18px system-ui" }); d.innerHTML = "La tarjeta gráfica se ha quedado sin memoria.<br>He puesto la calidad en Baja.<br><br><button style='font:inherit;padding:10px 22px;border:0;border-radius:8px;background:#ffd23a;color:#111;cursor:pointer'>Volver a cargar</button>"; d.querySelector("button").onclick = () => location.reload(); document.body.appendChild(d); }); Rn.debug.checkShaderErrors = !!window.SHDBG; if (QUAL !== "alta") Rn.shadowMap.type = THREE.PCFShadowMap; Rn.outputColorSpace = THREE.SRGBColorSpace; Rn.toneMapping = THREE.ACESFilmicToneMapping; Rn.toneMappingExposure = 1.05;
+  window.__RN = Rn; window.__CAM = () => [cam, sun]; Rn.domElement.addEventListener("webglcontextlost", e => { e.preventDefault(); try { localStorage.setItem("mdg27q", "baja"); } catch (er) {} const d = document.createElement("div"); Object.assign(d.style, { position: "fixed", inset: "0", display: "grid", placeItems: "center", background: "#050a14", color: "#fff", zIndex: 99, textAlign: "center", padding: "16px", font: "600 18px system-ui" }); d.innerHTML = "La tarjeta gráfica se ha quedado sin memoria.<br>He puesto la calidad en Baja.<br><br><button style='font:inherit;padding:10px 22px;border:0;border-radius:8px;background:#ffd23a;color:#111;cursor:pointer'>Volver a cargar</button>"; d.querySelector("button").onclick = () => location.reload(); document.body.appendChild(d); }); Rn.debug.checkShaderErrors = !!window.SHDBG; if (QUAL !== "alta") Rn.shadowMap.type = THREE.PCFShadowMap; Rn.outputColorSpace = THREE.SRGBColorSpace; Rn.toneMapping = THREE.ACESFilmicToneMapping; Rn.toneMappingExposure = 1.05;
   Rn.shadowMap.enabled = true; Rn.shadowMap.type = THREE.PCFSoftShadowMap;
-  const S = new THREE.Scene(); S.fog = new THREE.Fog(0xa9c4dc, 180, 420);
+  // texturas comprimidas para la tarjeta gráfica (KTX2/Basis): ocupan unas 8 veces menos memoria; el descompresor va incluido (sin internet también)
+  if (window.KTX2Loader && !/ktx=0/.test(location.search)) { try { const [bj, bw] = await Promise.all([asset("basis_js"), asset("basis_wasm")]);
+      const u1 = URL.createObjectURL(new Blob([atob(bj)], { type: "text/javascript" })), u2 = URL.createObjectURL(new Blob([b64buf(bw)], { type: "application/wasm" }));
+      const prevMod = THREE.DefaultLoadingManager.urlModifier; THREE.DefaultLoadingManager.setURLModifier(u => /basis_transcoder\.js$/.test(u) ? u1 : /basis_transcoder\.wasm$/.test(u) ? u2 : prevMod ? prevMod(u) : u);
+      const K2 = new KTX2Loader().setTranscoderPath("basis/").detectSupport(Rn); window.__KTX2 = K2;
+      const op = GLTFLoader.prototype.parse; GLTFLoader.prototype.parse = function (...a) { if (!this.ktx2Loader) this.setKTX2Loader(K2); return op.apply(this, a); };
+    } catch (e) { console.warn("KTX2", e); } }
+  const S = new THREE.Scene(); window.__S = S; S.fog = new THREE.Fog(0xa9c4dc, 180, 420);
   { const sky = new THREE.Mesh(new THREE.SphereGeometry(500, 32, 16), new THREE.ShaderMaterial({ side: THREE.BackSide, depthWrite: false, fog: false, uniforms: {},
       vertexShader: "varying vec3 vP; void main(){ vP = position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.); }",
       fragmentShader: "varying vec3 vP; float h2(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); } float vn(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3. - 2. * f); return mix(mix(h2(i), h2(i + vec2(1., 0.)), f.x), mix(h2(i + vec2(0., 1.)), h2(i + vec2(1., 1.)), f.x), f.y); } float fbm(vec2 p){ float a = .5, r = 0.; for (int k = 0; k < 5; k++) { r += a * vn(p); p *= 2.03; a *= .5; } return r; } void main(){ vec3 d = normalize(vP); float h = d.y; vec3 c = mix(vec3(.78,.86,.95), vec3(.18,.42,.82), smoothstep(0., .6, h)); vec2 uv = d.xz / max(.12, h + .15) * 1.6; float n = smoothstep(.5, .8, fbm(uv)) * smoothstep(.02, .25, h); c = mix(c, vec3(.97,.98,1.), n * .8); gl_FragColor = vec4(c, 1.); }" })); S.add(sky); window.__sky = sky; }
@@ -230,12 +237,64 @@
     for (let i = 0; i < P_.count; i++) { const e = acc.get(key(i)), l = Math.hypot(e[0], e[1], e[2]) || 1; N.setXYZ(i, e[0] / l, e[1] / l, e[2] / l); } N.needsUpdate = true; }
   const WARM_L = ["Receive", "Receive_M", "BreathingIdle", "SoccerIdle", "SoccerTackle2", "GoalkeeperMiss", "GoalkeeperDropKick", "SoccerPenaltyKick", "FistPump", "StandingFistPump", "KneelingPointing", "Rallying", "StandingCheering", "Excited", "InjuredWalking", "Quick180Turn", "StandingArguing", "ShoveReaction", "JoggingStumble", "SoccerSpin", "StallSoccerball", "ScissorKick", "ScissorKick_M", "GoalkeeperCatch1", "GoalkeeperCatch2", "Cheering", "Chip", "Clapping", "Disappointed", "FallFlat", "GettingUp", "GoalkeeperBodyBlock", "GoalkeeperBodyBlock1", "GoalkeeperCatch", "GoalkeeperDivingSave", "GoalkeeperDivingSave1", "GoalkeeperIdle", "GoalkeeperOverhandThrow", "GoalkeeperScoop", "GoalkeeperSidestep", "JogBackward", "JogForward", "JogStrafeLeft", "JogStrafeRight", "KickSoccerball1", "KneeingSoccerball", "Pointing", "ReceiveSoccerball", "Running", "RunningSlide", "SoccerHeader", "SoccerPass", "SoccerTackle", "SoccerTrip", "SprintForward", "StandardIdle", "StandardRun", "StandardWalk", "StrikeFowardJog", "ThrowIn", "Victory", "Chip_M", "KickSoccerball1_M", "KneeingSoccerball_M", "ReceiveSoccerball_M", "SoccerHeader_M", "SoccerPass_M", "SoccerTackle_M", "StrikeFowardJog_M"];
   const MODELS = {}, CLIPS = {};
+  // LOD (como DLS/FIFA): cada modelo de jugador tiene dos versiones simplificadas que comparten huesos, pesos y texturas; de lejos se pinta la de menos triángulos
+  async function lodBuild(root) {
+    const MS = window.MeshoptSimplifier; if (!MS) return; try { await MS.ready; } catch (e) { return; }
+    root.traverse(o => { if (!o.isMesh || !o.geometry.index || o.geometry.userData.lod) return; const g = o.geometry, P_ = g.attributes.position, n = P_.count, pos = new Float32Array(n * 3);
+      for (let i = 0; i < n; i++) { pos[i * 3] = P_.getX(i); pos[i * 3 + 1] = P_.getY(i); pos[i * 3 + 2] = P_.getZ(i); }
+      const idx = new Uint32Array(g.index.array), mk = (r, e) => { try { const [ix] = MS.simplify(idx, pos, 3, Math.max(300, Math.floor(idx.length * r / 3) * 3), e, ["LockBorder"]); if (ix.length >= idx.length * .9) return null;
+          const lg = new THREE.BufferGeometry(); for (const k in g.attributes) lg.setAttribute(k, g.attributes[k]); lg.morphAttributes = g.morphAttributes; lg.setIndex(new THREE.BufferAttribute(ix, 1)); if (!g.boundingBox) g.computeBoundingBox(); lg.boundingBox = g.boundingBox; lg.boundingSphere = g.boundingSphere; lg.userData.lodOf = g; return lg; } catch (e) { return null; } };
+      g.userData.lod = [g, mk(.4, .01) || g, mk(.16, .03) || g]; });
+  }
+  // elige el nivel de detalle por el tamaño del jugador en pantalla (en píxeles)
+  let lodOn = !/lod=0/.test(location.search);
+  // sombras de mancha (como en los juegos de móvil): un círculo oscuro bajo cada jugador cuando no hay sombras reales
+  const BLOB = (() => { const geo = new THREE.PlaneGeometry(1, 1); geo.rotateX(-Math.PI / 2);
+    return { geo, mat: new THREE.ShaderMaterial({ transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, uniforms: {}, vertexShader: "varying vec2 vU; void main(){ vU = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.); }",
+      fragmentShader: "varying vec2 vU; void main(){ float d = length(vU - .5) * 2.; gl_FragColor = vec4(0., 0., 0., (1. - smoothstep(.05, 1., d)) * .8); }" }) }; })();
+  function blobFor(a, sz) { if (a.blob) return a.blob; const m = new THREE.Mesh(BLOB.geo, BLOB.mat); m.scale.set(sz, 1, sz); m.renderOrder = 1; m.frustumCulled = false; m.visible = false; S.add(m); return (a.blob = m); }
+  function blobSel() { const sh = sun.castShadow && Rn.shadowMap.enabled;
+    for (const a of ACT) { const real = sh && (a.inner.userData.cs ?? true), b = blobFor(a, 1.45); b.visible = !real && a.wrap.visible; if (b.visible) b.position.set(a.wrap.position.x, .07, a.wrap.position.z); }
+    const bb = blobFor(window.__ballBlob || (window.__ballBlob = {}), .5); bb.visible = !sh && ballMesh.visible; if (bb.visible) { const z = Math.max(0, ballMesh.position.y - BR); bb.position.set(ballMesh.position.x, .071, ballMesh.position.z); const k = .5 + Math.min(1, z / 6) * .5; bb.scale.set(k, 1, k); } }
+  // estadio con la luz "pintada": se calcula una vez la luz de cada vértice y se dibuja sin iluminación en tiempo real; luego se juntan las piezas por material (menos llamadas de dibujo)
+  function bakeStatic() {
+    const lights = []; S.traverse(o => { if (o.isLight) lights.push(o); }); S.updateMatrixWorld(true);
+    const n = new THREE.Vector3(), d = new THREE.Vector3(), nm = new THREE.Matrix3(), c = new THREE.Color(), acc = new THREE.Color(), tmp = new THREE.Color();
+    const light = (nx, ny, nz) => { acc.setRGB(0, 0, 0); for (const l of lights) { if (!l.visible) continue;
+        if (l.isHemisphereLight) { const w = .5 * ny + .5; tmp.copy(l.groundColor).lerp(l.color, w).multiplyScalar(l.intensity); acc.add(tmp); }
+        else if (l.isAmbientLight) { tmp.copy(l.color).multiplyScalar(l.intensity); acc.add(tmp); }
+        else if (l.isDirectionalLight) { d.setFromMatrixPosition(l.matrixWorld).sub(n.setFromMatrixPosition(l.target.matrixWorld)).normalize(); const dl = Math.max(0, nx * d.x + ny * d.y + nz * d.z); if (dl > 0) { tmp.copy(l.color).multiplyScalar(l.intensity * dl); acc.add(tmp); } } }
+      return acc.multiplyScalar(1 / Math.PI); };
+    const groups = new Map(), done = new Map(); let nb = 0;
+    S.traverse(o => { if (!o.isMesh || o.isSkinnedMesh || o.isInstancedMesh || !o.material || Array.isArray(o.material) || !o.material.isMeshLambertMaterial) return;
+      const wp = o.getWorldPosition(new THREE.Vector3()); if (Math.abs(wp.x) < L / 2 + 2 && Math.abs(wp.z) < W / 2 + 2) return;
+      const m = o.material; let g = o.geometry.clone();
+      for (const k of ["position", "normal", "uv"]) { const at = g.attributes[k]; if (at && (at.normalized || !(at.array instanceof Float32Array) || at.isInterleavedBufferAttribute)) { const f = new Float32Array(at.count * at.itemSize); for (let i = 0; i < at.count; i++) for (let j = 0; j < at.itemSize; j++) f[i * at.itemSize + j] = at.getComponent ? at.getComponent(i, j) : [at.getX(i), at.getY(i), at.getZ(i)][j]; g.setAttribute(k, new THREE.BufferAttribute(f, at.itemSize)); } }   // modelos comprimidos (cuantizados): pasar a decimales antes de mover
+      g.applyMatrix4(o.matrixWorld);
+      if (!g.index && g.attributes.position.count > 30000 && window.mergeVertices) { for (const k of Object.keys(g.attributes)) if (k !== "position" && k !== "uv") g.deleteAttribute(k); g = window.mergeVertices(g, 1e-4); g.computeVertexNormals(); }   // soldar vértices para poder simplificar
+      if (!g.attributes.normal) g.computeVertexNormals();
+      const N = g.attributes.normal, cnt = g.attributes.position.count, col = new Float32Array(cnt * 3), em = m.emissive || new THREE.Color(0, 0, 0), ei = m.emissiveIntensity ?? 1;
+      for (let i = 0; i < cnt; i++) { n.fromBufferAttribute(N, i).normalize(); light(n.x, n.y, n.z); c.copy(m.color).multiply(acc); c.r += em.r * ei; c.g += em.g * ei; c.b += em.b * ei; col[i * 3] = c.r; col[i * 3 + 1] = c.g; col[i * 3 + 2] = c.b; }
+      for (const k of Object.keys(g.attributes)) if (k !== "position" && k !== "uv") g.deleteAttribute(k); g.morphAttributes = {}; g.setAttribute("color", new THREE.BufferAttribute(col, 3));
+      if (m.map && !g.attributes.uv) return; if (!m.map && g.attributes.uv) g.deleteAttribute("uv"); if (!g.index) { const ix = new Uint32Array(cnt); for (let i = 0; i < cnt; i++) ix[i] = i; g.setIndex(new THREE.BufferAttribute(ix, 1)); }
+      let bm = done.get(m); if (!bm) { bm = new THREE.MeshBasicMaterial({ map: m.map || null, vertexColors: true, transparent: m.transparent, alphaTest: m.alphaTest, side: m.side, opacity: m.opacity }); done.set(m, bm); }
+      const key = bm.uuid; if (!groups.has(key)) groups.set(key, { mat: bm, geos: [], objs: [] }); groups.get(key).geos.push(g); groups.get(key).objs.push(o); nb++; (window.__bakeL = window.__bakeL || []).push([o.name, Math.round(wp.x), Math.round(wp.z), cnt, !!m.map, m.transparent]); });
+    let merged = 0; const mg = window.mergeGeometries;
+    for (const { mat, geos, objs } of groups.values()) { let out = null; if (mg && geos.length > 1 && !mat.transparent) { try { out = mg(geos, false); } catch (e) { out = null; } }
+      if (out) { for (const o of objs) { o.visible = false; if (o.parent) o.parent.remove(o); } const mm = new THREE.Mesh(out, mat); mm.matrixAutoUpdate = false; mm.updateMatrix(); S.add(mm); merged++; }
+      else objs.forEach((o, i) => { o.material = mat; o.geometry.dispose ? null : null; const g = geos[i]; const inv = new THREE.Matrix4().copy(o.matrixWorld).invert(); g.applyMatrix4(inv); o.geometry = g; }); }
+    return { piezas: nb, grupos: merged };
+  }
+  function lodSel() { if (!lodOn) return; const H = cv.height || 540, k = H / (2 * Math.tan(cam.fov * Math.PI / 360));
+    for (const a of ACT) { const d = a.wrap.position.distanceTo(cam.position), px = 1.82 * k / Math.max(1, d), lv = px > 170 || a === M.human ? 0 : px > 75 ? 1 : 2;
+      if (a.lodLv === lv) continue; a.lodLv = lv; a.inner.traverse(o => { if (o.isMesh && o.userData.lod) o.geometry = o.userData.lod[lv]; }); } }
   async function makeActor(modelName, kit, num, des) {
     if (!MODELS[modelName]) { MODELS[modelName] = await GL().parseAsync(b64buf(await asset("m_" + modelName)), ""); CLIPS[modelName] = {}; MODELS[modelName].scene.traverse(o => { if (o.isMesh) { smoothN(o.geometry); const mp = o.material && o.material.map, im = mp && mp.image;
-        if (im && im.width > TEXMAX) { const c = document.createElement("canvas"); c.width = c.height = TEXMAX; c.getContext("2d").drawImage(im, 0, 0, TEXMAX, TEXMAX); if (im.close) im.close(); mp.image = c; mp.needsUpdate = true; } } }); }
+        if (im && !mp.isCompressedTexture && im.width > TEXMAX) { const c = document.createElement("canvas"); c.width = c.height = TEXMAX; c.getContext("2d").drawImage(im, 0, 0, TEXMAX, TEXMAX); if (im.close) im.close(); mp.image = c; mp.needsUpdate = true; } } });
+      await lodBuild(MODELS[modelName].scene); }
     const g = MODELS[modelName], wrap = new THREE.Group(), inner = THREE.SkeletonUtils ? THREE.SkeletonUtils.clone(g.scene) : SkeletonUtils.clone(g.scene);
     const bb = new THREE.Box3().setFromObject(g.scene), k = 1.82 / (bb.max.y - bb.min.y); inner.scale.setScalar(k); inner.position.y = -bb.min.y * k;
-    inner.traverse(o => { if (o.isMesh) { o.castShadow = true; o.frustumCulled = false; if (kit) o.material = kitMat(o.material, kit[0], kit[1], num, o.geometry, des, kit[2]); } }); wrap.add(inner); S.add(wrap);
+    inner.traverse(o => { if (o.isMesh) { o.castShadow = true; o.frustumCulled = false; o.userData.lod = o.geometry.userData.lod || null; if (kit) o.material = kitMat(o.material, kit[0], kit[1], num, o.geometry, des, kit[2]); } }); wrap.add(inner); S.add(wrap);
     const mixer = new THREE.AnimationMixer(inner), acts = {};
     const act = n => acts[n] || (acts[n] = mixer.clipAction(CLIPS[modelName][n] || (CLIPS[modelName][n] = clipOne(MODELS[modelName], n))));
     const toes = { R: inner.getObjectByName("RightToeBase"), L: inner.getObjectByName("LeftToeBase") }, hands = [inner.getObjectByName("RightHand"), inner.getObjectByName("LeftHand")], head = inner.getObjectByName("Head");
@@ -1635,7 +1694,7 @@
   const ring = new THREE.Mesh(new THREE.RingGeometry(.42, .55, 32), new THREE.MeshBasicMaterial({ color: 0xffd23a, transparent: true, opacity: .9, depthWrite: false })); ring.rotation.x = -Math.PI / 2; S.add(ring);
 
   /* ---------- bucle ---------- */
-  let lowQ = 0, maxDpr = QUAL === "alta" ? 1.5 : QUAL === "media" ? 1.25 : (devicePixelRatio >= 2 ? 1 : .85), fpsN = 0, fpsT = 0, last = performance.now();
+  let dynS = 1, lowQ = 0, maxDpr = QUAL === "alta" ? 1.5 : QUAL === "media" ? 1.25 : (devicePixelRatio >= 2 ? 1 : .85), fpsN = 0, fpsT = 0, last = performance.now();
   /* ---------- repetición de los goles: se graban los últimos segundos (huesos, posiciones y balón) y se reproducen a cámara lenta ---------- */
   const ACT = P.concat(OFF); for (const a of ACT) { a.bones = []; a.inner.traverse(o => { if (o.isBone) a.bones.push(o); }); }
   /* ---------- banquillo y cambios (máximo 5); la IA cambia a los cansados en la segunda parte ---------- */
@@ -2013,17 +2072,20 @@
   function draw(dt) {
     lodF++; for (const a of ACT) { if (!a.pd) continue; const far = a.wrap.position.distanceToSquared(cam.position) > 2500 && a !== M.human; if (!far || (lodF + (a.i || 0)) % 2 === 0) flushPose(a); }   // lejos de la cámara: animación a medio ritmo
     if (recQ && !M.replay) { recQ = false; recFrame(); }
-    const w = cv.clientWidth, h = cv.clientHeight, dpr = Math.min(devicePixelRatio || 1, maxDpr);
+    const w = cv.clientWidth, h = cv.clientHeight, dpr = Math.max(.5, Math.min(devicePixelRatio || 1, maxDpr) * dynS);
     if (cv.width !== Math.round(w * dpr) || cv.height !== Math.round(h * dpr)) { Rn.setPixelRatio(dpr); Rn.setSize(w, h, false); cam.aspect = w / h; cam.updateProjectionMatrix(); }
     if (window.__camOv) { const o = window.__camOv(P); cam.position.copy(o.p); cam.lookAt(o.l); }
-    wxFrame(Math.min(.05, dt)); renderFrame(); hudFrame();
+    if (!draw.baked && !STREET && !/bake=0/.test(location.search)) { draw.baked = 1; try { window.__bake = bakeStatic(); } catch (e) { console.warn("bake", e); } }
+    wxFrame(Math.min(.05, dt)); lodSel(); blobSel(); renderFrame(); hudFrame();
     // calidad adaptable según el tiempo REAL de cada fotograma: baja por escalones y nunca vuelve a subir de golpe (sin tirones)
     const now = performance.now(), rf = now - (draw.lt || now); draw.lt = now; fpsN++; fpsT += rf / 1000;
-    if (fpsT > 1.5) { const f = Math.round(fpsN / fpsT); $("#fps").textContent = f + " fps"; fpsN = 0; fpsT = 0;
-      if (!window.STEP && !M.intro && simT > 4) { if (f < 48) lowQ++; else lowQ = Math.max(0, lowQ - .5);
+    if (fpsT > 1.5) { const f = Math.round(fpsN / fpsT); $("#fps").textContent = f + " fps · " + Math.round(dynS * 100) + " %"; fpsN = 0; fpsT = 0;
+      // resolución dinámica (como en los juegos de móvil): baja un poco si no llega a 60 y vuelve a subir cuando sobra
+      if (!window.STEP && !M.intro && simT > 3) { if (f < 50) dynS = Math.max(.62, dynS - .08); else if (f >= 58) dynS = Math.min(1, dynS + .04); }
+      if (!window.STEP && !M.intro && simT > 4) { if (f < 48 && dynS <= .63) lowQ++; else lowQ = Math.max(0, lowQ - .5);
         if (lowQ >= 2 && !draw.q1) { draw.q1 = 1; sun.shadow.mapSize.set(1024, 1024); if (sun.shadow.map) { sun.shadow.map.dispose(); sun.shadow.map = null; } lowQ = 0; }
         else if (lowQ >= 2 && !draw.q2) { draw.q2 = 1; maxDpr = Math.min(maxDpr, 1); lowQ = 0; }
-        else if (lowQ >= 2 && !draw.q3) { draw.q3 = 1; if (CROWD) CROWD.im.count = Math.floor(CROWD.n * .55); for (const a of P.concat(OFF)) a.inner.traverse(o => { if (o.isMesh) o.castShadow = a.gk || a === M.human; }); lowQ = 0; }
+        else if (lowQ >= 2 && !draw.q3) { draw.q3 = 1; if (CROWD) CROWD.im.count = Math.floor(CROWD.n * .55); for (const a of P.concat(OFF)) a.inner.traverse(o => { if (o.isMesh) o.castShadow = a.gk || a === M.human; }); for (const a of P.concat(OFF)) a.inner.userData.cs = !!(a.gk || a === M.human); lowQ = 0; }
         else if (lowQ >= 2 && !draw.q4) { draw.q4 = 1; maxDpr = Math.min(maxDpr, .85); Rn.shadowMap.autoUpdate = false; lowQ = 0; }
         else if (lowQ >= 2 && !draw.q5) { draw.q5 = 1; maxDpr = .7; lowQ = 0; }
         else if (lowQ >= 2 && !draw.q6 && PF.on && PF.lite) { draw.q6 = 1; PF.on = false; lowQ = 0; } } }
