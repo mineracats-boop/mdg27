@@ -404,7 +404,11 @@
       const K = td.kits; if (K && K[0] && hex(K[0].c1)) { const kk = o => [hex(o.c1), hex(o.c2) || hex(o.c1), hex(o.sh) || hex(o.c2) || hex(o.c1)]; TEAMS[t].kit = kk(K[0]); TEAMS[t].des = K[0].d; if (K[1] && hex(K[1].c1)) { TEAMS[t].away = kk(K[1]); TEAMS[t].awayD = K[1].d; } } });
     // color dominante de cada camiseta (con rayas o mitades cuenta también el 2º color)
     const domC = T => { const a = new THREE.Color(T.kit[0]); if ([0, 1, 2, 4, 7].includes(T.des)) a.lerp(new THREE.Color(T.kit[1]), .5); return a; };
-    const near = () => { const a = domC(TEAMS[0]), b = domC(TEAMS[1]); return Math.abs(a.r - b.r) + Math.abs(a.g - b.g) + Math.abs(a.b - b.b) < .55; };
+    // ¿se confunden? distancia de color tipo «redmean» (cercana a como lo ve el ojo) entre el color dominante de cada camiseta, y también entre los colores principales
+    const cdist = (a, b) => { const r = (a.r + b.r) / 2; return Math.sqrt((2 + r) * (a.r - b.r) ** 2 + 4 * (a.g - b.g) ** 2 + (3 - r) * (a.b - b.b) ** 2) / 3; };
+    const lumC = c => .2126 * c.r + .7152 * c.g + .0722 * c.b;
+    const near = () => { const a = domC(TEAMS[0]), b = domC(TEAMS[1]), a0 = new THREE.Color(TEAMS[0].kit[0]), b0 = new THREE.Color(TEAMS[1].kit[0]);
+      return cdist(a, b) < .36 || cdist(a0, b0) < .3 || (lumC(a) > .78 && lumC(b) > .78) || (lumC(a) < .1 && lumC(b) < .1); };
     if (TEAMS[1].away && near()) { TEAMS[1].kit = TEAMS[1].away; TEAMS[1].des = TEAMS[1].awayD; }
     // si las camisetas se parecen, el visitante cambia a su segunda equipación
     if (near()) { TEAMS[1].kit = lum(TEAMS[0].kit[0]) > .55 ? ["#1f2937", "#111827", "#111827"] : ["#f4f4f4", TEAMS[1].kit[0], "#f4f4f4"]; TEAMS[1].des = -1; } }
@@ -1675,7 +1679,7 @@
     const me = NET.host ? 0 : 1, body = JSON.stringify({ tok: ses.tok, sala: NET.sala, gf: TEAMS[me].score, ga: TEAMS[1 - me].score });
     for (const u of [NET_SRV || NET_LIST[0], ...NET_LIST.filter(x => x !== NET_SRV)].slice(0, 2)) { fetch(u + "/cuenta/resultado", { method: "POST", headers: { "content-type": "application/json" }, body }).then(r => r.json()).then(j => { if (j && j.ok && !j.dup && j.r) msg("Clasificación online: " + j.r.pts + " puntos", 3); }).catch(() => {}); break; } }
   function showEnd() { if (NET) { netReport(); if (NET.host && NET.peer && !NET.ended) netSend({ t: "s", b: [ball.x, ball.y, ball.z], p: [], sc: [TEAMS[0].score, TEAMS[1].score], ck: $("#clock").textContent, ph: "end", h: [-1, -1], ex: 0, ev: NET.ev.splice(0).concat([["end"]]) }); NET.ended = true; }
-    if (EMB && !EMB.net) { const s = TEAMS.map(t => t.stats); parent.postMessage({ type: "mdg27end", r: { score: [TEAMS[0].score, TEAMS[1].score], goals: M.goals, stats: s.map(x => ({ sh: x.sh, ont: x.ont, pos: x.pos, fo: x.fo, pa: x.pa, pc: x.pc, co: x.co, off: x.off })), cards: M.cards || [], pens: M.pens || null } }, "*"); return; } const s = TEAMS.map(t => t.stats), tot = s[0].pos + s[1].pos || 1;
+    if (EMB && !EMB.net) { const s = TEAMS.map(t => t.stats); parent.postMessage({ type: "mdg27end", r: { track: { f: TRK.f, sc: TRK.ev, n: P.length, side: P.map(p => p.t), names: P.map(p => p.name || ""), kits: TEAMS.map(t => t.kit[0]), L, W }, score: [TEAMS[0].score, TEAMS[1].score], goals: M.goals, stats: s.map(x => ({ sh: x.sh, ont: x.ont, pos: x.pos, fo: x.fo, pa: x.pa, pc: x.pc, co: x.co, off: x.off })), cards: M.cards || [], pens: M.pens || null } }, "*"); return; } const s = TEAMS.map(t => t.stats), tot = s[0].pos + s[1].pos || 1;
     $("#end").innerHTML = `<h2>FINAL</h2><div class="es">${TEAMS[0].name} <b>${TEAMS[0].score} - ${TEAMS[1].score}</b> ${TEAMS[1].name}</div>${M.pens ? `<div>Penaltis: <b>${M.pens[0]} - ${M.pens[1]}</b></div>` : ""}
       <table><tr><td>${Math.round(s[0].pos / tot * 100)}%</td><th>Posesión</th><td>${Math.round(s[1].pos / tot * 100)}%</td></tr>
       ${[["sh", "Tiros"], ["ont", "A puerta"], ["pa", "Pases"], ["pc", "Pases completados"], ["co", "Córners"], ["fo", "Faltas"], ["off", "Fueras de juego"]].filter(([k]) => !STREET || (k !== "co" && k !== "off")).map(([k, n]) => `<tr><td>${s[0][k]}</td><th>${n}</th><td>${s[1][k]}</td></tr>`).join("")}</table>
@@ -1985,6 +1989,7 @@
       if (c.obj === "puertas") { const g = c.gates.find(q => !q.ok); if (g && hasBall(me) && Math.abs(me.x - g.x) < .9 && Math.abs(me.y - g.y) < 1.5) { g.ok = true; DR.cnt++; play("toque", .6); drMsg(); if (DR.cnt >= DR.goalN) return drEnd(true); } }
       if (c.obj === "aros") for (const r of c.rings) if (!r.ok && hasBall(me) && Math.hypot(me.x - r.x, me.y - r.y) < 1.4) { r.ok = true; r.m.visible = false; DR.cnt++; play("toque", .6); msg("¡Bien!", .6); drMsg(); if (DR.cnt >= DR.goalN) return drEnd(true); } }
     if ((Math.floor(DR.t * 2) !== Math.floor((DR.t - dt) * 2))) drMsg(); }
+  const TRK = { t: 0, f: [], ev: [] };
   function tick(dt) {
     { let gp = null; try { gp = navigator.getGamepads && [...navigator.getGamepads()].find(q => q && q.connected); } catch (e) {} const pi = gp ? padMapFor(gp).pause : 9, st = !!(gp && gp.buttons[pi] && gp.buttons[pi].pressed) && !PADCFG.on; if (st && !padStartPrev) setPause(!M.paused); padStartPrev = st; }
     if (M.paused) return;
@@ -1993,6 +1998,8 @@
     if (M.intro) { introStep(dt); return; }
     if (M.replay) { replayStep(dt); return; }
     simT += dt;
+    // grabación ligera del partido para revisar trampas: balón y 22 jugadores, 2 veces por segundo
+    if (EMB && !DR && M.phase !== "end" && !M.replay && (TRK.t += dt) >= .5) { TRK.t = 0; if (TRK.f.length < 2400) { const fr = [Math.round(ball.x * 10), Math.round(ball.y * 10)]; for (const p of P) fr.push(Math.round(p.x * 10), Math.round(p.y * 10)); TRK.f.push(fr); TRK.ev.push(TEAMS[0].score * 100 + TEAMS[1].score); } }
     for (let i = TIMERS.length - 1; i >= 0; i--) if (TIMERS[i].at <= simT) { const f = TIMERS[i].fn; TIMERS.splice(i, 1); f(); }
     const I = input(); lastI = I; const I2 = R2 && NET.peer ? remoteInput() : null;
     if (M.aft) { M.aft.dt = dt; aftStep(I); }
