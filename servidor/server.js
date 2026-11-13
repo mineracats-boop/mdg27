@@ -24,7 +24,7 @@ const srv = http.createServer((req, res) => { const u = new URL(req.url, "http:/
   if (u.pathname === "/ping") { res.writeHead(200, CORS); return res.end(JSON.stringify({ ok: true, juego: "MDG 27", reserva: true, t: Date.now() })); }
   if (u.pathname === "/plaza") { let i = 1; while ((salas.get("PLAZA" + i) || new Set()).size >= 25 && i < 40) i++; res.writeHead(200, CORS); return res.end(JSON.stringify({ sala: "PLAZA" + i, n: (salas.get("PLAZA" + i) || new Set()).size })); }
   // cuentas: el servidor de reserva reenvía al de Cloudflare (allí están guardadas); así el inicio de sesión funciona aunque LaLiga bloquee Cloudflare
-  if (u.pathname.startsWith("/cuenta/")) { const chunks = []; req.on("data", c => { chunks.push(c); if (chunks.reduce((a, b) => a + b.length, 0) > (u.pathname === "/cuenta/guardar" ? 5e6 : 8192)) req.destroy(); });
+  if (u.pathname.startsWith("/cuenta/")) { const chunks = []; req.on("data", c => { chunks.push(c); if (chunks.reduce((a, b) => a + b.length, 0) > (u.pathname === "/cuenta/guardar" || u.pathname === "/cuenta/srv" ? 9e6 : 8192)) req.destroy(); });
     req.on("end", async () => { try { const r = await fetch("https://mdg27-online.guidavilagri.workers.dev" + u.pathname + u.search, { method: req.method, headers: { "content-type": "application/json" }, body: req.method === "POST" ? Buffer.concat(chunks) : undefined });
         res.writeHead(r.status, Object.assign({}, CORS, { "Access-Control-Allow-Methods": "GET, POST, OPTIONS" })); res.end(await r.text()); } catch (e) { res.writeHead(502, CORS); res.end(JSON.stringify({ ok: false, error: "Sin conexión con el servidor de cuentas." })); } }); return; }
   if (u.pathname === "/nueva") { res.writeHead(200, CORS); return res.end(JSON.stringify({ sala: code() })); }

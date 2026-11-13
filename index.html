@@ -8906,11 +8906,13 @@ function marketBots(dtSec) {
     const t1 = Math.min(now, s.end), mins = Math.max(0, (t1 - (s.chk || s.start)) / 60000); s.chk = t1;
     const r = s.price / value(c);
     const perMin = r <= .8 ? .5 : r <= 1 ? .22 : r <= 1.15 ? .07 : r <= 1.4 ? .018 : .003;
+    if (s.pend) continue;
     if (mins > 0 && rnd() < 1 - Math.pow(1 - perMin, mins)) {
-      s.done = "sold"; s.soldAt = t1; const net = Math.round(s.price * .95);
-      removeCard(s.u); S.coins += net; S.st.sell++; track("sell", 1); updateCoins(); ch = true;
-      toast(`Vendido: ${shortName(P(c).n)} por ${fmt(s.price)} (+${fmt(net)} tras comisión)`); addLog(`Vendió ${P(c).n} por ${fmt(s.price)}`);
-      s.name = P(c).n; s.v = c.v; s.k = c.k;
+      const fin = () => { if (s.done) return; s.done = "sold"; s.soldAt = t1; const net = Math.round(s.price * .95);
+        removeCard(s.u); S.coins += net; S.st.sell++; track("sell", 1); updateCoins();
+        toast(`Vendido: ${shortName(P(c).n)} por ${fmt(s.price)} (+${fmt(net)} tras comisión)`); addLog(`Vendió ${P(c).n} por ${fmt(s.price)}`);
+        s.name = P(c).n; s.v = c.v; s.k = c.k; save(); updateHub(); };
+      if (s.srv && typeof mkBotSale === "function") mkBotSale(s, fin); else { fin(); ch = true; }
     } else if (now >= s.end) { s.done = "unsold"; ch = true; toast(`Sin comprador: ${shortName(P(c).n)} vuelve a tu club`); }
   }
   S.mk.sales = S.mk.sales.filter(s => !s.done || now - (s.soldAt || s.end) < 864e5).slice(-40);
@@ -9053,7 +9055,7 @@ const mem = (lg, id) => lg.members[id];
 function teamOf(lg, id) {
   const m = mem(lg, id);
   if (m.me) { const slots = FORMS[S.squad.f]; return { str: teamStrength(), players: S.squad.xi.map((u, i) => { const c = u && C(u); return c ? { name: shortName(P(c).n), pos: slots[i][0], u } : null; }).filter(Boolean) }; }
-  return { str: m.str, players: m.pids.map(k => ({ name: shortName(PBY[k].n), pos: PBY[k].pos })) };
+  return { str: m.str, players: m.pl ? m.pl : m.pids.map(k => ({ name: shortName(PBY[k].n), pos: PBY[k].pos })) };
 }
 function simMatch(A, B) {
   const lA = clamp(1.3 * Math.exp((A.str + 1.2 - B.str) * .075), .15, 4.2), lB = clamp(1.3 * Math.exp((B.str - A.str - 1.2) * .075), .15, 4.2);
@@ -9115,7 +9117,7 @@ function table(lg) {
   return T.sort((x, y) => y.pts - x.pts || (y.gf - y.ga) - (x.gf - x.ga) || y.gf - x.gf);
 }
 function processLeague(silent) {
-  const lg = S.lg; if (!lg) return false;
+  const lg = S.lg; if (!lg) return false; if (lg.srv) return lgSrvProcesar();
   const now = Date.now(); let ch = false; const msgs = [];
   while (!lg.done && now >= lg.nextAt) { const s = playRound(lg); if (s) msgs.push(s); lg.nextAt = nextSlot(lg.nextAt + 1000, lg); ch = true; }
   if (msgs.length) { const last = msgs[msgs.length - 1]; if (!silent || msgs.length) toast(msgs.length > 1 ? `Se han jugado ${msgs.length} jornadas. ${last}` : last); }
@@ -9130,6 +9132,7 @@ function leagueHubLine() {
   const el = $("[data-lgline]"), al = $("[data-lgalert]"); const lg = S.lg;
   if (!el) return;
   if (!lg) { el.textContent = "Crea una liga y comparte el código."; if (al) al.hidden = true; return; }
+  if (lg.srv && (!lg.started || (lg.done && !lg.final))) { el.textContent = lg.done ? "Temporada terminada" : `Esperando jugadores · ${lg.members.length}/${lg.n}`; if (al) al.hidden = true; return; }
   el.textContent = lg.done ? `Temporada terminada · puesto ${lg.final.pos}` : `Jornada ${lg.r + 1}/${lg.rounds.length} · en ${ago(lg.nextAt - Date.now())}`;
   if (al) al.hidden = lg.done || lg.ready || lg.nextAt - Date.now() > 3 * 3600000;
 }
@@ -9160,15 +9163,18 @@ function renderLeague() {
     const L = Object.values(sc).filter(x => x.g).sort((a, b) => b.g - a.g || b.a - a.a).slice(0, 20);
     main = L.length ? `<table class="tb"><tr><th>#</th><th class="l">Jugador</th><th class="l">Equipo</th><th>Goles</th><th>Asist.</th></tr>${L.map((x, i) => { const m = mem(lg, x.id); return `<tr class="${m.me ? "me" : ""}"><td class="pos">${i + 1}</td><td class="l">${esc(x.n)}</td><td class="l">${esc(m.me ? S.club || "Mi Club" : m.club)}</td><td class="pts">${x.g}</td><td>${x.a}</td></tr>`; }).join("")}</table>` : `<div class="empty">Aún no hay goles.</div>`;
   } else {
-    main = `<table class="tb"><tr><th class="l">Mánager</th><th class="l">Club</th><th>Media</th><th></th></tr>${lg.members.map(m => `<tr class="${m.me ? "me" : ""}"><td class="l"><span class="tmn"><img src="${avImg(m.me ? S.av : m.av)}" alt="">${esc(m.me ? S.name : m.name)}</span></td><td class="l">${esc(m.me ? S.club || "Mi Club" : m.club)}</td><td>${m.me ? teamInfo().rating : Math.round(m.str - 1.5)}</td><td>${m.me ? "Tú" : "IA"}</td></tr>`).join("")}</table>
-      <div class="mute" style="font-size:1.2rem;margin-top:1rem;line-height:1.5">Mientras no haya servidor, los rivales los controla la IA. Cuando lo tengamos, tus amigos entrarán con el código <b style="color:var(--gold2)">${lg.code}</b> y ocuparán estos puestos.</div>`;
+    main = `<table class="tb"><tr><th class="l">Mánager</th><th class="l">Club</th><th>Media</th><th></th></tr>${lg.members.map(m => `<tr class="${m.me ? "me" : ""}"><td class="l"><span class="tmn"><img src="${avImg(m.me ? S.av : m.av)}" alt="">${esc(m.me ? S.name : m.name)}</span></td><td class="l">${esc(m.me ? S.club || "Mi Club" : m.club)}</td><td>${m.me ? teamInfo().rating : Math.round(m.str - 1.5)}</td><td>${m.me ? "Tú" : lg.srv ? (m.bot ? "Bot" : "Amigo" + (lg.started && !lg.done ? (m.ready ? " · LISTO" : "") : "")) : "IA"}</td></tr>`).join("")}</table>
+      ${lg.srv ? `${lg.news && lg.news.length ? `<div class="lbl" style="margin-top:1.2rem">Noticias de la liga</div>${lg.news.slice().reverse().slice(0, 15).map(n => `<div class="ev" style="grid-template-columns:11rem 1fr"><span class="mute">${new Date(n.at).toLocaleString("es-ES", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}</span><span>${esc(n.t)}</span></div>`).join("")}` : ""}
+        <div class="mute" style="font-size:1.2rem;margin-top:1rem;line-height:1.5">Tus amigos entran con el código <b style="color:var(--gold2)">${lg.code}</b>. Los bots fichan durante la temporada como cualquier mánager.</div>` :
+      `<div class="mute" style="font-size:1.2rem;margin-top:1rem;line-height:1.5">Esta liga es sin conexión: los rivales los controla la IA. Inicia sesión y crea una liga nueva para jugarla con tus amigos.</div>`}`;
   }
   // panel lateral: próxima jornada
   let side;
-  if (lg.done) {
+  if (lg.srv && (!lg.started || (lg.done && !lg.final))) side = lgEsperaHTML(lg);
+  else if (lg.done) {
     side = `<div class="lbl">Temporada ${lg.season} terminada</div><div class="big">${lg.final.pos}.º</div>
       <div class="okb">Premio: ${fmt(lg.final.coins)} monedas${lg.final.pack ? " + " + PACKS[lg.final.pack].n : ""}.</div>
-      <button class="mbtn gold" data-nav data-a="lgNewSeason" data-first>Empezar nueva temporada</button>`;
+      ${lg.srv && !lg.owner ? `<div class="mute" style="text-align:center">El creador de la liga empezará la nueva temporada.</div>` : `<button class="mbtn gold" data-nav data-a="lgNewSeason" data-first>Empezar nueva temporada</button>`}`;
   } else {
     const fx = lg.rounds[lg.r].find(([h, a]) => mem(lg, h).me || mem(lg, a).me); const H = mem(lg, fx[0]), A = mem(lg, fx[1]);
     const full = teamInfo().full;
@@ -9180,7 +9186,9 @@ function renderLeague() {
       ${!full ? `<div class="warn">Tu once está incompleto. Complétalo en «Plantilla» para poder marcar LISTO.</div>` :
         lg.ready ? `<div class="okb">Estás LISTO. El partido se jugará a la hora fijada.</div>` :
         `<div class="warn">Pulsa LISTO antes de la hora o perderás 0-3.${lg.avisos ? ` Aviso ${lg.avisos}/3.` : ""}</div>`}
-      ${lg.live && lg.live.r === lg.r ? `<div class="okb">Ya jugaste este partido: ${lg.live.gf}-${lg.live.ga}. Contará a la hora de la jornada.</div>` :
+      ${lg.srv && !(A.me ? H : A).bot ? `<div class="mute" style="text-align:center;font-size:1.2rem">Contra un amigo: el partido se simula a la hora de la jornada con vuestras plantillas.</div>
+      <button class="mbtn ${lg.ready ? "" : "gold"}${full ? "" : " dis"}" data-nav data-a="lgReady" data-first>${lg.ready ? "Quitar LISTO" : "¡LISTO!"}</button>` :
+      lg.live && lg.live.r === lg.r ? `<div class="okb">Ya jugaste este partido: ${lg.live.gf}-${lg.live.ga}. Contará a la hora de la jornada.</div>` :
         `<button class="mbtn pri${full ? "" : " dis"}" data-nav data-a="lgLive" data-first>Jugar mi partido ahora</button>
       <button class="mbtn ${lg.ready ? "" : "gold"}${full ? "" : " dis"}" data-nav data-a="lgReady">${lg.ready ? "Quitar LISTO" : "¡LISTO! (simular)"}</button>`}
       `;
@@ -9193,13 +9201,15 @@ function renderLeague() {
 }
 ONSHOW.league = () => { processLeague(); renderLeague(); };
 ACT.lgTab = el => { LT.tab = el.dataset.tab; renderLeague(); };
-ACT.lgReady = () => { const lg = S.lg; if (!teamInfo().full) return; lg.ready = !lg.ready; if (lg.ready) track("ready", 1); save(); const f = focusKey(); renderLeague(); restoreFocus(f); updateHub(); toast(lg.ready ? "¡Listo para la jornada!" : "Has quitado el LISTO"); };
-ACT.lgForce = () => { S.lg.nextAt = Date.now() - 1; processLeague(); renderLeague(); updateHub(); };
-ACT.lgNewSeason = () => { newSeason(); renderLeague(); toast("Nueva temporada creada"); };
+ACT.lgReady = () => { const lg = S.lg; if (!teamInfo().full) return;
+  if (lg.srv) return lgSrvCargar("utlListo", { listo: !lg.ready }).then(j => { if (j && !j.ok) return info("Liga", esc(j.error || "Sin conexión")); if (S.lg && S.lg.ready) track("ready", 1); const f = focusKey(); renderLeague(); restoreFocus(f); updateHub(); toast(S.lg && S.lg.ready ? "¡Listo para la jornada!" : "Has quitado el LISTO"); });
+  lg.ready = !lg.ready; if (lg.ready) track("ready", 1); save(); const f = focusKey(); renderLeague(); restoreFocus(f); updateHub(); toast(lg.ready ? "¡Listo para la jornada!" : "Has quitado el LISTO"); };
+ACT.lgForce = () => { if (S.lg && S.lg.srv) return; S.lg.nextAt = Date.now() - 1; processLeague(); renderLeague(); updateHub(); };
+ACT.lgNewSeason = () => { if (S.lg && S.lg.srv) return ACT.lgStart(); newSeason(); renderLeague(); toast("Nueva temporada creada"); };
 ACT.lgCode = () => {
   const lg = S.lg;
-  dlg("Invitar amigos", `Pasa este código a tus amigos para que se unan a <b>${esc(lg.name)}</b>.`, [["Copiar código", () => { try { navigator.clipboard.writeText(lg.code).then(() => toast("Código copiado"), () => toast("Cópialo a mano: " + lg.code)); } catch (e) { toast("Cópialo a mano: " + lg.code); } }, true], ["Salir de la liga", () => confirmDlg("Salir de la liga", "Se borrará la liga y su clasificación de este dispositivo.", "Salir", () => { S.lg = null; save(); renderLeague(); updateHub(); }), false, "red"], ["Cerrar", closeDlg]],
-    `<div class="codein">${[...lg.code].map(c => `<span>${c}</span>`).join("")}</div><div class="mute" style="font-size:1.2rem;margin-bottom:1.4rem">Unirse con código funcionará cuando conectemos el servidor (Fase 3).</div>`);
+  dlg("Invitar amigos", `Pasa este código a tus amigos para que se unan a <b>${esc(lg.name)}</b>.`, [["Copiar código", () => { try { navigator.clipboard.writeText(lg.code).then(() => toast("Código copiado"), () => toast("Cópialo a mano: " + lg.code)); } catch (e) { toast("Cópialo a mano: " + lg.code); } }, true], ["Salir de la liga", () => confirmDlg("Salir de la liga", lg.srv ? (lg.started && !lg.done ? "Tu equipo lo seguirá llevando la IA hasta el final de la temporada." : "Saldrás de la liga.") : "Se borrará la liga y su clasificación de este dispositivo.", "Salir", async () => { if (lg.srv) await srvOp("utlSalir", { c: lg.code }); S.lg = null; save(); renderLeague(); updateHub(); }), false, "red"], ["Cerrar", closeDlg]],
+    `<div class="codein">${[...lg.code].map(c => `<span>${c}</span>`).join("")}</div><div class="mute" style="font-size:1.2rem;margin-bottom:1.4rem">${lg.srv ? "Tus amigos lo meten en Ultimate Team › Liga › Unirse con código." : "Esta liga es sin conexión: nadie más puede unirse."}</div>`);
 };
 ACT.lgMatch = el => {
   const lg = S.lg, r = lg.res[+el.dataset.r][+el.dataset.i], H = mem(lg, r.h), A = mem(lg, r.a);
@@ -9222,11 +9232,18 @@ ACT.nlN = el => { keepName(); NEWLG.n = +el.dataset.m; renderNewLeague(); setFoc
 ACT.nlD = el => { keepName(); NEWLG.days = el.dataset.m; renderNewLeague(); setFocus($(`[data-a="nlD"][data-m="${NEWLG.days}"]`)); };
 STEPPERS.hour = d => { keepName(); const [h, m] = NEWLG.hour.split(":").map(Number); let t = (h * 60 + m + d * 30 + 1440) % 1440; NEWLG.hour = `${String(t / 60 | 0).padStart(2, "0")}:${String(t % 60).padStart(2, "0")}`; renderNewLeague(); setFocus($('[data-step="hour"]')); };
 ACT.nlH = el => { STEPPERS.hour(+el.dataset.d); const b = $(`[data-a="nlH"][data-d="${el.dataset.d}"]`); if (navMode() && b) setFocus(b); };
-ACT.nlCreate = () => { keepName(); createLeague(NEWLG); closeDlg(); LT.tab = "tabla"; renderLeague(); updateHub(); toast(`Liga creada · código ${S.lg.code}`); };
+ACT.nlCreate = () => { keepName();
+  if (online()) { if (!teamInfo().full) return info("Equipo incompleto", "Completa tu once titular antes de crear la liga.");
+    return srvOp("utlCrear", { name: NEWLG.name, n: NEWLG.n, hour: NEWLG.hour, days: NEWLG.days, team: miEquipo() }).then(j => { if (!j || !j.ok) return info("Crear liga", esc((j && j.error) || "No hay conexión con el servidor."));
+      S.lg = lgLocal(j.lg); S.ob.sea = {}; S.ob.sgot = {}; ONL.lgT = Date.now(); addLog(`Creó la liga ${S.lg.name} (${S.lg.code})`); save(); closeDlg(); LT.tab = "mem"; renderLeague(); updateHub(); toast(`Liga creada · código ${S.lg.code}`); }); }
+  createLeague(NEWLG); closeDlg(); LT.tab = "tabla"; renderLeague(); updateHub(); toast(`Liga creada · código ${S.lg.code}`); };
 ACT.lgJoin = () => dlg("Unirse con código", "Escribe el código de 6 letras que te ha pasado tu amigo.", [["Unirse", () => {
   const v = ($("#joinCode").value || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
   if (v.length !== 6) return toast("El código tiene 6 letras o números");
-  info("Falta el servidor", `El código <b>${esc(v)}</b> tiene el formato correcto, pero para entrar en la liga de un amigo hace falta el servidor (Fase 3). De momento puedes crear tu propia liga contra la IA.`);
+  if (!online()) return info("Sin conexión", "Para entrar en la liga de un amigo tienes que haber iniciado sesión y tener internet.");
+  if (!teamInfo().full) return info("Equipo incompleto", "Completa tu once titular antes de unirte.");
+  srvOp("utlUnir", { c: v, team: miEquipo() }).then(j => { if (!j || !j.ok) return info("Unirse a la liga", esc((j && j.error) || "No hay conexión con el servidor."));
+    S.lg = lgLocal(j.lg); ONL.lgT = Date.now(); lgPremios(S.lg); save(); closeDlg(); LT.tab = "mem"; renderLeague(); updateHub(); toast(`Te has unido a ${S.lg.name}`); });
 }, true], ["Cancelar", closeDlg]], `<input class="inp" id="joinCode" data-nav data-first maxlength="6" placeholder="ABC123" style="font-size:2.4rem;letter-spacing:.3em;text-transform:uppercase;width:20rem;margin-bottom:1.4rem">`);
 
 /* =====================================================================
@@ -9306,7 +9323,7 @@ ONSHOW.acc = renderAcc;
 document.addEventListener("change", e => {
   const b = e.target.dataset && e.target.dataset.bind; if (!b) return;
   const v = e.target.value.trim().slice(0, 22); S[b] = v || (b === "name" ? "Mánager" : "Mi Club");
-  if (S.lg) { S.lg.members[0].name = S.name; S.lg.members[0].club = S.club; }
+  if (S.lg) { const m = S.lg.members.find(x => x.me) || S.lg.members[0]; m.name = S.name; m.club = S.club; }
   save(); updateHub(); toast("Guardado");
 });
 ACT.accAv = el => { S.av = +el.dataset.i; save(); updateHub(); const f = focusKey(); renderAcc(); restoreFocus(f); };
@@ -11923,6 +11940,7 @@ ACT.lgLive = () => {
   if (!teamInfo().full) return info("Equipo incompleto", "Completa tu once titular para jugar.");
   const fx = lg.rounds[lg.r].find(([h, a]) => mem(lg, h).me || mem(lg, a).me); const meHome = !!mem(lg, fx[0]).me;
   const rival = mem(lg, meHome ? fx[1] : fx[0]);
+  if (!rival.pids) return info("Contra un amigo", "Este partido se simula a la hora de la jornada con las plantillas de los dos. Marca LISTO para no perderlo.");
   const mine = utTeamData(), theirs = botTeamData(rival);
   startMatch({ teams: meHome ? [mine, theirs] : [theirs, mine], humans: [{ t: meHome ? 0 : 1, src: "any" }], cpuTeams: [meHome ? 1 : 0], diff: "Normal", halfLen: (store.get("pre", {}).dur || 3) * 60,
     abandonTxt: "Si abandonas, la jornada se simulará a su hora como siempre.", onAbandon: () => refresh(),
@@ -11932,7 +11950,8 @@ ACT.lgLive = () => {
       if (gf) track("goal", gf); track("match", 1);
       S.squad.xi.forEach(u => { const c = u && C(u); if (c) c.m++; });
       r.ev.filter(e => e.s === me).forEach(e => { const c = e.su && C(e.su); if (c) c.g++; const d = e.au && C(e.au); if (d) d.a++; });
-      lg.ready = true; save(); refresh();
+      lg.ready = true; if (lg.srv) { S.lgLive = Object.assign({ code: lg.code, season: lg.season }, lg.live); srvOp("utlVivo", { c: lg.code, r: lg.r, gf: lg.live.gf, ga: lg.live.ga, ev: lg.live.ev }).then(j => { if (j && j.ok) { S.lg = lgLocal(j.lg); save(); } }); }
+      save(); refresh();
       return `Resultado guardado para la jornada ${lg.r + 1}. Contará en la clasificación cuando se juegue la jornada (${new Date(lg.nextAt).toLocaleString("es-ES", { weekday: "short", hour: "2-digit", minute: "2-digit" })}).`;
     } });
 };
@@ -12828,6 +12847,256 @@ ACT.admTest = () => {
 };
 
 try { if (typeof S !== "undefined" && S) customInit(); } catch (e) { console.warn(e); }
+
+/* =====================================================================
+   ONLINE · todo lo que pasa por el servidor
+   buzón (monedas, sobres y avisos del admin, cartas vendidas), sobres y cartas
+   creados por el admin para todos, mercado entre jugadores reales, códigos de
+   influencer, moderación (baneos con prueba) y ligas con amigos + bots.
+   ===================================================================== */
+var ONL = { mk: [], mkQ: "", busy: false, lgT: 0 };
+function online() { return !!(SES && SES.tok); }
+async function srvOp(op, o) { return cuentaApi("/cuenta/srv", Object.assign({ tok: SES && SES.tok, op, clave: admKey() || undefined }, o || {})); }
+function srvBan(j) { if (!j || !j.ban) return false;
+  try { localStorage.removeItem("mdg27_ses"); } catch (e) {} SES = null;
+  document.body.classList.add("nolog"); info("Cuenta baneada", esc(j.error || "Tu cuenta está baneada.")); setTimeout(cuentaPantalla, 4000); return true; }
+
+/* ---------------- buzón ---------------- */
+function srvState() { if (!S.srv) S.srv = { done: [], gseen: null }; return S.srv; }
+function applyOp(o) {
+  const st = srvState(); if (st.done.includes(o.id)) return; st.done.push(o.id); st.done = st.done.slice(-400);
+  if (o.t === "coins") { addCoins(o.n, o.msg || (o.n >= 0 ? "regalo del equipo de MDG 27" : "ajuste del equipo de MDG 27")); addLog(`Servidor: ${o.n >= 0 ? "+" : ""}${fmt(o.n)} monedas${o.msg ? " · " + o.msg : ""}`); }
+  else if (o.t === "pack") { if (PACKS[o.p]) { S.packs.push(o.p); toast(`Te han regalado un ${PACKS[o.p].n}${o.msg ? " · " + o.msg : ""}`); addLog(`Servidor: regalo ${PACKS[o.p].n}`); } }
+  else if (o.t === "aviso") { setTimeout(() => info("Mensaje del equipo de MDG 27", esc(o.msg || "")), 600); addLog("Aviso: " + (o.msg || "")); }
+  else if (o.t === "vendida") {
+    const s = S.mk.sales.find(x => x.srv === o.lid); const net = Math.round(o.price * .95);
+    if (s && s.done !== "sold") { const c = C(s.u); s.done = "sold"; s.soldAt = Date.now(); s.real = o.comprador || "otro jugador"; if (c) { s.name = P(c).n; s.k = c.k; s.v = c.v; removeCard(s.u); } }
+    else if (!s && o.lid) { /* la venta ya no está en este dispositivo: se cobran igual las monedas */ }
+    S.coins += net; S.st.sell++; track("sell", 1); updateCoins();
+    toast(`¡${esc(o.comprador || "Un jugador")} ha comprado a ${shortName(o.name || "tu carta")} por ${fmt(o.price)}! (+${fmt(net)})`); addLog(`Vendió ${o.name || "una carta"} a ${o.comprador || "un jugador"} por ${fmt(o.price)}`);
+  }
+}
+async function srvSync() {
+  if (!online() || ONL.busy || typeof S === "undefined") return; ONL.busy = true;
+  try { const st = srvState(), ack = st.done.slice(-60);
+    const j = await srvOp("sync", { ack, gseen: st.gseen });
+    if (srvBan(j)) return; if (!j || !j.ok) return;
+    for (const o of j.ops || []) applyOp(o);
+    for (const o of j.g || []) applyOp(o);
+    st.gseen = Math.max(st.gseen || 0, j.gmax || 0);
+    if ((j.cfgV || 0) !== +(localStorage.getItem("mdg27_cfgv") || 0)) await cfgBajar();
+    if (admKey() && S.custom) cfgPublicar();
+    save(); updateHub && updateHub();
+  } catch (e) { console.warn(e); } finally { ONL.busy = false; }
+}
+setTimeout(srvSync, 3500); setInterval(srvSync, 60000);
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") srvSync(); });
+
+/* ---------------- sobres y tipos de carta del admin, para todos ---------------- */
+function cfgRegistrar() { let c = null; try { c = JSON.parse(localStorage.getItem("mdg27_cfg") || "null"); } catch (e) {} if (!c) return;
+  const mineT = new Set(((S.custom || {}).types || []).map(t => t.id)), mineP = new Set(((S.custom || {}).packs || []).map(p => p.id));
+  for (const t of c.types || []) if (!mineT.has(t.id)) registerType(t);
+  for (const p of c.packs || []) if (!mineP.has(p.id)) registerPack(p); }
+async function cfgBajar() { const j = await srvOp("cfg"); if (!j || !j.ok) return;
+  try { localStorage.setItem("mdg27_cfg", JSON.stringify(j.custom || {})); localStorage.setItem("mdg27_cfgv", String(j.v || 0)); } catch (e) {}
+  cfgRegistrar(); if (current && current.id === "shop") renderShop(); }
+let cfgUlt = null;
+async function cfgPublicar() { const s = JSON.stringify(S.custom || {}); if (cfgUlt === null) cfgUlt = localStorage.getItem("mdg27_cfgpub") || ""; if (s === cfgUlt) return;
+  const j = await srvOp("admCfg", { custom: S.custom }); if (j && j.ok) { cfgUlt = s; try { localStorage.setItem("mdg27_cfgpub", s); localStorage.setItem("mdg27_cfgv", String(j.v)); } catch (e) {} toast("Sobres y cartas publicados para todos los jugadores"); } }
+try { cfgRegistrar(); } catch (e) { console.warn(e); }
+
+/* ---------------- código de creador (influencers) ---------------- */
+const INF_DTO = .15;
+const infCode = () => S.inf || "";
+{ const _buy = ACT.buyPack;
+  ACT.buyPack = el => { const t = el.dataset.t, pk = PACKS[t]; if (!infCode() || !pk) return _buy(el);
+    if (!packAvailable(t)) return info(pk.n, "Este sobre no está disponible: no hay jugadores de este nivel en la base de datos.");
+    const price = Math.round(pk.price * (1 - INF_DTO));
+    if (S.coins < price) return info("Monedas insuficientes", `Te faltan <b>${fmt(price - S.coins)}</b> monedas.`);
+    confirmDlg("Comprar " + pk.n, `${pk.desc}<br>Precio: <s class="mute">${fmt(pk.price)}</s> <b>${fmt(price)}</b> monedas<br><span class="mute">Descuento del 15 % con el código de creador <b>${esc(infCode())}</b>.</span>`, "Comprar y abrir", () => {
+      addCoins(-price); openPack(t); if (online()) srvOp("gasto", { c: infCode(), n: price }); }); }; }
+ACT.infSet = async () => { const v = (($("#infIn") || {}).value || "").trim().toUpperCase();
+  if (!v) { S.inf = ""; save(); toast("Código de creador quitado"); return renderAcc(); }
+  if (!online()) return toast("Necesitas conexión para poner un código");
+  const j = await srvOp("codigo", { c: v }); if (!j || !j.ok) return info("Código de creador", esc((j && j.error) || "No se ha podido comprobar."));
+  if (j.de === SES.u) return info("Código de creador", "No puedes usar tu propio código.");
+  S.inf = j.c; save(); renderAcc(); toast(`Código ${j.c} activado: 15 % de descuento en sobres`); };
+{ const _r = renderAcc;
+  renderAcc = function () { _r(); const box = $("#accBody .acc .panel.scroll"); if (!box) return;
+    const fase = [...box.querySelectorAll(".mute")].find(e => /Fase 3/.test(e.textContent));
+    if (fase) fase.textContent = online() ? `Tu partida se guarda en tu cuenta (${SES.u}) y se sincroniza sola entre dispositivos.` : "Estás jugando sin conexión: la partida se guarda en este dispositivo.";
+    const extra = document.createElement("div"); extra.style.cssText = "display:flex;flex-direction:column;gap:1rem";
+    extra.innerHTML = `<div class="lbl">Código de creador</div>
+      <div class="mkbar" style="margin:0"><input class="inp" id="infIn" data-nav data-enter="infSet" maxlength="16" placeholder="CÓDIGO" value="${esc(infCode())}" style="width:16rem;text-transform:uppercase"><button class="mbtn gold" data-nav data-a="infSet">${infCode() ? "Cambiar" : "Usar"}</button></div>
+      <div class="mute" style="font-size:1.2rem">Con el código de un creador de contenido tienes un 15 % de descuento en todos los sobres.</div>
+      ${SES && SES.rango === "inf" ? `<div class="okb">Eres influencer. Tu código: <b>${esc(SES.cod)}</b></div>` : ""}
+      ${SES && SES.rango === "mod" ? `<div class="okb">Eres moderador.</div><button class="mbtn red" data-nav data-a="modOpen">Moderar</button>` : ""}`;
+    box.appendChild(extra); };
+  ONSHOW.acc = renderAcc;
+}
+// el rango y el código llegan con la sesión
+{ const _g = cuentaGuardar; cuentaGuardar = function (j) { const r = _g(j); if (SES) { SES.rango = j.rango || ""; SES.cod = j.cod || ""; try { localStorage.setItem("mdg27_ses", JSON.stringify(SES)); } catch (e) {} } return r; }; }
+setTimeout(() => { if (online()) cuentaApi("/cuenta/yo", { tok: SES.tok }).then(j => { if (srvBan(j)) return; if (j && j.ok && SES) { SES.rango = j.rango || ""; SES.cod = j.cod || ""; try { localStorage.setItem("mdg27_ses", JSON.stringify(SES)); } catch (e) {} } }); }, 4000);
+
+/* ---------------- admin y moderación ---------------- */
+const fechaC = t => t ? new Date(t).toLocaleString("es-ES", { day: "2-digit", month: "2-digit", year: "2-digit", hour: "2-digit", minute: "2-digit" }) : "—";
+const RANGO_N = { mod: "Moderador", inf: "Influencer", "": "Jugador" };
+function usuariosDlg(modo) {   // modo: "admin" | "mod" | "rango"
+  const t = modo === "rango" ? "Rangos" : modo === "mod" ? "Moderar" : "Usuarios y baneos";
+  dlg(t, "", [], `<div class="mkbar"><input class="inp" id="usQ" data-nav data-first data-enter="usBuscar" placeholder="Nombre de usuario (vacío = todos)" style="width:26rem"><button class="mbtn gold" data-nav data-a="usBuscar" data-m="${modo}">Buscar</button>
+    ${modo === "admin" ? `<button class="mbtn" data-nav data-a="usTodos">A todos</button><button class="mbtn" data-nav data-a="usBans">Baneos</button><button class="mbtn" data-nav data-a="usLigas">Ligas</button><button class="mbtn" data-nav data-a="usLog">Registro</button>` : modo === "mod" ? `<button class="mbtn" data-nav data-a="usBans">Baneos</button>` : ""}
+    <button class="mbtn" data-nav data-a="closeDlg">Cerrar</button></div><div class="scroll" id="usRes" style="max-height:58vh"><div class="empty">Escribe un nombre y pulsa Buscar.</div></div>`, { wide: true });
+  ONL.modo = modo; }
+ACT.usBuscar = async () => { const q = (($("#usQ") || {}).value || "").trim(), box = $("#usRes"); if (!box) return; box.innerHTML = `<div class="empty">Buscando…</div>`;
+  const j = await srvOp("usuarios", { q }); if (!j || !j.ok) { box.innerHTML = `<div class="empty">${esc((j && j.error) || "Sin conexión")}</div>`; return; }
+  ONL.us = j.usuarios; const m = ONL.modo;
+  box.innerHTML = j.usuarios.length ? `<table class="tb"><tr><th class="l">Usuario</th><th class="l">Nombre</th><th>Alta</th><th>Rango</th><th>Estado</th><th></th></tr>${j.usuarios.map((x, i) => `<tr><td class="l"><b>${esc(x.u)}</b></td><td class="l">${esc(x.nombre)}</td><td>${fechaC(x.alta)}</td><td>${x.admin ? "Admin" : RANGO_N[x.rango] + (x.cod ? " · " + esc(x.cod) : "")}</td><td>${x.ban ? `<span style="color:#ff6b6b">Baneado${x.ban.hasta ? " hasta " + fechaC(x.ban.hasta) : ""}</span>` : "OK"}</td>
+    <td style="white-space:nowrap">${m === "rango" ? `<button class="mbtn" data-nav data-a="usRango" data-i="${i}">Rango</button>` : m === "mod" ? (x.ban ? "" : `<button class="mbtn red" data-nav data-a="usBan" data-i="${i}">Banear</button>`) :
+      `<button class="mbtn" data-nav data-a="usDar" data-i="${i}">Dar</button>${x.ban ? `<button class="mbtn gold" data-nav data-a="usDesban" data-i="${i}">Desbanear</button>` : x.admin ? "" : `<button class="mbtn red" data-nav data-a="usBan" data-i="${i}">Banear</button>`}`}</td></tr>`).join("")}</table>` : `<div class="empty">Ninguna cuenta con ese nombre.</div>`;
+  if (navMode()) { const f = box.querySelector("button"); if (f) setFocus(f); } };
+// dar monedas / sobre / aviso a uno (data-i) o a todos (a="*")
+function darDlg(a, quien) {
+  const packs = Object.keys(PACKS).filter(k => packAvailable(k));
+  dlg("Enviar a " + quien, "Llega a su juego en menos de un minuto (o al abrirlo).", [], `<div class="aform">
+    <label class="afld"><span>Qué</span><select class="inp" id="drT" data-nav data-first><option value="coins">Monedas</option><option value="pack">Sobre</option><option value="aviso">Solo un aviso</option></select></label>
+    <label class="afld"><span>Monedas (negativo para quitar)</span><input class="inp" id="drN" type="number" value="10000" data-nav></label>
+    <label class="afld"><span>Sobre</span><select class="inp" id="drP" data-nav>${packs.map(k => `<option value="${k}">${esc(PACKS[k].n)}</option>`).join("")}</select></label>
+    <label class="afld"><span>Mensaje (opcional)</span><input class="inp" id="drM" maxlength="300" data-nav placeholder="¡Gracias por jugar!"></label></div>
+    <div class="acts"><button class="mbtn gold" data-nav data-a="drGo" data-u="${esc(a)}">Enviar</button><button class="mbtn" data-nav data-a="closeDlg">Cancelar</button></div>`); }
+ACT.usDar = el => { const x = ONL.us[+el.dataset.i]; darDlg(x.u, x.u); };
+ACT.usTodos = () => darDlg("*", "TODOS los jugadores");
+ACT.drGo = async el => { const a = el.dataset.u, t = $("#drT").value, n = +$("#drN").value || 0, p = $("#drP").value, msg = $("#drM").value.trim();
+  if (t === "aviso" && !msg) return toast("Escribe el aviso");
+  const go = async () => { const j = await srvOp("admDar", { a, t, n, p, msg }); if (!j || !j.ok) return info("Error", esc((j && j.error) || "No se ha podido enviar."));
+    closeDlg(); toast(a === "*" ? "Enviado a todos los jugadores" : "Enviado a " + a); };
+  if (a === "*") confirmDlg("Enviar a todos", `Se enviará ${t === "coins" ? fmt(n) + " monedas" : t === "pack" ? "un " + esc(PACKS[p].n) : "el aviso"} a <b>todas las cuentas</b>. No se puede deshacer.`, "Enviar", go); else go(); };
+ACT.usBan = el => { const x = ONL.us[+el.dataset.i], mod = ONL.modo === "mod";
+  dlg("Banear a " + x.u, mod ? "Como moderador tienes que escribir el motivo y adjuntar una prueba (captura o vídeo). El administrador puede revisarlo y anularlo." : "", [], `<div class="aform">
+    <label class="afld"><span>Motivo</span><input class="inp" id="bnM" maxlength="400" data-nav data-first placeholder="Insultos en el chat, trampas…"></label>
+    <label class="afld"><span>Duración</span><select class="inp" id="bnH" data-nav><option value="24">1 día</option><option value="168">1 semana</option><option value="720">1 mes</option><option value="0">Para siempre</option></select></label>
+    <label class="afld"><span>Prueba (imagen o vídeo, máx. 6 MB)${mod ? "" : " · opcional"}</span><input class="inp" id="bnF" type="file" accept="image/*,video/*" data-nav></label></div>
+    <div class="acts"><button class="mbtn red" data-nav data-a="bnGo" data-u="${esc(x.u)}">Banear</button><button class="mbtn" data-nav data-a="closeDlg">Cancelar</button></div>`); };
+ACT.bnGo = el => { const a = el.dataset.u, motivo = $("#bnM").value.trim(), horas = +$("#bnH").value, f = $("#bnF").files && $("#bnF").files[0];
+  if (ONL.modo === "mod" && (motivo.length < 5 || !f)) return toast("Escribe el motivo y adjunta la prueba");
+  if (f && f.size > 6e6) return toast("La prueba pesa más de 6 MB");
+  const go = async prueba => { toast("Enviando…"); const j = await srvOp("ban", { a, motivo, horas, prueba }); if (!j || !j.ok) return info("No se ha podido banear", esc((j && j.error) || "Sin conexión"));
+    closeDlg(); toast(a + " baneado"); };
+  if (!f) return go(""); const rd = new FileReader(); rd.onload = () => go(rd.result); rd.readAsDataURL(f); };
+ACT.usDesban = async el => { const x = ONL.us[+el.dataset.i]; const j = await srvOp("desban", { a: x.u }); if (j && j.ok) { toast(x.u + " desbaneado"); ACT.usBuscar(); } else info("Error", esc((j && j.error) || "")); };
+ACT.usBans = async () => { const j = await srvOp("banList"); if (!j || !j.ok) return info("Baneos", esc((j && j.error) || "Sin conexión"));
+  ONL.bans = j.bans; const adm = !!admKey();
+  dlg("Baneos", "", [], `<div class="scroll" style="max-height:62vh">${j.bans.length ? `<table class="tb"><tr><th>Fecha</th><th class="l">Cuenta</th><th class="l">Por</th><th class="l">Motivo</th><th>Hasta</th><th></th></tr>${j.bans.map((b, i) => `<tr${b.anulado ? ' style="opacity:.45"' : ""}><td>${fechaC(b.at)}</td><td class="l"><b>${esc(b.u)}</b></td><td class="l">${esc(b.por)}</td><td class="l">${esc(b.motivo)}</td><td>${b.hasta ? fechaC(b.hasta) : "Siempre"}</td>
+    <td style="white-space:nowrap">${b.prueba ? `<button class="mbtn" data-nav data-a="bnVer" data-i="${i}">Prueba</button>` : ""}${adm && !b.anulado ? `<button class="mbtn gold" data-nav data-a="bnAnular" data-i="${i}">Anular</button>` : b.anulado ? "Anulado" : ""}</td></tr>`).join("")}</table>` : `<div class="empty">No hay baneos.</div>`}</div>
+    <div class="acts"><button class="mbtn" data-nav data-a="closeDlg" data-first>Cerrar</button></div>`, { wide: true }); };
+ACT.bnVer = async el => { const b = ONL.bans[+el.dataset.i]; const j = await srvOp("prueba", { id: b.prueba }); if (!j || !j.ok) return toast("No se ha podido cargar la prueba");
+  const v = /^data:video/.test(j.d); dlg("Prueba · " + b.u, esc(b.motivo), [["Volver", ACT.usBans, true]], v ? `<video src="${j.d}" controls style="max-width:100%;max-height:55vh"></video>` : `<img src="${j.d}" alt="" style="max-width:100%;max-height:55vh">`, { wide: true }); };
+ACT.bnAnular = async el => { const b = ONL.bans[+el.dataset.i]; const j = await srvOp("desban", { a: b.u, id: b.id }); if (j && j.ok) { toast("Baneo anulado"); ACT.usBans(); } };
+ACT.usLog = async () => { const j = await srvOp("admLog"); if (!j || !j.ok) return info("Registro", "Sin conexión");
+  info("Registro del servidor", j.log.length ? `<div class="scroll" style="max-height:52vh">${j.log.map(l => `<div class="ev" style="grid-template-columns:13rem 8rem 1fr"><span class="mute">${fechaC(l.at)}</span><b>${esc(l.por)}</b><span>${esc(l.txt)}</span></div>`).join("")}</div>` : "Todavía no hay acciones."); };
+ACT.usRango = el => { const x = ONL.us[+el.dataset.i];
+  dlg("Rango de " + x.u, "• <b>Moderador</b>: puede banear con motivo y prueba; tú lo revisas y lo puedes anular.<br>• <b>Influencer</b>: etiqueta y código propio con un 15 % de descuento en sobres.", [], `<div class="aform">
+    <label class="afld"><span>Rango</span><select class="inp" id="rgR" data-nav data-first><option value="">Jugador normal</option><option value="mod"${x.rango === "mod" ? " selected" : ""}>Moderador</option><option value="inf"${x.rango === "inf" ? " selected" : ""}>Influencer</option></select></label>
+    <label class="afld"><span>Código (solo influencer)</span><input class="inp" id="rgC" maxlength="16" data-nav value="${esc(x.cod || x.u.toUpperCase())}" style="text-transform:uppercase"></label></div>
+    <div class="acts"><button class="mbtn gold" data-nav data-a="rgGo" data-u="${esc(x.u)}">Guardar</button><button class="mbtn" data-nav data-a="closeDlg">Cancelar</button></div>`); };
+ACT.rgGo = async el => { const j = await srvOp("rango", { a: el.dataset.u, rango: $("#rgR").value, cod: $("#rgC").value }); if (!j || !j.ok) return info("Rangos", esc((j && j.error) || "Sin conexión")); closeDlg(); toast("Rango guardado"); usuariosDlg("rango"); ACT.usBuscar(); };
+ACT.modOpen = () => usuariosDlg("mod");
+async function infTablaDlg() { const j = await srvOp("infTabla"); if (!j || !j.ok) return info("Influencers", esc((j && j.error) || "Sin conexión"));
+  info("Influencers", j.tabla.length ? `<table class="tb"><tr><th>#</th><th class="l">Código</th><th class="l">Cuenta</th><th>Jugadores</th><th>Compras</th><th>Monedas gastadas</th></tr>${j.tabla.map((x, i) => `<tr><td class="pos">${i + 1}</td><td class="l"><b>${esc(x.c)}</b></td><td class="l">${esc(x.u)}</td><td>${x.jugadores}</td><td>${x.compras}</td><td class="pts">${fmt(x.gasto)}</td></tr>`).join("")}</table>` : "Todavía no hay influencers. Dáselo a una cuenta en «Rangos»."); }
+{ const _srv = ACT.srv;
+  ACT.srv = el => { const t = el.dataset.t;
+    if (t === "Usuarios y baneos") return usuariosDlg("admin");
+    if (t === "Rangos") return usuariosDlg("rango");
+    if (t === "Influencers") return infTablaDlg();
+    return _srv(el); }; }
+ACT.usLigas = async () => { const j = await srvOp("utlTodas"); if (!j || !j.ok) return info("Ligas", "Sin conexión"); ONL.ligas = j.ligas;
+  info("Ligas de Ultimate Team", j.ligas.length ? `<table class="tb"><tr><th class="l">Código</th><th class="l">Nombre</th><th class="l">Creador</th><th>Equipos</th><th>Amigos</th><th>Estado</th><th></th></tr>${j.ligas.map((l, i) => `<tr><td class="l"><b>${l.c}</b></td><td class="l">${esc(l.name)}</td><td class="l">${esc(l.owner)}</td><td>${l.mem}/${l.n}</td><td>${l.humanos}</td><td>${l.started ? (l.done ? "Terminada" : "T" + l.season) : "Esperando"}</td>
+    <td>${(!l.started || l.done) && l.mem < l.n ? `<button class="mbtn gold" data-nav data-a="usLigaBots" data-i="${i}">Rellenar con bots</button>` : ""}</td></tr>`).join("")}</table>` : "Nadie ha creado ligas todavía."); };
+ACT.usLigaBots = async el => { const l = ONL.ligas[+el.dataset.i]; const v = await srvOp("utlVer", { c: l.c, admin: 1 }); if (!v || !v.ok) return toast("No se ha podido abrir la liga");
+  const j = await srvOp("utlBots", { c: l.c, bots: botsPara(v.lg, v.lg.n - v.lg.mem.length) }); if (!j || !j.ok) return info("Ligas", esc((j && j.error) || "")); toast("Liga rellenada con bots"); ACT.usLigas(); };
+
+/* ---------------- mercado entre jugadores ---------------- */
+const qualOf = c => VER[c.v].sp ? "SP" : ovOf(c) >= 75 ? "ORO" : ovOf(c) >= 65 ? "PLATA" : "BRONCE";
+async function mkReal() { if (!online()) { ONL.mk = []; return; } const q = S.mk.q;
+  const j = await srvOp("mkBuscar", { q: q.name || "", g: q.g, t: q.t }); ONL.mk = j && j.ok ? j.list.filter(l => PBY[l.c.k] && VER[l.c.v]) : [];
+  if (current && current.id === "market" && MT.tab === "buscar" && !$("#dlg").classList.contains("on")) { const f = focusKey(); renderMarket(); restoreFocus(f); } }
+function realHTML(l) { const c = { k: l.c.k, v: l.c.v, lv: l.c.lv || 0, u: 0 };
+  return `<div class="li real">${cardHTML(c)}<div class="pr"><span>Vende</span><b style="color:var(--gold2)">${esc(l.sn)}</b></div><div class="pr"><span>Compra ya</span><b>${fmt(l.price)}</b></div>
+    <div class="tm" data-end="${l.end}">${ago(l.end - Date.now())}</div><div class="bb"><button class="mbtn pri" data-nav data-a="mkBuyReal" data-id="${l.id}">Comprar</button></div></div>`; }
+ACT.mkBuyReal = el => { const l = ONL.mk.find(x => x.id === el.dataset.id); if (!l) return; const n = PBY[l.c.k].n;
+  if (S.coins < l.price) return info("Monedas insuficientes", `Te faltan <b>${fmt(l.price - S.coins)}</b> monedas.`);
+  confirmDlg("Comprar a " + esc(l.sn), `¿Comprar a <b>${esc(n)}</b> (${VER[l.c.v].n}) por <b>${fmt(l.price)}</b> monedas? Se la compras a otro jugador de verdad.`, "Comprar", async () => {
+    const j = await srvOp("mkComprar", { id: l.id, max: l.price }); if (!j || !j.ok) { ONL.mk = ONL.mk.filter(x => x !== l); renderMarket(); return info("No se ha podido comprar", esc((j && j.error) || "Sin conexión")); }
+    S.coins -= j.price; const c = mkCard(j.c.k, j.c.v); if (j.c.lv) c.lv = j.c.lv; S.cards.push(c); S.st.buy++; track("buy", 1); addLog(`Compró ${n} a ${j.sn} por ${fmt(j.price)}`);
+    ONL.mk = ONL.mk.filter(x => x !== l); updateCoins(); save(); renderMarket(); updateHub(); toast(`${shortName(n)} fichado`); srvSync(); }); };
+{ const _rm = renderMarket;
+  renderMarket = function () { _rm(); if (MT.tab !== "buscar" || !ONL.mk.length) return; const lst = $("#marketBody .lst"); if (!lst) return;
+    lst.insertAdjacentHTML("afterbegin", `<div class="lbl" style="width:100%;flex-basis:100%">De otros jugadores</div>${ONL.mk.map(realHTML).join("")}<div class="lbl" style="width:100%;flex-basis:100%">Mercado</div>`); };
+  const _s = ACT.mkSearch; ACT.mkSearch = () => { _s(); mkReal(); };
+  const _on = ONSHOW.market; ONSHOW.market = () => { _on(); mkReal(); };
+  // al poner una carta a la venta, también la ven los demás jugadores
+  const _sc = ACT.sellConfirm; ACT.sellConfirm = () => { const u = SELL.u, c = C(u), price = SELL.steps[SELL.i], min = SELL.dur; _sc(); if (!online() || !c) return;
+    const s = S.mk.sales.find(x => x.u === u && !x.done); const p = P(c);
+    srvOp("mkVender", { c: { k: c.k, v: c.v, lv: c.lv || 0 }, name: p.n, pos: p.pos, grp: GROUP[p.pos], ov: ovOf(c), q: qualOf(c), price, min, nombre: S.name }).then(j => { if (j && j.ok && s) { s.srv = j.id; save(); } }); };
+  const _w = ACT.mkWithdraw; ACT.mkWithdraw = el => { const s = S.mk.sales.find(x => x.u === +el.dataset.u && !x.done);
+    if (!s || !s.srv || !online()) return _w(el);
+    srvOp("mkRetirar", { id: s.srv }).then(j => { if (j && j.vendida) { toast("¡Ya la ha comprado otro jugador! Te llegan las monedas."); srvSync(); } else _w(el); }); };
+}
+// la IA del mercado solo puede comprar una carta que también está en el servidor si antes se retira de allí (así nunca se vende dos veces)
+function mkBotSale(s, done) { if (!s.srv || !online()) return done(); if (s.pend) return; s.pend = 1;
+  srvOp("mkRetirar", { id: s.srv }).then(j => { s.pend = 0; if (j && j.vendida) { srvSync(); return; } if (j && j.ok) { s.srv = null; done(); } }); }
+
+/* ---------------- ligas con amigos (en el servidor) ---------------- */
+function miEquipo() { const slots = FORMS[S.squad.f];
+  return { name: S.name, club: S.club || "Mi Club", av: S.av, str: teamStrength(), kit: typeof clubKit === "function" ? clubKit() : null,
+    pl: S.squad.xi.map((u, i) => { const c = u && C(u); return c ? { name: shortName(P(c).n), pos: slots[i][0], u } : null; }).filter(Boolean) }; }
+function botsPara(lg, n) { const hum = (lg.mem || lg.members).filter(m => !m.bot), base = Math.max(70, Math.round(hum.reduce((s, m) => s + (m.str || 72), 0) / Math.max(1, hum.length)) - 2), out = [];
+  for (let i = 0; i < n; i++) { const t = clamp(base + Math.round(rnd() * 7) - 4, 64, 88), pids = botSquad(t), slots = FORMS["4-3-3"];
+    const pl = pids.map((k, j) => ({ k, name: shortName(PBY[k].n), pos: slots[j][0], ov: PBY[k].ov })), used = new Set(pids);
+    const obj = []; for (let q = 0; q < 10; q++) { const pos = pick(slots)[0], cand = PL.filter(p => p.pos === pos && !used.has(p.k) && p.ov >= t + 2 && p.ov <= t + 7); if (!cand.length) continue; const p = pick(cand); used.add(p.k); obj.push({ k: p.k, name: shortName(p.n), pos, ov: p.ov }); }
+    out.push({ str: pl.reduce((s, p) => s + p.ov, 0) / 11 + 1 + rnd() * 1.5, pl, obj }); }
+  return out; }
+// la liga del servidor con la misma forma que la liga local, para usar las mismas pantallas
+function lgLocal(g) { const yo = g.yo, prev = S.lg || {};
+  return { srv: 1, code: g.c, name: g.name, n: g.n, season: Math.max(1, g.season), hour: g.hour, days: g.days, started: g.started, done: g.done, owner: g.esDueño, news: g.news || [],
+    members: g.mem.map(m => ({ id: m.id, me: m.id === yo ? 1 : 0, u: m.u, bot: m.bot, name: m.name, club: m.club, av: m.av, str: m.str, pl: m.pl, ready: m.ready,
+      pids: m.bot && m.pl.length === 11 && m.pl.every(p => p.k && PBY[p.k]) ? m.pl.map(p => p.k) : null })),
+    rounds: g.rounds, res: g.res, r: g.r, nextAt: g.nextAt, ready: !!(g.mem[yo] && g.mem[yo].ready), avisos: prev.code === g.c && prev.r === g.r ? prev.avisos || 0 : 0,
+    live: S.lgLive && S.lgLive.code === g.c && S.lgLive.r === g.r && S.lgLive.season === g.season ? S.lgLive : null, final: prev.code === g.c && prev.season === Math.max(1, g.season) ? prev.final : null }; }
+// premios y estadísticas de las jornadas que ya se han jugado en el servidor
+function lgPremios(lg) { const key = lg.code + ":" + lg.season, seen = (S.lgSeen = S.lgSeen || {}), msgs = []; let n = seen[key] || 0;
+  for (; n < lg.res.length; n++) { const r = lg.res[n].find(x => mem(lg, x.h).me || mem(lg, x.a).me); if (!r) continue;
+    const meHome = !!mem(lg, r.h).me, gf = meHome ? r.hg : r.ag, ga = meHome ? r.ag : r.hg, rival = mem(lg, meHome ? r.a : r.h).club, res = gf > ga ? "W" : gf === ga ? "D" : "L";
+    const ffMe = r.ff && ((meHome && r.ag === 3) || (!meHome && r.hg === 3) || r.ff === 2), coins = ffMe ? 0 : res === "W" ? 800 : res === "D" ? 400 : 200;
+    S.st.played++; S.st.gf += gf; S.st.ga += ga; if (res === "W") { S.st.won++; track("win", 1); } else if (res === "D") S.st.drawn++; else S.st.lost++;
+    if (!r.live && !ffMe) { if (gf) track("goal", gf); track("match", 1); S.squad.xi.forEach(u => { const c = u && C(u); if (c) c.m++; });
+      r.ev.filter(e => e.s === (meHome ? 0 : 1)).forEach(e => { const c = e.su && C(e.su); if (c) c.g++; const d = e.au && C(e.au); if (d) d.a++; }); }
+    S.coins += coins; msgs.push(ffMe ? `Jornada ${n + 1}: no marcaste LISTO y pierdes contra ${rival}` : `Jornada ${n + 1}: ${res === "W" ? "ganaste" : res === "D" ? "empataste" : "perdiste"} ${gf}-${ga} contra ${rival} (+${fmt(coins)} monedas)`); }
+  seen[key] = n;
+  if (lg.done && !seen[key + ":fin"]) { seen[key + ":fin"] = 1; const tb = table(lg), pos = tb.findIndex(t => mem(lg, t.id).me) + 1;
+    const prize = pos === 1 ? [50000, "especial"] : pos === 2 ? [25000, "oro"] : pos === 3 ? [10000, "oro"] : [5000, null];
+    S.coins += prize[0]; if (prize[1]) S.packs.push(prize[1]); if (pos === 1) { S.st.titles++; track("title", 1); } if (pos <= 3) track("top3", 1);
+    lg.final = { pos, coins: prize[0], pack: prize[1] }; addLog(`Temporada ${lg.season} de ${lg.name}: puesto ${pos}`); msgs.push(`Fin de temporada: quedas ${pos}.º (+${fmt(prize[0])} monedas)`); }
+  else if (lg.done && !lg.final) { const tb = table(lg), pos = tb.findIndex(t => mem(lg, t.id).me) + 1; lg.final = { pos, coins: pos === 1 ? 50000 : pos === 2 ? 25000 : pos === 3 ? 10000 : 5000, pack: pos === 1 ? "especial" : pos <= 3 ? "oro" : null }; }
+  if (msgs.length) { updateCoins(); toast(msgs.length > 1 ? `Se han jugado ${msgs.length} jornadas. ${msgs[msgs.length - 1]}` : msgs[0]); }
+  return msgs.length > 0; }
+async function lgSrvCargar(op, o) { const j = await srvOp(op || "utlVer", Object.assign({ c: S.lg && S.lg.code, team: teamInfo().full ? miEquipo() : undefined }, o || {}));
+  if (srvBan(j)) return null;
+  if (!j || !j.ok) { if (j && j.gone) { S.lg = null; save(); toast(j.error || "La liga ya no existe"); if (current && current.id === "league") renderLeague(); updateHub(); } return j; }
+  S.lg = lgLocal(j.lg); lgPremios(S.lg); save(); ONL.lgT = Date.now(); return j; }
+function lgSrvProcesar() { const lg = S.lg; if (!online()) return false;
+  if (!ONL.lgBusy && (Date.now() - ONL.lgT > 45000 || (lg.started && !lg.done && Date.now() >= lg.nextAt))) { ONL.lgBusy = 1;
+    lgSrvCargar().then(() => { ONL.lgBusy = 0; if (current && current.id === "league" && !$("#dlg").classList.contains("on")) { const f = focusKey(); renderLeague(); restoreFocus(f); } updateHub(); }); }
+  if (lg.started && !lg.done && !lg.ready) { const rem = lg.nextAt - Date.now(), cnt = rem <= 15 * 60000 ? 3 : rem <= 3600000 ? 2 : rem <= 3 * 3600000 ? 1 : 0;
+    if (cnt > (lg.avisos || 0)) { lg.avisos = cnt; save(); toast(`Aviso ${cnt}/3: la jornada ${lg.r + 1} empieza en ${ago(rem)}. Pulsa LISTO.`); return true; } }
+  return false; }
+// pantalla de espera: amigos que van entrando, y el creador puede rellenar con bots
+function lgEsperaHTML(lg) { const falta = lg.n - lg.members.length;
+  return `<div class="lbl">${lg.done ? `Temporada ${lg.season} terminada` : "Esperando jugadores"}</div><div class="big">${lg.members.length}/${lg.n}</div>
+    <div class="mute" style="text-align:center;font-size:1.25rem;line-height:1.5">Pasa el código <b style="color:var(--gold2)">${lg.code}</b> a tus amigos para que entren con «Unirse con código».${lg.owner ? (falta ? ` Si no tenéis ${lg.n}, rellena los huecos con bots: fichan, juegan y compiten como cualquier mánager.` : "") : " Cuando estéis todos, el creador empieza la liga."}</div>
+    ${lg.owner ? `${falta ? `<button class="mbtn gold" data-nav data-a="lgBots" data-first>Rellenar ${falta} hueco${falta > 1 ? "s" : ""} con bots y empezar</button>` : ""}
+      ${lg.members.length % 2 === 0 && lg.members.length >= 2 ? `<button class="mbtn pri" data-nav data-a="lgStart"${falta ? "" : " data-first"}>Empezar ${falta ? `solo con ${lg.members.length}` : "la liga"}</button>` : ""}` : ""}`; }
+ACT.lgBots = async () => { const lg = S.lg; const j = await lgSrvCargar("utlBots", { bots: botsPara(lg, lg.n - lg.members.length), empezar: true }); if (j && !j.ok) return info("Liga", esc(j.error || "")); renderLeague(); updateHub(); toast("¡Liga completa! Empieza la temporada"); };
+ACT.lgStart = async () => { const j = await lgSrvCargar("utlEmpezar"); if (j && !j.ok) return info("Liga", esc(j.error || "")); renderLeague(); updateHub(); toast("¡Empieza la temporada!"); };
 
 const CAR_DATA = {"season": "2026-27", "leagues": {"LaLiga EA Sports": {"country": "España", "cups": ["Copa del Rey", "Supercopa de España"], "continental": [{"comp": "UCL", "positions": [1, 2, 3, 4]}, {"comp": "UEL", "positions": [5]}, {"comp": "UECL", "positions": [6]}]}, "Premier League": {"country": "Inglaterra", "cups": ["FA Cup", "Community Shield"], "continental": [{"comp": "UCL", "positions": [1, 2, 3, 4]}, {"comp": "UEL", "positions": [5]}, {"comp": "UECL", "positions": [6]}]}, "Serie A": {"country": "Italia", "cups": ["Coppa Italia", "Supercoppa Italiana"], "continental": [{"comp": "UCL", "positions": [1, 2, 3, 4]}, {"comp": "UEL", "positions": [5]}, {"comp": "UECL", "positions": [6]}]}, "Bundesliga": {"country": "Alemania", "cups": ["DFB-Pokal", "DFL-Supercup"], "continental": [{"comp": "UCL", "positions": [1, 2, 3, 4]}, {"comp": "UEL", "positions": [5]}, {"comp": "UECL", "positions": [6]}]}, "Ligue 1": {"country": "Francia", "cups": ["Coupe de France", "Trophée des Champions"], "continental": [{"comp": "UCL", "positions": [1, 2, 3, 4]}, {"comp": "UEL", "positions": [5]}, {"comp": "UECL", "positions": [6]}]}, "Liga Portugal Betclic": {"country": "Portugal", "cups": ["Taça de Portugal", "Supertaça Cândido de Oliveira"], "continental": [{"comp": "UCL", "positions": [1, 2]}, {"comp": "UEL", "positions": [3]}, {"comp": "UECL", "positions": [4]}]}, "Eredivisie": {"country": "Países Bajos", "cups": ["KNVB Beker", "Johan Cruijff Schaal"], "continental": [{"comp": "UCL", "positions": [1, 2]}, {"comp": "UEL", "positions": [3]}, {"comp": "UECL", "positions": [4, 5]}]}, "Saudi Pro League": {"country": "Arabia Saudí", "cups": ["King's Cup", "Supercopa de Arabia Saudí"], "continental": [{"comp": "AFC_ELITE", "positions": [1, 2, 3, 4, 5]}, {"comp": "AFC_TWO", "positions": [6]}]}, "Brasileirão Série A": {"country": "Brasil", "cups": ["Copa do Brasil", "Supercopa do Brasil"], "continental": [{"comp": "LIBERTADORES", "positions": [1, 2, 3, 4, 5]}, {"comp": "SUDAMERICANA", "positions": [6, 7, 8, 9, 10, 11]}]}, "Liga Profesional": {"country": "Argentina", "cups": ["Copa Argentina", "Trofeo de Campeones"], "continental": [{"comp": "LIBERTADORES", "positions": [1, 2, 3, 4, 5]}, {"comp": "SUDAMERICANA", "positions": [6, 7, 8, 9, 10, 11]}]}, "LaLiga Hypermotion": {"country": "España", "cups": ["Copa del Rey"], "continental": []}, "EFL Championship": {"country": "Inglaterra", "cups": ["FA Cup"], "continental": []}}, "cups": {"Supercopa de España": {"superCupParticipants": ["FC Barcelona (campeón Liga)", "Real Madrid (subcampeón Liga)", "Real Sociedad (campeón Copa)", "Atlético de Madrid (finalista Copa)"]}, "Community Shield": {"superCupParticipants": ["Arsenal (campeón Premier 2025-26)", "Manchester City (campeón FA Cup 2025-26)"]}, "Supercoppa Italiana": {"superCupParticipants": ["Inter de Milán", "SS Lazio"]}, "DFL-Supercup": {"superCupParticipants": ["FC Bayern München (doblete 2025-26)", "Borussia Dortmund (subcampeón Bundesliga)"]}, "Trophée des Champions": {"superCupParticipants": ["Paris Saint-Germain (campeón Ligue 1)", "RC Lens (campeón Coupe de France)"]}, "Supertaça Cândido de Oliveira": {"superCupParticipants": ["FC Porto (campeón Liga)", "SCU Torreense (campeón Taça; equipo de relleno)"]}, "Johan Cruijff Schaal": {"superCupParticipants": ["AZ Alkmaar (campeón KNVB Beker)", "PSV Eindhoven (campeón Eredivisie)"]}, "Supercopa de Arabia Saudí": {"superCupParticipants": ["Al-Nassr (campeón liga)", "Al-Ahli (3º liga)", "Al-Qadsiah (4º liga)", "Al-Kholood (finalista King's Cup)"]}, "Supercopa do Brasil": {"superCupParticipants": ["Flamengo (campeón Brasileirão 2025)", "Corinthians (campeón Copa do Brasil 2025)"]}, "Trofeo de Campeones": {"superCupParticipants": ["Belgrano (campeón Apertura 2026)", "campeón Clausura 2026 (por definir)"]}, "Supercopa Argentina": {"superCupParticipants": ["Campeón de Liga 2026 (por definir)", "Campeón Copa Argentina 2026 (por definir)"]}}, "continental": {"UCL": {"participantsInGame": ["Paris Saint-Germain", "FC Bayern München", "Real Madrid", "Liverpool", "Inter de Milán", "Manchester City", "Arsenal", "FC Barcelona", "Atlético de Madrid", "Borussia Dortmund", "AS Roma", "Sporting CP", "Aston Villa", "FC Porto", "Manchester United", "Real Betis", "PSV Eindhoven", "Feyenoord", "LOSC Lille", "SSC Napoli", "RB Leipzig", "Villarreal CF", "VfB Stuttgart", "Como 1907", "RC Lens"], "otherParticipants": ["Club Brugge", "Bodø/Glimt", "Fenerbahçe", "Shakhtar Donetsk", "Galatasaray", "Slavia Praga", "Slovan Bratislava", "AEK Atenas", "LASK", "Viking FK", "Sabah FK"]}, "UEL": {"participantsInGame": ["AZ Alkmaar", "Bayer 04 Leverkusen", "SL Benfica", "AFC Bournemouth", "RC Celta", "Crystal Palace", "Juventus", "Olympique de Lyon", "Olympique de Marsella", "AC Milan", "NEC Nijmegen", "Real Sociedad", "Stade Rennais", "Sunderland", "TSG Hoffenheim"], "otherParticipants": ["Anderlecht", "Ararat-Armenia", "Beşiktaş", "Celje", "Celtic", "Dinamo Zagreb", "Ferencváros", "Hapoel Be'er Sheva", "Jagiellonia Białystok", "Lech Poznań", "Levski Sofia", "Lillestrøm", "OFI Creta", "Olympiacos", "Omonia", "Red Bull Salzburg", "Sparta Praga", "Sturm Graz", "SCU Torreense", "Union Saint-Gilloise", "Viktoria Plzeň"]}, "UECL": {"participantsInGame": ["Ajax", "Atalanta", "SC Braga", "Brighton & Hove Albion", "Getafe CF", "AS Mónaco", "SC Freiburg", "FC Twente"], "otherParticipants": ["AGF Aarhus", "Borac Banja Luka", "Brann", "FC Copenhague", "CSKA Sofia", "Egnatia", "Gent", "Hajduk Split", "Heart of Midlothian", "Iberia 1999", "Inter Club d'Escaldes", "Jablonec", "Kairat Almaty", "Kauno Žalgiris", "KuPS", "Lincoln Red Imps", "Lugano", "Midtjylland", "Mjällby AIF", "Nordsjælland", "Pafos", "Panathinaikos", "Estrella Roja", "Riga FC", "Sint-Truiden", "Thun", "Trabzonspor", "Universitatea Craiova"]}, "LIBERTADORES": {"participantsInGame": ["Flamengo", "Palmeiras", "Fluminense", "Corinthians", "Cruzeiro", "Mirassol", "Botafogo", "Bahia", "Estudiantes de La Plata", "Lanús", "Platense", "Independiente Rivadavia", "Rosario Central", "Boca Juniors", "Argentinos Juniors"], "otherParticipants": ["LDU Quito", "Barcelona SC", "O'Higgins", "Peñarol", "Nacional (URU)", "Olimpia", "Cerro Porteño", "Libertad", "Universidad de Chile", "Colo-Colo", "Atlético Nacional", "Independiente Santa Fe", "Junior", "Sporting Cristal", "Universitario", "Alianza Lima", "Bolívar", "The Strongest", "Independiente del Valle", "Universidad Central"]}, "SUDAMERICANA": {"participantsInGame": ["São Paulo", "Grêmio", "Red Bull Bragantino", "Atlético Mineiro", "Santos", "Vasco da Gama", "Botafogo", "River Plate", "Racing Club", "Deportivo Riestra", "San Lorenzo", "Tigre", "Barracas Central", "Boca Juniors", "Lanús"], "otherParticipants": ["Cienciano", "Montevideo City Torque", "Independiente Santa Fe", "América de Cali", "Deportes Tolima", "Universidad Católica", "Palestino", "Danubio", "Defensor Sporting", "Guaraní", "Sportivo Luqueño", "Melgar", "Cusco FC", "Always Ready", "Nacional Potosí", "Aucas", "Deportivo Cuenca", "Carabobo", "Deportivo La Guaira", "Academia Puerto Cabello"]}, "AFC_ELITE": {"participantsInGame": ["Al-Ahli", "Al-Nassr", "Al-Hilal", "Al-Qadsiah", "Al-Ittihad"], "otherParticipants": ["Al Ain", "Shabab Al Ahli", "Al Wasl", "Al Sadd", "Al-Gharafa", "Al-Shamal", "Esteghlal", "Tractor", "Neftchi", "Al-Quwa Al-Jawiya", "Pakhtakor", "Kashima Antlers", "Gamba Osaka", "Vissel Kobe", "Beijing Guoan", "Shanghai Port", "Johor Darul Ta'zim", "Daejeon Hana Citizen", "Kashiwa Reysol", "Kyoto Sanga", "Jeonbuk Hyundai Motors", "Buriram United", "Ratchaburi", "Công An Hà Nội", "Pohang Steelers", "Port FC", "Newcastle Jets"]}}, "clubs": {"Real Madrid": {"transferBudgetM": 225, "wageBudgetM": 520, "objective": "campeón"}, "FC Barcelona": {"transferBudgetM": 110, "wageBudgetM": 400, "objective": "campeón"}, "Atlético de Madrid": {"transferBudgetM": 140, "wageBudgetM": 260, "objective": "champions"}, "Villarreal CF": {"transferBudgetM": 55, "wageBudgetM": 110, "objective": "champions"}, "Real Betis": {"transferBudgetM": 40, "wageBudgetM": 95, "objective": "europa"}, "Athletic Club": {"transferBudgetM": 40, "wageBudgetM": 100, "objective": "europa"}, "Real Sociedad": {"transferBudgetM": 40, "wageBudgetM": 95, "objective": "europa"}, "Valencia CF": {"transferBudgetM": 22, "wageBudgetM": 68, "objective": "mitad"}, "RC Celta": {"transferBudgetM": 22, "wageBudgetM": 60, "objective": "mitad"}, "RC Deportivo": {"transferBudgetM": 12, "wageBudgetM": 42, "objective": "salvacion"}, "Rayo Vallecano": {"transferBudgetM": 12, "wageBudgetM": 42, "objective": "mitad"}, "RCD Espanyol": {"transferBudgetM": 12, "wageBudgetM": 42, "objective": "mitad"}, "Elche CF": {"transferBudgetM": 10, "wageBudgetM": 40, "objective": "salvacion"}, "Getafe CF": {"transferBudgetM": 10, "wageBudgetM": 38, "objective": "mitad"}, "CA Osasuna": {"transferBudgetM": 12, "wageBudgetM": 38, "objective": "mitad"}, "Racing de Santander": {"transferBudgetM": 10, "wageBudgetM": 35, "objective": "salvacion"}, "Levante UD": {"transferBudgetM": 7, "wageBudgetM": 30, "objective": "salvacion"}, "Deportivo Alavés": {"transferBudgetM": 7, "wageBudgetM": 30, "objective": "salvacion"}, "Málaga CF": {"transferBudgetM": 5, "wageBudgetM": 24, "objective": "salvacion"}, "Sevilla FC": {"transferBudgetM": 3, "wageBudgetM": 55, "objective": "mitad"}, "Manchester City": {"transferBudgetM": 531, "wageBudgetM": 450, "objective": "campeón"}, "Chelsea": {"transferBudgetM": 405, "wageBudgetM": 380, "objective": "champions"}, "Tottenham Hotspur": {"transferBudgetM": 350, "wageBudgetM": 260, "objective": "champions"}, "Newcastle United": {"transferBudgetM": 311, "wageBudgetM": 250, "objective": "champions"}, "Aston Villa": {"transferBudgetM": 297, "wageBudgetM": 240, "objective": "champions"}, "Liverpool": {"transferBudgetM": 270, "wageBudgetM": 430, "objective": "campeón"}, "Arsenal": {"transferBudgetM": 225, "wageBudgetM": 380, "objective": "campeón"}, "Ipswich Town": {"transferBudgetM": 221, "wageBudgetM": 110, "objective": "salvacion"}, "Brighton & Hove Albion": {"transferBudgetM": 179, "wageBudgetM": 150, "objective": "europa"}, "Hull City": {"transferBudgetM": 176, "wageBudgetM": 80, "objective": "salvacion"}, "Manchester United": {"transferBudgetM": 172, "wageBudgetM": 380, "objective": "champions"}, "Coventry City": {"transferBudgetM": 161, "wageBudgetM": 85, "objective": "salvacion"}, "Nottingham Forest": {"transferBudgetM": 136, "wageBudgetM": 130, "objective": "mitad"}, "Brentford": {"transferBudgetM": 123, "wageBudgetM": 110, "objective": "mitad"}, "Everton": {"transferBudgetM": 102, "wageBudgetM": 140, "objective": "mitad"}, "Fulham": {"transferBudgetM": 102, "wageBudgetM": 130, "objective": "mitad"}, "Leeds United": {"transferBudgetM": 99, "wageBudgetM": 110, "objective": "salvacion"}, "Crystal Palace": {"transferBudgetM": 85, "wageBudgetM": 130, "objective": "mitad"}, "AFC Bournemouth": {"transferBudgetM": 80, "wageBudgetM": 120, "objective": "mitad"}, "Sunderland": {"transferBudgetM": 76, "wageBudgetM": 100, "objective": "mitad"}, "Inter de Milán": {"transferBudgetM": 70, "wageBudgetM": 250, "objective": "campeón"}, "SSC Napoli": {"transferBudgetM": 80, "wageBudgetM": 200, "objective": "campeón"}, "Juventus": {"transferBudgetM": 164, "wageBudgetM": 230, "objective": "champions"}, "AC Milan": {"transferBudgetM": 90, "wageBudgetM": 200, "objective": "champions"}, "AS Roma": {"transferBudgetM": 60, "wageBudgetM": 160, "objective": "champions"}, "Atalanta": {"transferBudgetM": 60, "wageBudgetM": 110, "objective": "europa"}, "Como 1907": {"transferBudgetM": 80, "wageBudgetM": 90, "objective": "europa"}, "SS Lazio": {"transferBudgetM": 30, "wageBudgetM": 100, "objective": "europa"}, "Fiorentina": {"transferBudgetM": 150, "wageBudgetM": 90, "objective": "europa"}, "Bologna": {"transferBudgetM": 35, "wageBudgetM": 75, "objective": "europa"}, "Udinese": {"transferBudgetM": 15, "wageBudgetM": 45, "objective": "mitad"}, "Torino": {"transferBudgetM": 20, "wageBudgetM": 55, "objective": "mitad"}, "Genoa": {"transferBudgetM": 15, "wageBudgetM": 45, "objective": "mitad"}, "Sassuolo": {"transferBudgetM": 15, "wageBudgetM": 45, "objective": "mitad"}, "Cagliari": {"transferBudgetM": 10, "wageBudgetM": 35, "objective": "salvacion"}, "Lecce": {"transferBudgetM": 8, "wageBudgetM": 30, "objective": "salvacion"}, "Parma": {"transferBudgetM": 20, "wageBudgetM": 45, "objective": "salvacion"}, "Venezia FC": {"transferBudgetM": 10, "wageBudgetM": 30, "objective": "salvacion"}, "AC Monza": {"transferBudgetM": 10, "wageBudgetM": 30, "objective": "salvacion"}, "Frosinone": {"transferBudgetM": 6, "wageBudgetM": 22, "objective": "salvacion"}, "FC Bayern München": {"transferBudgetM": 120, "wageBudgetM": 400, "objective": "campeón"}, "Borussia Dortmund": {"transferBudgetM": 80, "wageBudgetM": 230, "objective": "champions"}, "Bayer 04 Leverkusen": {"transferBudgetM": 90, "wageBudgetM": 180, "objective": "champions"}, "RB Leipzig": {"transferBudgetM": 80, "wageBudgetM": 170, "objective": "champions"}, "VfB Stuttgart": {"transferBudgetM": 50, "wageBudgetM": 120, "objective": "europa"}, "Eintracht Frankfurt": {"transferBudgetM": 50, "wageBudgetM": 110, "objective": "europa"}, "SC Freiburg": {"transferBudgetM": 25, "wageBudgetM": 70, "objective": "europa"}, "1. FSV Mainz 05": {"transferBudgetM": 15, "wageBudgetM": 55, "objective": "mitad"}, "Borussia Mönchengladbach": {"transferBudgetM": 25, "wageBudgetM": 80, "objective": "mitad"}, "SV Werder Bremen": {"transferBudgetM": 15, "wageBudgetM": 65, "objective": "mitad"}, "FC Augsburg": {"transferBudgetM": 12, "wageBudgetM": 50, "objective": "salvacion"}, "TSG Hoffenheim": {"transferBudgetM": 30, "wageBudgetM": 75, "objective": "europa"}, "1. FC Union Berlin": {"transferBudgetM": 12, "wageBudgetM": 55, "objective": "mitad"}, "1. FC Köln": {"transferBudgetM": 10, "wageBudgetM": 50, "objective": "salvacion"}, "Hamburger SV": {"transferBudgetM": 12, "wageBudgetM": 50, "objective": "salvacion"}, "FC Schalke 04": {"transferBudgetM": 8, "wageBudgetM": 45, "objective": "salvacion"}, "SV 07 Elversberg": {"transferBudgetM": 4, "wageBudgetM": 18, "objective": "salvacion"}, "SC Paderborn 07": {"transferBudgetM": 4, "wageBudgetM": 18, "objective": "salvacion"}, "Paris Saint-Germain": {"transferBudgetM": 150, "wageBudgetM": 600, "objective": "campeón"}, "Olympique de Marsella": {"transferBudgetM": 50, "wageBudgetM": 140, "objective": "champions"}, "AS Mónaco": {"transferBudgetM": 50, "wageBudgetM": 120, "objective": "champions"}, "OGC Niza": {"transferBudgetM": 20, "wageBudgetM": 70, "objective": "europa"}, "LOSC Lille": {"transferBudgetM": 30, "wageBudgetM": 85, "objective": "champions"}, "Olympique de Lyon": {"transferBudgetM": 25, "wageBudgetM": 100, "objective": "europa"}, "RC Estrasburgo": {"transferBudgetM": 40, "wageBudgetM": 60, "objective": "europa"}, "RC Lens": {"transferBudgetM": 25, "wageBudgetM": 65, "objective": "europa"}, "Stade Brestois": {"transferBudgetM": 8, "wageBudgetM": 40, "objective": "mitad"}, "Toulouse FC": {"transferBudgetM": 10, "wageBudgetM": 40, "objective": "mitad"}, "AJ Auxerre": {"transferBudgetM": 5, "wageBudgetM": 28, "objective": "salvacion"}, "Stade Rennais": {"transferBudgetM": 30, "wageBudgetM": 80, "objective": "europa"}, "Angers SCO": {"transferBudgetM": 4, "wageBudgetM": 22, "objective": "salvacion"}, "Le Havre AC": {"transferBudgetM": 4, "wageBudgetM": 22, "objective": "salvacion"}, "FC Lorient": {"transferBudgetM": 4, "wageBudgetM": 22, "objective": "salvacion"}, "Paris FC": {"transferBudgetM": 25, "wageBudgetM": 50, "objective": "mitad"}, "ESTAC Troyes": {"transferBudgetM": 3, "wageBudgetM": 18, "objective": "salvacion"}, "Le Mans FC": {"transferBudgetM": 2, "wageBudgetM": 12, "objective": "salvacion"}, "SL Benfica": {"transferBudgetM": 80, "wageBudgetM": 120, "objective": "campeón"}, "FC Porto": {"transferBudgetM": 60, "wageBudgetM": 95, "objective": "campeón"}, "Sporting CP": {"transferBudgetM": 60, "wageBudgetM": 100, "objective": "campeón"}, "SC Braga": {"transferBudgetM": 20, "wageBudgetM": 40, "objective": "europa"}, "Vitória SC": {"transferBudgetM": 6, "wageBudgetM": 18, "objective": "europa"}, "CD Santa Clara": {"transferBudgetM": 3, "wageBudgetM": 10, "objective": "mitad"}, "FC Famalicão": {"transferBudgetM": 5, "wageBudgetM": 12, "objective": "mitad"}, "Gil Vicente FC": {"transferBudgetM": 3, "wageBudgetM": 9, "objective": "mitad"}, "Estoril Praia": {"transferBudgetM": 4, "wageBudgetM": 10, "objective": "mitad"}, "Casa Pia AC": {"transferBudgetM": 2, "wageBudgetM": 8, "objective": "salvacion"}, "Moreirense FC": {"transferBudgetM": 2, "wageBudgetM": 8, "objective": "salvacion"}, "Rio Ave FC": {"transferBudgetM": 4, "wageBudgetM": 10, "objective": "mitad"}, "FC Arouca": {"transferBudgetM": 2, "wageBudgetM": 8, "objective": "salvacion"}, "Estrela da Amadora": {"transferBudgetM": 2, "wageBudgetM": 7, "objective": "salvacion"}, "CD Nacional": {"transferBudgetM": 1.5, "wageBudgetM": 6, "objective": "salvacion"}, "FC Alverca": {"transferBudgetM": 3, "wageBudgetM": 8, "objective": "salvacion"}, "CS Marítimo": {"transferBudgetM": 1.5, "wageBudgetM": 7, "objective": "salvacion"}, "Académico de Viseu FC": {"transferBudgetM": 1, "wageBudgetM": 5, "objective": "salvacion"}, "Ajax": {"transferBudgetM": 50, "wageBudgetM": 90, "objective": "campeón"}, "PSV Eindhoven": {"transferBudgetM": 45, "wageBudgetM": 85, "objective": "campeón"}, "Feyenoord": {"transferBudgetM": 40, "wageBudgetM": 75, "objective": "champions"}, "AZ Alkmaar": {"transferBudgetM": 20, "wageBudgetM": 40, "objective": "champions"}, "FC Twente": {"transferBudgetM": 10, "wageBudgetM": 25, "objective": "europa"}, "FC Utrecht": {"transferBudgetM": 8, "wageBudgetM": 22, "objective": "europa"}, "NEC Nijmegen": {"transferBudgetM": 6, "wageBudgetM": 18, "objective": "europa"}, "Go Ahead Eagles": {"transferBudgetM": 4, "wageBudgetM": 14, "objective": "mitad"}, "sc Heerenveen": {"transferBudgetM": 4, "wageBudgetM": 15, "objective": "mitad"}, "FC Groningen": {"transferBudgetM": 3, "wageBudgetM": 13, "objective": "mitad"}, "Sparta Rotterdam": {"transferBudgetM": 3, "wageBudgetM": 12, "objective": "mitad"}, "Fortuna Sittard": {"transferBudgetM": 3, "wageBudgetM": 11, "objective": "salvacion"}, "PEC Zwolle": {"transferBudgetM": 2, "wageBudgetM": 10, "objective": "salvacion"}, "Excelsior Rotterdam": {"transferBudgetM": 1.5, "wageBudgetM": 8, "objective": "salvacion"}, "Telstar": {"transferBudgetM": 1, "wageBudgetM": 6, "objective": "salvacion"}, "Willem II": {"transferBudgetM": 1.5, "wageBudgetM": 8, "objective": "salvacion"}, "SC Cambuur": {"transferBudgetM": 1.5, "wageBudgetM": 7, "objective": "salvacion"}, "ADO Den Haag": {"transferBudgetM": 2, "wageBudgetM": 9, "objective": "salvacion"}, "Al-Hilal": {"transferBudgetM": 205, "wageBudgetM": 230, "objective": "campeón"}, "Al-Nassr": {"transferBudgetM": 0, "wageBudgetM": 220, "objective": "campeón"}, "Al-Ittihad": {"transferBudgetM": 60, "wageBudgetM": 170, "objective": "campeón"}, "Al-Ahli": {"transferBudgetM": 70, "wageBudgetM": 180, "objective": "campeón"}, "Al-Qadsiah": {"transferBudgetM": 40, "wageBudgetM": 110, "objective": "champions"}, "Al-Ettifaq": {"transferBudgetM": 10, "wageBudgetM": 60, "objective": "mitad"}, "Al-Shabab": {"transferBudgetM": 5, "wageBudgetM": 55, "objective": "mitad"}, "Al-Taawoun": {"transferBudgetM": 8, "wageBudgetM": 35, "objective": "mitad"}, "Al-Fateh": {"transferBudgetM": 5, "wageBudgetM": 25, "objective": "mitad"}, "Al-Khaleej": {"transferBudgetM": 6, "wageBudgetM": 30, "objective": "mitad"}, "Al-Riyadh": {"transferBudgetM": 4, "wageBudgetM": 22, "objective": "salvacion"}, "Al-Fayha": {"transferBudgetM": 3, "wageBudgetM": 22, "objective": "salvacion"}, "Al-Kholood": {"transferBudgetM": 6, "wageBudgetM": 25, "objective": "salvacion"}, "Al-Hazem": {"transferBudgetM": 3, "wageBudgetM": 20, "objective": "salvacion"}, "NEOM": {"transferBudgetM": 25, "wageBudgetM": 60, "objective": "europa"}, "Abha": {"transferBudgetM": 5, "wageBudgetM": 22, "objective": "salvacion"}, "Al-Faisaly": {"transferBudgetM": 1, "wageBudgetM": 18, "objective": "salvacion"}, "Al-Diriyah": {"transferBudgetM": 20, "wageBudgetM": 45, "objective": "mitad"}, "Flamengo": {"transferBudgetM": 50, "wageBudgetM": 110, "objective": "campeón"}, "Palmeiras": {"transferBudgetM": 45, "wageBudgetM": 95, "objective": "campeón"}, "Cruzeiro": {"transferBudgetM": 30, "wageBudgetM": 70, "objective": "champions"}, "Mirassol": {"transferBudgetM": 5, "wageBudgetM": 18, "objective": "mitad"}, "Fluminense": {"transferBudgetM": 15, "wageBudgetM": 55, "objective": "europa"}, "Botafogo": {"transferBudgetM": 20, "wageBudgetM": 60, "objective": "europa"}, "Bahia": {"transferBudgetM": 20, "wageBudgetM": 45, "objective": "europa"}, "São Paulo": {"transferBudgetM": 10, "wageBudgetM": 55, "objective": "europa"}, "Grêmio": {"transferBudgetM": 12, "wageBudgetM": 45, "objective": "mitad"}, "Red Bull Bragantino": {"transferBudgetM": 20, "wageBudgetM": 35, "objective": "europa"}, "Atlético Mineiro": {"transferBudgetM": 20, "wageBudgetM": 65, "objective": "europa"}, "Santos": {"transferBudgetM": 15, "wageBudgetM": 50, "objective": "mitad"}, "Corinthians": {"transferBudgetM": 15, "wageBudgetM": 60, "objective": "europa"}, "Vasco da Gama": {"transferBudgetM": 15, "wageBudgetM": 45, "objective": "mitad"}, "Vitória": {"transferBudgetM": 5, "wageBudgetM": 20, "objective": "salvacion"}, "Internacional": {"transferBudgetM": 15, "wageBudgetM": 50, "objective": "mitad"}, "Athletico Paranaense": {"transferBudgetM": 10, "wageBudgetM": 35, "objective": "mitad"}, "Chapecoense": {"transferBudgetM": 2, "wageBudgetM": 10, "objective": "salvacion"}, "Coritiba": {"transferBudgetM": 4, "wageBudgetM": 15, "objective": "salvacion"}, "Remo": {"transferBudgetM": 3, "wageBudgetM": 12, "objective": "salvacion"}, "River Plate": {"transferBudgetM": 30, "wageBudgetM": 45, "objective": "campeón"}, "Boca Juniors": {"transferBudgetM": 25, "wageBudgetM": 45, "objective": "campeón"}, "Racing Club": {"transferBudgetM": 12, "wageBudgetM": 25, "objective": "champions"}, "Independiente": {"transferBudgetM": 8, "wageBudgetM": 18, "objective": "europa"}, "San Lorenzo": {"transferBudgetM": 3, "wageBudgetM": 12, "objective": "mitad"}, "Estudiantes de La Plata": {"transferBudgetM": 10, "wageBudgetM": 20, "objective": "champions"}, "Gimnasia y Esgrima La Plata": {"transferBudgetM": 2, "wageBudgetM": 7, "objective": "salvacion"}, "Vélez Sarsfield": {"transferBudgetM": 8, "wageBudgetM": 16, "objective": "europa"}, "Huracán": {"transferBudgetM": 3, "wageBudgetM": 9, "objective": "mitad"}, "Lanús": {"transferBudgetM": 5, "wageBudgetM": 12, "objective": "europa"}, "Banfield": {"transferBudgetM": 2, "wageBudgetM": 7, "objective": "mitad"}, "Argentinos Juniors": {"transferBudgetM": 5, "wageBudgetM": 10, "objective": "europa"}, "Talleres de Córdoba": {"transferBudgetM": 6, "wageBudgetM": 14, "objective": "europa"}, "Belgrano": {"transferBudgetM": 4, "wageBudgetM": 10, "objective": "europa"}, "Instituto": {"transferBudgetM": 2, "wageBudgetM": 7, "objective": "salvacion"}, "Rosario Central": {"transferBudgetM": 6, "wageBudgetM": 14, "objective": "europa"}, "Newell's Old Boys": {"transferBudgetM": 3, "wageBudgetM": 9, "objective": "mitad"}, "Unión de Santa Fe": {"transferBudgetM": 2, "wageBudgetM": 7, "objective": "mitad"}, "Defensa y Justicia": {"transferBudgetM": 3, "wageBudgetM": 8, "objective": "mitad"}, "Tigre": {"transferBudgetM": 3, "wageBudgetM": 8, "objective": "mitad"}, "Platense": {"transferBudgetM": 3, "wageBudgetM": 7, "objective": "mitad"}, "Barracas Central": {"transferBudgetM": 3, "wageBudgetM": 7, "objective": "mitad"}, "Deportivo Riestra": {"transferBudgetM": 2, "wageBudgetM": 6, "objective": "mitad"}, "Sarmiento de Junín": {"transferBudgetM": 1.5, "wageBudgetM": 5, "objective": "salvacion"}, "Aldosivi": {"transferBudgetM": 1.5, "wageBudgetM": 5, "objective": "salvacion"}, "Independiente Rivadavia": {"transferBudgetM": 3, "wageBudgetM": 8, "objective": "mitad"}, "Atlético Tucumán": {"transferBudgetM": 2, "wageBudgetM": 6, "objective": "salvacion"}, "Central Córdoba (SdE)": {"transferBudgetM": 2, "wageBudgetM": 6, "objective": "salvacion"}, "Estudiantes de Río Cuarto": {"transferBudgetM": 1, "wageBudgetM": 4, "objective": "salvacion"}, "Gimnasia y Esgrima de Mendoza": {"transferBudgetM": 1, "wageBudgetM": 4, "objective": "salvacion"}, "Albacete Balompié": {"transferBudgetM": 1.5, "wageBudgetM": 9, "objective": "mitad"}, "UD Almería": {"transferBudgetM": 8, "wageBudgetM": 25, "objective": "ascenso"}, "FC Andorra": {"transferBudgetM": 4, "wageBudgetM": 12, "objective": "mitad"}, "Burgos CF": {"transferBudgetM": 2, "wageBudgetM": 10, "objective": "mitad"}, "Cádiz CF": {"transferBudgetM": 3, "wageBudgetM": 16, "objective": "ascenso"}, "CD Castellón": {"transferBudgetM": 3, "wageBudgetM": 12, "objective": "mitad"}, "Celta Fortuna": {"transferBudgetM": 0.5, "wageBudgetM": 3, "objective": "salvacion"}, "AD Ceuta FC": {"transferBudgetM": 1, "wageBudgetM": 7, "objective": "salvacion"}, "Córdoba CF": {"transferBudgetM": 1.5, "wageBudgetM": 10, "objective": "mitad"}, "SD Eibar": {"transferBudgetM": 2, "wageBudgetM": 12, "objective": "mitad"}, "CD Eldense": {"transferBudgetM": 0.5, "wageBudgetM": 5, "objective": "salvacion"}, "Girona FC": {"transferBudgetM": 15, "wageBudgetM": 45, "objective": "ascenso"}, "Granada CF": {"transferBudgetM": 4, "wageBudgetM": 20, "objective": "ascenso"}, "UD Las Palmas": {"transferBudgetM": 6, "wageBudgetM": 25, "objective": "ascenso"}, "CD Leganés": {"transferBudgetM": 5, "wageBudgetM": 22, "objective": "ascenso"}, "RCD Mallorca": {"transferBudgetM": 12, "wageBudgetM": 40, "objective": "ascenso"}, "Real Oviedo": {"transferBudgetM": 5, "wageBudgetM": 22, "objective": "ascenso"}, "Real Sociedad B": {"transferBudgetM": 0.5, "wageBudgetM": 3, "objective": "salvacion"}, "CE Sabadell": {"transferBudgetM": 0.5, "wageBudgetM": 5, "objective": "salvacion"}, "Sporting de Gijón": {"transferBudgetM": 3, "wageBudgetM": 15, "objective": "mitad"}, "CD Tenerife": {"transferBudgetM": 2, "wageBudgetM": 12, "objective": "salvacion"}, "Real Valladolid": {"transferBudgetM": 5, "wageBudgetM": 22, "objective": "ascenso"}, "Wolverhampton Wanderers": {"transferBudgetM": 40, "wageBudgetM": 110, "objective": "ascenso"}, "West Ham United": {"transferBudgetM": 50, "wageBudgetM": 120, "objective": "ascenso"}, "Burnley": {"transferBudgetM": 30, "wageBudgetM": 80, "objective": "ascenso"}, "Southampton": {"transferBudgetM": 25, "wageBudgetM": 70, "objective": "ascenso"}, "Sheffield United": {"transferBudgetM": 10, "wageBudgetM": 45, "objective": "ascenso"}, "Middlesbrough": {"transferBudgetM": 12, "wageBudgetM": 45, "objective": "ascenso"}, "Bristol City": {"transferBudgetM": 6, "wageBudgetM": 30, "objective": "mitad"}, "Millwall": {"transferBudgetM": 5, "wageBudgetM": 28, "objective": "mitad"}, "Birmingham City": {"transferBudgetM": 20, "wageBudgetM": 50, "objective": "ascenso"}, "West Bromwich Albion": {"transferBudgetM": 8, "wageBudgetM": 38, "objective": "mitad"}, "Watford": {"transferBudgetM": 8, "wageBudgetM": 35, "objective": "mitad"}, "Norwich City": {"transferBudgetM": 8, "wageBudgetM": 38, "objective": "mitad"}, "Swansea City": {"transferBudgetM": 6, "wageBudgetM": 30, "objective": "mitad"}, "Preston North End": {"transferBudgetM": 4, "wageBudgetM": 25, "objective": "mitad"}, "Queens Park Rangers": {"transferBudgetM": 3, "wageBudgetM": 25, "objective": "mitad"}, "Portsmouth": {"transferBudgetM": 4, "wageBudgetM": 25, "objective": "salvacion"}, "Stoke City": {"transferBudgetM": 6, "wageBudgetM": 32, "objective": "mitad"}, "Derby County": {"transferBudgetM": 4, "wageBudgetM": 28, "objective": "mitad"}, "Blackburn Rovers": {"transferBudgetM": 4, "wageBudgetM": 25, "objective": "mitad"}, "Wrexham": {"transferBudgetM": 25, "wageBudgetM": 45, "objective": "ascenso"}, "Charlton Athletic": {"transferBudgetM": 3, "wageBudgetM": 20, "objective": "salvacion"}, "Cardiff City": {"transferBudgetM": 3, "wageBudgetM": 22, "objective": "salvacion"}, "Bolton Wanderers": {"transferBudgetM": 3, "wageBudgetM": 18, "objective": "salvacion"}, "Lincoln City": {"transferBudgetM": 2, "wageBudgetM": 12, "objective": "salvacion"}}};
 
