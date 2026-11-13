@@ -8763,7 +8763,8 @@ function cardDetail(u) {
     <div class="lbl">${esc(VER[c.v].n)}</div>
     <div class="facts"><span>Club</span><span>Liga</span><span>Nación</span><b>${esc(p.club)}</b><b>${esc(p.liga)}</b><b>${esc(p.nac)}</b>
       <span>Posición</span><span>Edad</span><span>Valor</span><b>${POSN[p.pos]}</b><b>${p.edad} años</b><b>${fmt(value(c))}</b>
-      <span>Partidos</span><span>Goles</span><span>Asistencias</span><b>${c.m}</b><b>${c.g}</b><b>${c.a}</b></div>
+      <span>Partidos</span><span>Goles</span><span>Asistencias</span><b>${c.m}</b><b>${c.g}</b><b>${c.a}</b>
+      <span>Dorsal</span><span></span><span></span><b>${c.num || "—"}</b><b></b><b></b></div>
     ${statBars(c)}
     ${sale ? `<div class="warn" style="margin-bottom:1rem">Esta carta está a la venta en el mercado.</div>` : sq ? `<div class="okb" style="margin-bottom:1rem">Está en tu plantilla. Si la vendes, saldrá del equipo.</div>` : ""}
     <div class="acts">
@@ -8849,7 +8850,7 @@ function renderSquad() {
     <div class="pitchw"><div class="pitch">${FORMS[f].map(([pos], i) => slotHTML(S.squad.xi[i], pos, t.per[i], i, "xi")).join("")}</div></div>
     <div class="side panel" style="padding:1.2rem">
       <div class="kpis"><div class="kpi"><b>${t.rating}</b><span>Media</span></div><div class="kpi"><b>${t.chem}<small style="font-size:1.6rem">/33</small></b><span>Química</span></div></div>
-      <div class="btns"><button class="mbtn" data-nav data-a="sqForm">Formación · ${f}</button><button class="mbtn gold" data-nav data-a="sqAuto">Mejor once</button>
+      <div class="btns"><button class="mbtn" data-nav data-a="sqForm">Formación · ${f}</button><button class="mbtn gold" data-nav data-a="sqAuto">Mejor once</button><button class="mbtn" data-nav data-a="sqNums">Dorsales</button>
         <button class="mbtn pri${t.full ? "" : " dis"}" data-nav data-a="utFriendly" style="grid-column:1/3">Jugar amistoso</button></div>
       <div class="mute" style="font-size:1.15rem">Valor del once: <b style="color:var(--gold2)">${fmt(tv)}</b> · ${t.full ? "Equipo completo" : "<span style='color:#ff9aa5'>Faltan titulares</span>"}</div>
       <div class="lbl">Suplentes</div>
@@ -9646,8 +9647,8 @@ function utTeamData() {
   const f = S.squad.f, ch = chemistry(), fx = window.CD_READY ? trainFx() : { b: 0, fit: 1, inj: 1 }, bonus = Math.round(ch.total / 33 * 3) + fx.b;
   return { fit: fx.fit, inj: fx.inj, name: S.club || "Mi Club", sh: (S.club || "MI CLUB").replace(/[^A-Za-zÁÉÍÓÚÑáéíóúñ ]/g, "").split(" ").map(w => w[0]).join("").slice(0, 3).toUpperCase() || "MDG", c1: (S.kit || {}).c1 || "#1e6bff", c2: (S.kit || {}).c2 || "#d4a64a", c3: (S.kit || {}).c3, kitPat: S.kit ? S.kit.dis : null, form: f,
     pl: S.squad.xi.map((u, i) => { const c = C(u), st = statsOf(c), pen = P(c).pos === FORMS[f][i][0] ? 0 : -4;
-      return { n: shortName(P(c).n), full: P(c).n, role: FORMS[f][i][0], u, ov: ovOf(c) + bonus + pen, st: Object.fromEntries(Object.entries(st).map(([k, v]) => [k, clamp(v + bonus + pen, 20, 99)])) }; }),
-    bench: S.squad.bn.filter(Boolean).map(u => { const c = C(u), st = statsOf(c); return { n: shortName(P(c).n), full: P(c).n, pos: P(c).pos, role: P(c).pos, u, ov: ovOf(c) + bonus, st: Object.fromEntries(Object.entries(st).map(([k, v]) => [k, clamp(v + bonus, 20, 99)])) }; }) };
+      return { n: shortName(P(c).n), full: P(c).n, role: FORMS[f][i][0], u, num: c.num || null, ov: ovOf(c) + bonus + pen, st: Object.fromEntries(Object.entries(st).map(([k, v]) => [k, clamp(v + bonus + pen, 20, 99)])) }; }),
+    bench: S.squad.bn.filter(Boolean).map(u => { const c = C(u), st = statsOf(c); return { n: shortName(P(c).n), full: P(c).n, pos: P(c).pos, role: P(c).pos, u, num: c.num || null, ov: ovOf(c) + bonus, st: Object.fromEntries(Object.entries(st).map(([k, v]) => [k, clamp(v + bonus, 20, 99)])) }; }) };
 }
 function botTeamData(m) {
   return { name: m.club, sh: m.club.split(" ").map(w => w[0]).join("").slice(0, 3).toUpperCase(), c1: "#c62839", c2: "#f4f7ff", form: "4-3-3",
@@ -9733,7 +9734,7 @@ function startNew(cfg) {
   const fr = document.createElement("iframe"); fr.id = "m2"; fr.src = "motor/index.html?embed=1"; fr.allow = "gamepad; fullscreen; autoplay";
   fr.style.cssText = "position:fixed;inset:0;width:100%;height:100%;border:0;z-index:9999;background:#050a14"; document.body.appendChild(fr);
   document.body.classList.add("inmatch"); MATCH_ON = true;
-  const data = { teams: cfg.teams.map(T => ({ name: T.name, sh: T.sh, c1: T.c1, c2: T.c2, kits: teamKits(T), pl: T.pl.map(d => ({ n: d.n, role: d.role, st: d.st, ov: d.ov, u: d.u })), bench: (T.bench || []).map(d => ({ n: d.n, role: d.role, st: d.st, ov: d.ov, u: d.u })) })),
+  const data = { teams: cfg.teams.map(T => ({ name: T.name, sh: T.sh, c1: T.c1, c2: T.c2, kits: teamKits(T), pl: T.pl.map(d => ({ n: d.n, role: d.role, st: d.st, ov: d.ov, u: d.u, num: d.num })), bench: (T.bench || []).map(d => ({ n: d.n, role: d.role, st: d.st, ov: d.ov, u: d.u, num: d.num })) })).map(dorsalesRellenar),
     human: cfg.humans && cfg.humans[0] ? cfg.humans[0].t : 0, cpu: cfg.cpuTeams || [], diff: cfg.diff, halfLen: cfg.halfLen, tod: cfg.tod || "Auto", padmap: store.get("padmap", {}), weather: cfg.weather === undefined ? undefined : cfg.weather, drill: cfg.drill || null, drillSpec: cfg.drillSpec || null, knockout: !!cfg.knockout, lock: cfg.lock || null };
   const onMsg = e => { if (e.source !== fr.contentWindow) return; const d = e.data || {};
     if (d.type === "mdg27ready") fr.contentWindow.postMessage({ type: "mdg27cfg", cfg: data }, "*");
@@ -13671,7 +13672,7 @@ function teamFor(id, user) {
   const c = CL(id), order = user ? userSquad() : null, F = FORMS[user ? CAR.form : "4-3-3"];
   const ks = user ? order.slice(0, 11) : bestXI(id).map(p => p.k), bn = user ? order.slice(11, 20) : ROST[id].filter(k => !ks.includes(k)).sort((a, b) => cps(b)[1] - cps(a)[1]).slice(0, 9);
   const mk = (k, role) => { const p = pinfo(k), s = cps(k), d = s[1] - p.ov, fm = user ? Math.round((s[4] - 100) / 12 + (s[3] - 60) / 15) : 0, pen = role === p.pos ? 0 : luPen(p.pos, role);
-    return { n: shortName(p.n), full: p.n, pos: p.pos, role, u: k, num: p.num, ov: Math.max(20, s[1] + pen + fm), st: Object.fromEntries(Object.entries(p.f).map(([x, v]) => [x, clamp(v + d + pen + fm, 20, 99)])) }; };
+    return { n: shortName(p.n), full: p.n, pos: p.pos, role, u: k, num: user ? dorsalCar(k) : p.num, ov: Math.max(20, s[1] + pen + fm), st: Object.fromEntries(Object.entries(p.f).map(([x, v]) => [x, clamp(v + d + pen + fm, 20, 99)])) }; };
   return { name: c.nombre, sh: c.sh, c1: c.c1, c2: c.c2, pl: ks.map((k, i) => mk(k, F[i] ? F[i][0] : pinfo(k).pos)), bench: bn.map(k => mk(k, pinfo(k).pos)) };
 }
 function carPlay() {
@@ -13960,7 +13961,7 @@ function carHome() {
 const carCrest = id => isNat(id) ? `<div class="crest sm">${crestSVG(natName(id), natName(id).slice(0, 3).toUpperCase(), (NAT[natName(id)] || {}).c1 || "#455a8a", (NAT[natName(id)] || {}).c2 || "#fff")}</div>` : typeof id === "number" ? `<div class="crest sm">${crestSVG(CL(id).nombre, CL(id).sh, CL(id).c1, CL(id).c2)}</div>` : `<div class="crest sm">${crestSVG(cname(id), cshort(id), "#455a8a", "#fff")}</div>`;
 function carSquad() {
   const o = userSquad();
-  return luView({ form: CAR.form, rows: o.map(k => { const p = pinfo(k), s = cps(k); return { n: p.n, pos: p.pos, ov: s[1], warn: s[5] ? "LES " + s[5] + "s" : s[6] ? "SANC" : "", sub: `F${Math.round(s[4])} · M${Math.round(s[3])}` }; }),
+  return luView({ form: CAR.form, numAct: "carNums", rows: o.map(k => { const p = pinfo(k), s = cps(k); return { n: p.n, pos: p.pos, ov: s[1], num: dorsalCar(k), warn: s[5] ? "LES " + s[5] + "s" : s[6] ? "SANC" : "", sub: `F${Math.round(s[4])} · M${Math.round(s[3])}` }; }),
     pick: CT.pick, act: "carPick", formAct: "carForm", autoAct: "carAuto", help: "Toca dos jugadores para cambiarlos (campo, banquillo o no convocados). F = forma física · M = moral. En rojo: fuera de su posición." });
 }
 function carComps() {
@@ -15253,12 +15254,12 @@ function luView(o) {
     return `<button class="lurow luvr${o.pick === i ? " on" : ""}${i >= 20 ? " nc" : ""}" data-nav data-a="${o.act}" data-i="${i}"><span class="lr">${role}</span><span class="ln">${esc(shortName(r.n))}${r.warn ? ` <em class="bad">${esc(r.warn)}</em>` : ""}</span><span class="lp${pen < 0 ? " bad" : ""}">${r.pos}</span><span class="lo">${r.ov + pen}</span></button>`; };
   const tok = (r, i) => { const [role, x, y] = F[i], pen = luPen(r.pos, role), sel = o.pick === i;
     return `<button class="luvt${sel ? " on" : ""}${pen < 0 ? " out" : ""}${r.warn ? " warn" : ""}" data-nav data-a="${o.act}" data-i="${i}" style="left:${x}%;top:${y}%">
-      <b>${r.ov + pen}</b><span class="rl${pen < 0 ? " bad" : ""}">${role}</span><i>${esc(shortName(r.n))}</i>${r.sub ? `<small>${esc(r.sub)}</small>` : ""}</button>`; };
+      <b>${r.ov + pen}</b><span class="rl${pen < 0 ? " bad" : ""}">${role}</span><i>${r.num ? r.num + " · " : ""}${esc(shortName(r.n))}</i>${r.sub ? `<small>${esc(r.sub)}</small>` : ""}</button>`; };
   const xi = o.rows.slice(0, 11), avg = Math.round(xi.reduce((a, r, i) => a + r.ov + luPen(r.pos, F[i][0]), 0) / Math.max(1, xi.length));
   return `<div class="luv"><div class="luhead">${o.title ? `<b>${esc(o.title)}</b>` : ""}
       <div class="stepper"><span class="lbl">Formación</span><button class="mbtn" data-nav data-a="${o.formAct}" data-d="-1">◀</button><div class="val">${o.form}</div><button class="mbtn" data-nav data-a="${o.formAct}" data-d="1">▶</button></div>
       <span class="luavg">MEDIA <b>${avg}</b></span>
-      <button class="mbtn" data-nav data-a="${o.autoAct}">Automática</button>${o.okAct ? `<button class="mbtn gold" data-nav data-a="${o.okAct}" data-first>${o.okTxt || "Listo"}</button>` : ""}</div>
+      <button class="mbtn" data-nav data-a="${o.autoAct}">Automática</button>${o.numAct ? `<button class="mbtn" data-nav data-a="${o.numAct}">Dorsales</button>` : ""}${o.okAct ? `<button class="mbtn gold" data-nav data-a="${o.okAct}" data-first>${o.okTxt || "Listo"}</button>` : ""}</div>
     <p class="mute luhelp">${o.help || "Toca un jugador y luego otro para cambiarlos: en el campo, del banquillo o de los no convocados. En rojo: fuera de su posición (rinde menos)."}</p>
     <div class="luvg"><div class="pitchw"><div class="pitch luvp">${xi.map(tok).join("")}</div></div>
       <div class="panel scroll luvside"><h4>BANQUILLO</h4>${o.rows.slice(11, 20).map((r, i) => row(r, i + 11)).join("")}${o.rows.length > 20 ? `<h4>NO CONVOCADOS</h4>${o.rows.slice(20).map((r, i) => row(r, i + 20)).join("")}` : ""}</div></div></div>`;
@@ -15288,6 +15289,29 @@ ACT.lueP = el => { const i = +el.dataset.i, lu = lusOf(LUE.id); if (LUE.pick == 
 ACT.lueF = el => { const lu = lusOf(LUE.id), ks = Object.keys(FORMS); lu.form = ks[(ks.indexOf(lu.form) + +el.dataset.d + ks.length) % ks.length]; LUS[LUE.id] = lu; lusSave(); renderLUE(); reFocus(`[data-a="lueF"][data-d="${el.dataset.d}"]`); };
 ACT.lueA = () => { const lu = lusOf(LUE.id), c = qtBy(LUE.id), xi = pickXI(c.pl, lu.form).filter(Boolean), used = new Set(xi.map(p => p.k)); lu.ord = xi.map(p => p.k).concat(lu.ord.filter(k => !used.has(k))); LUS[LUE.id] = lu; lusSave(); renderLUE(); };
 ACT.lueOk = () => { const f = LUE.then; $("#luEd").remove(); LUE.then = null; focused = null; if (f) f(); if (navMode()) setTimeout(ensureFocus, 30); };
+
+/* ---------------- dorsales: cada jugador lleva el número que tú quieras (1-99, sin repetir) ---------------- */
+const DORS_BASE = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
+// números que faltan: los titulares por su puesto, los suplentes con los primeros libres
+function dorsalesRellenar(T) { const def = [1, 3, 4, 5, 2, 8, 6, 10, 11, 9, 7], used = new Set([...T.pl, ...T.bench].map(d => d.num).filter(Boolean));
+  T.pl.forEach((d, i) => { if (!d.num) { let n = def[i] || i + 1; if (used.has(n)) { n = 1; while (used.has(n)) n++; } d.num = n; used.add(n); } });
+  T.bench.forEach(d => { if (!d.num) { let n = 12; while (used.has(n)) n++; d.num = n; used.add(n); } }); return T; }
+// items: [{ id, n, pos, num }] · guardar(mapa id → número)
+function dorsalesDlg(titulo, items, guardar) {
+  dlg(titulo, "Pon el número que quieras a cada jugador (del 1 al 99, sin repetir). El portero no tiene por qué llevar el 1.", [], `<div class="scroll" style="max-height:56vh"><table class="tb">${items.map((it, i) => `<tr><td class="l">${esc(it.pos || "")}</td><td class="l">${esc(it.n)}</td><td><input class="inp dors" data-nav${i ? "" : " data-first"} data-id="${esc(String(it.id))}" type="number" min="1" max="99" value="${it.num || ""}" style="width:7rem;text-align:center"></td></tr>`).join("")}</table></div>
+    <div class="warn" id="dorsErr" style="display:none;margin-top:.8rem"></div><div class="acts" style="margin-top:1rem"><button class="mbtn gold" data-nav data-a="dorsOk">Guardar</button><button class="mbtn" data-nav data-a="closeDlg">Cancelar</button></div>`, { wide: true });
+  ACT.dorsOk = () => { const m = {}, vistos = {}; let err = "";
+    for (const inp of $$("#dlg input.dors")) { const v = inp.value.trim(); if (!v) continue; const n = Math.round(+v); if (!(n >= 1 && n <= 99)) { err = "Los dorsales van del 1 al 99."; break; }
+      if (vistos[n]) { err = `El ${n} está repetido.`; break; } vistos[n] = 1; m[inp.dataset.id] = n; }
+    if (err) { const e = $("#dorsErr"); e.textContent = err; e.style.display = ""; return; }
+    guardar(m); closeDlg(); toast("Dorsales guardados"); }; }
+ACT.sqNums = () => { const ids = [...S.squad.xi, ...S.squad.bn].filter(Boolean), F = FORMS[S.squad.f];
+  dorsalesDlg("Dorsales", ids.map(u => { const c = C(u), i = S.squad.xi.indexOf(u); return { id: u, n: P(c).n, pos: i >= 0 ? F[i][0] : "SUP", num: c.num }; }),
+    m => { for (const u of ids) { const c = C(u); if (m[u]) c.num = m[u]; else delete c.num; } save(); if (typeof renderSquad === "function") renderSquad(); }); };
+function dorsalCar(k) { return (CAR && CAR.num && CAR.num[k]) || (typeof pinfo === "function" && pinfo(k) ? pinfo(k).num : null) || null; }
+ACT.carNums = () => { const o = userSquad().slice(0, 20), F = FORMS[CAR.form];
+  dorsalesDlg("Dorsales", o.map((k, i) => ({ id: k, n: pinfo(k).n, pos: i < 11 ? F[i][0] : "SUP", num: dorsalCar(k) })),
+    m => { CAR.num = CAR.num || {}; for (const k of o) { if (m[k]) CAR.num[k] = m[k]; else delete CAR.num[k]; } carSave(); renderCar(); }); };
 
 /* =====================================================================
    MODO CARRERA · VIDA DE ENTRENADOR / FUTBOLISTA

@@ -785,7 +785,7 @@
   const KC = { shot: { st: "KickSoccerball1", run: "StrikeFowardJog" }, pass: { st: "SoccerPass", run: "SoccerPass" }, lob: { st: "Chip", run: "Chip" }, thru: { st: "SoccerPass", run: "SoccerPass" }, cross: { st: "KickSoccerball1", run: "StrikeFowardJog" }, clear: { st: "KickSoccerball1", run: "StrikeFowardJog" } };
   function requestKick(p, r) { p.req = Object.assign({ at: simT }, r); }
   function tryKick(p) {
-    const r = p.req; if (!r || p.one || p.down > 0) return; if (simT - r.at > (r.k === "shot" && M.penT && simT - M.penT < 4 ? 3 : M.pass && M.pass.to === p ? 3.2 : 1.6)) { p.req = null; return; }
+    const r = p.req; if (r) p.lastReq = r; if (!r || p.one || p.down > 0) return; if (simT - r.at > (r.k === "shot" && M.penT && simT - M.penT < 4 ? 3 : M.pass && M.pass.to === p ? 3.2 : 1.6)) { p.req = null; return; }
     const moving = p.v > 2.6, pen = r.k === "shot" && M.penT && simT - M.penT < 4 && !moving && META.SoccerPenaltyKick, base = pen ? "SoccerPenaltyKick" : moving ? KC[r.k].run : KC[r.k].st;
     const dx = ball.x - p.x, dy = ball.y - p.y, lat = -dx * Math.sin(p.h) + dy * Math.cos(p.h);
     const aimH = Math.atan2(r.ty - ball.y, r.tx - ball.x), turn = angD(p.h, aimH);
@@ -806,7 +806,9 @@
     const miss = Math.hypot(tv.x + L / 2 - ball.x, tv.z + W / 2 - ball.y), q = clamp(1 - Math.max(0, miss - .35) * 1.4, .25, 1);
     const weak = left ? .86 : 1, run = p.v > 5.5 ? .1 : 0, st = r.k === "shot" ? p.st.sho : p.st.pas;
     const err0 = r.pen ? .03 + (100 - st) * .0015 + (r.tz > 2.15 ? .32 : 0) : (1 - q) * .35 + (1 - weak) * .3 + run + (r.fin ? -.05 : 0) + (100 - st) * .004 + (r.press || 0) + (r.k === "shot" ? (p === M.human ? .21 : .26) + Math.max(0, Math.hypot(r.tx - ball.x, r.ty - ball.y) - 11) * .016 + (nearestOpp(p) < 1.6 ? .08 : 0) : 0) + (r.pow ? .07 : 0);
-    const err = r.fk ? .05 + (100 - st) * .0025 + Math.max(0, (r.p || .6) - .85) * 1.2 : r.perf ? err0 * .55 : r.chip ? err0 * .6 : err0;   // falta con diana: la precisión la pones tú
+    // remate cronometrado (FIFA): segunda pulsación de TIRO justo antes del contacto
+    let tf = 0; if (r.k === "shot" && r.fifa && r.tf != null) { const d = simT - r.tf; tf = d >= -.03 && d <= .16 ? 1 : -1; if (!window.STEP) msg(tf > 0 ? "¡REMATE PERFECTO!" : "Remate mal sincronizado", .8); }
+    const err = r.fk ? .05 + (100 - st) * .0025 + Math.max(0, (r.p || .6) - .85) * 1.2 : (r.chip ? err0 * .6 : r.low ? err0 * .9 : err0) * (tf > 0 ? .5 : tf < 0 ? 1.45 : 1);   // falta con diana: la precisión la pones tú
     const pw = r.p != null ? r.p : .6;
     if (ball.hold && ball.hold !== p) return;                     // el portero ya la tiene en las manos
     if (miss > 1.6 && !(M.set && M.set.taker === p)) return;      // el balón ya no está ahí: patada al aire
@@ -818,7 +820,7 @@
       sp = d / T; vz = (clamp(r.tz + tri() * err * 1.2, .8, 2.6) - ball.z + .5 * G * T * T) / T; a = Math.atan2(ty - ball.y, r.tx - ball.x); topspin = -4;
       TEAMS[p.t].stats.sh++; M.shot = { p, t: simT, chip: true }; var doGk = true; if (!window.STEP) msg("¡VASELINA!", 1); }
     else if (r.k === "shot") {
-      sp = (r.fin ? 17 + pw * 9 : 16 + pw * 16 + (p.st.sho - 70) * .08) * (.75 + q * .25) * weak * (r.perf ? 1.07 : 1);
+      sp = (r.fin ? 17 + pw * 9 : r.low ? 19 + pw * 12 + (p.st.sho - 70) * .06 : 16 + pw * 16 + (p.st.sho - 70) * .08) * (.75 + q * .25) * weak * (tf > 0 ? 1.06 : 1);
       if (r.pow) { sp *= 1.3 + (p.st.sho - 75) * .004; if (!window.STEP) { msg("¡TRALLAZO!", 1); try { cam.position.y += .15; } catch (e) {} } }
       const tri = () => Math.random() + Math.random() - 1, ty = r.ty + tri() * err * (4.5 + D * .3), d = Math.hypot(r.tx - ball.x, ty - ball.y), t = d / (sp * .93);
       const tz = clamp((r.tz != null ? r.tz : .25 + pw * 1.5) + (pw > .82 && !r.pen && !r.fk ? (pw - .82) * 6 * (1.2 - q) : 0) + tri() * err * (1.4 + D * .06), .1, 4.5);
@@ -826,7 +828,9 @@
       if (r.fk) { const f = fkSolve(sp, d, tz); vz = f.vz; topspin = f.ts; }   // falta: efecto hacia abajo, pasa por encima de la barrera y cae a la diana
       if (r.fin) { const s = Math.sign(W / 2 - r.ty) || 1; wz = -s * 26 * Math.sign(r.tx - ball.x); const curl = .5 * .0042 * 26 * sp * t * t; a = Math.atan2(ty + s * curl - ball.y, r.tx - ball.x); }
       if (r.pen) topspin = 0;   // penalti: sin efecto, el balón va a donde apuntas
-      TEAMS[p.t].stats.sh++; M.shot = { p, t: simT, perf: !!r.perf, fin: !!r.fin }; var doGk = true; if (r.perf && !window.STEP) msg("¡TIRO PERFECTO!", .9);
+      if (r.fk && r.curl) { wz = clamp(-r.curl * 30 * Math.sign(r.tx - ball.x), -30, 30); }   // falta: efecto con el stick al golpear (como en FIFA)
+      if (r.low) topspin = 9;
+      TEAMS[p.t].stats.sh++; M.shot = { p, t: simT, perf: tf > 0, fin: !!r.fin }; var doGk = true; if (r.low && !window.STEP) msg("¡TIRO RASO!", .8);
       // trivela: rosca con el exterior (los buenos tiradores, a veces, al tirar cruzado con el pie bueno)
       else if (r.fin && !left && p.st.sho > 76 && Math.random() < .3) { wz *= -1.1; const s2 = -(Math.sign(W / 2 - r.ty) || 1), curl2 = .5 * .0042 * 28 * sp * t * t; a = Math.atan2(ty + s2 * curl2 - ball.y, r.tx - ball.x); M.shot.tri = true; if (!window.STEP) msg("¡CON EL EXTERIOR!", 1); }
     } else if (r.k === "pass" || r.k === "thru") {
@@ -845,7 +849,7 @@
     ball.vx = Math.cos(a) * sp; ball.vy = Math.sin(a) * sp; ball.vz = vz; ball.z = Math.max(ball.z, .02); ball.wz = wz; ball.wx = -Math.sin(a) * topspin; ball.wy = Math.cos(a) * topspin;
     kickSnd(sp); M.last = p;
     // DLS: después de golpear, mover el stick le da efecto al balón (y arriba/abajo lo baja o lo eleva)
-    M.aft = (p === M.human || r.fk) && !r.pen && (r.k === "shot" || r.k === "cross" || r.k === "lob") ? { t: simT, a, p, k: r.k, d0: lastI.m > .3 ? lastI.dir : null, arm: !(lastI.m > .3) } : null;
+    M.aft = null;   // como en FIFA: después del golpeo el balón ya no se controla
     if (doGk) { gkReact(1 - p.t); (M.shotLog = M.shotLog || []).push({ d: +Math.hypot(r.tx - ball.x, r.ty - ball.y).toFixed(1), sp: +sp.toFixed(1), gk: gkS[1 - p.t].mode, gkd: +Math.hypot(GKP(1 - p.t).x - ball.x, GKP(1 - p.t).y - ball.y).toFixed(1), ty: +(r.ty - W / 2).toFixed(1), gy: +(GKP(1 - p.t).y - W / 2).toFixed(1), gl: +Math.abs(GKP(1 - p.t).x - own(1 - p.t)).toFixed(1), by: +(ball.y - W / 2).toFixed(1), g1: GKP(1 - p.t).one ? GKP(1 - p.t).one.n : '', down: GKP(1 - p.t).down > 0 }); }
   }
   const aimH = r => Math.atan2(r.ty - ball.y, r.tx - ball.x);
@@ -1022,11 +1026,12 @@
     if (hasBall(p) && !p.one && !charge && (I.spinD || I.stopD || I.feintD || I.nutD || I.stepD)) { skillMove(p, I.spinD ? "spin" : I.stopD ? "stop" : I.feintD ? "feint" : I.nutD ? "nut" : "step", I); return { dir: null, m: 0 }; }
     const keys = { shot: I.shoot, pass: I.pass, lob: I.lob, thru: I.thru };
     if (hasBall(p) || (!M.owner && Math.hypot(ball.x - p.x, ball.y - p.y) < 2.2 && ball.z < .6)) {
-      if (!charge) {
+      if (!charge && I.shootD && p.lastReq && p.lastReq.k === "shot" && p.lastReq.fifa && p.lastReq.tf == null && simT - p.lastReq.at < 1.2 && (p.req === p.lastReq || p.kickLock)) { p.lastReq.tf = simT; }
+      else if (!charge) {
         // DLS: pase, al hueco y bombeado salen al pulsar, con la fuerza justa según la distancia
         const pk = I.passD ? "pass" : I.thruD ? "thru" : I.lobD ? "lob" : null;
-        if (pk) { humanKick(p, { k: pk, p: .6, inst: true }, I); }
-        else if (I.shootD) charge = { k: "shot", p: 0 }; }
+        if (I.shootD) charge = { k: "shot", p: 0 };   // TIRO manda (con L1/R1 a la vez es vaselina o raso)
+        else if (pk) { humanKick(p, { k: pk, p: .6, inst: true }, I); } }
       else { if (I.fin) charge.fin = true; charge.p = Math.min(1, charge.p + dt / (charge.k === "pass" ? .9 : 1.05)); if (!keys[charge.k]) { humanKick(p, charge, I); charge = null; } }
     } else {
       charge = null;
@@ -1060,12 +1065,21 @@
   }
   function humanKick(p, c, I) {
     const dirH = I.dir != null ? I.dir : p.h, t = p.t;
-    if (c.k === "shot") { const side = I.dir != null && Math.abs(I.my) > .25 ? Math.sign(I.my) : (ball.y < W / 2 ? 1 : -1); const pow = !!I.spr && !c.fin && c.p >= .5;
-      // vaselina: centro (L / X) mantenido al tirar, o tiro flojo con el portero adelantado
-      const g = GKP(1 - t), gOff = Math.abs(g.x - own(1 - t)), dG = Math.hypot(opp(t) - ball.x, W / 2 - ball.y);
-      if ((I.lob || (c.p < .3 && gOff > 4)) && dG > 7 && dG < 32) { requestKick(p, { k: "shot", chip: true, p: .5, tx: opp(t) + M.dirOf[t] * .2, ty: W / 2 + side * 1.2, tz: 1.7 }); return; }
-      const perf = c.p >= .63 && c.p <= .73;   // punto dulce de la barra: tiro perfecto
-      requestKick(p, { k: "shot", p: Math.max(.12, c.p), fin: c.fin, pow, perf, tx: opp(t) + M.dirOf[t] * .2, ty: W / 2 + side * (GW / 2 - (c.fin ? .4 : pow ? .7 : .5)), tz: pow ? .35 + c.p * .9 : undefined }); return; }
+    if (c.k === "shot") {
+      /* TIRO COMO EN FIFA
+         · se apunta con el stick: la dirección del stick se proyecta sobre la portería (sin stick, hacia donde mira el jugador)
+         · la barra es la fuerza: más fuerza, más alto (pasada de rosca, se va por encima)
+         · R1/RB (regate) + tiro = tiro colocado con rosca · L1/LB (centro) + tiro = vaselina · los dos a la vez + tiro = tiro raso
+         · correr (sprint) + tiro = tiro potente (más lento de armar y menos preciso)
+         · volver a pulsar TIRO justo cuando el pie toca el balón = remate cronometrado (verde: más preciso; rojo: peor) */
+      const gx = opp(t), aimDir = I.dir != null && I.m > .25 ? I.dir : p.h, dx = gx - ball.x, ca = Math.cos(aimDir), sa = Math.sin(aimDir);
+      let off = Math.abs(ca) > .08 && Math.sign(ca) === Math.sign(dx) ? sa / ca * dx : (sa >= 0 ? 1 : -1) * GW;   // dónde cruza la línea de gol esa dirección
+      off = (ball.y + off) - W / 2; const lim = GW / 2 - .35, side = off >= 0 ? 1 : -1; off = clamp(off, -lim, lim);
+      if (I.dir == null || I.m < .25) off = side * Math.max(Math.abs(off), lim * .55);   // stick suelto: al palo hacia el que mira
+      const low = c.fin && I.lob, chip = I.lob && !c.fin, pow = !!I.spr && !c.fin && !I.lob && c.p >= .4;
+      const dG = Math.hypot(gx - ball.x, W / 2 - ball.y);
+      if (chip && dG > 6) { requestKick(p, { k: "shot", chip: true, p: .5, tx: gx + M.dirOf[t] * .2, ty: W / 2 + off * .6, tz: 1.3 + c.p * 1.1, fifa: 1 }); return; }
+      requestKick(p, { k: "shot", p: Math.max(.12, c.p), fin: c.fin && !low, low, pow, fifa: 1, tx: gx + M.dirOf[t] * .2, ty: W / 2 + off * (c.fin ? .92 : 1), tz: low ? .18 + c.p * .2 : pow ? .35 + c.p * .9 : undefined }); return; }
     let k = c.k;
     if (k === "pass" || k === "thru") {   // desde la banda en el último tercio hacia el área: centro
       const wide = prog(t, p.x) > .7 && Math.abs(p.y - W / 2) > 14, q = wide ? assistTarget(p, dirH, "lob", I.dir != null) : null;
@@ -1530,10 +1544,10 @@
         // como en DLS: con el stick mueves la diana de la portería, mantienes TIRO para la potencia y, al soltar, el stick le da efecto
         const aimOn = s.type === "pen" || (!s.indirect && Math.hypot(opp(p.t) - ball.x, W / 2 - ball.y) < 35);
         if (aimOn) { if (!s.aim) s.aim = s.type === "pen" ? { y: 0, z: .6 } : { y: (Math.sign(W / 2 - ball.y) || 1) * 2.2, z: 2.05 };
-          if (I.dir != null && I.m > .2 && !(charge && charge.k !== "shot")) { const d = M.dirOf[p.t]; s.aim.y = clamp(s.aim.y + I.mx * d * 3.4 * dt, -(GW / 2 + 1.3), GW / 2 + 1.3); s.aim.z = clamp(s.aim.z - I.my * 1.8 * dt, .2, 2.5); }
+          if (I.dir != null && I.m > .2 && !charge) { const d = M.dirOf[p.t]; s.aim.y = clamp(s.aim.y + I.mx * d * 3.4 * dt, -(GW / 2 + 1.3), GW / 2 + 1.3); s.aim.z = clamp(s.aim.z - I.my * 1.8 * dt, .2, 2.5); }
           aimShow(p.t, s.aim); }
         if (I.shootD) charge = { k: "shot", p: 0 }; if (I.passD) charge = { k: "pass", p: 0 }; if (I.lobD) charge = { k: "lob", p: 0 };
-        if (charge) { if (I.fin) charge.fin = true; charge.p = Math.min(1, charge.p + dt / 1.05); const held = charge.k === "shot" ? I.shoot : charge.k === "pass" ? I.pass : I.lob; if (!held) { go = { k: charge.k, p: charge.p, fin: charge.fin, dir: I.dir, my: I.my, mx: I.mx, aim: aimOn && charge.k === "shot" ? Object.assign({}, s.aim) : null }; charge = null; } }
+        if (charge) { if (I.fin) charge.fin = true; charge.p = Math.min(1, charge.p + dt / 1.05); const held = charge.k === "shot" ? I.shoot : charge.k === "pass" ? I.pass : I.lob; if (!held) { go = { k: charge.k, p: charge.p, fin: charge.fin, dir: I.dir, my: I.my, mx: I.mx, curl: I.dir != null && I.m > .3 ? I.mx * M.dirOf[p.t] : 0, aim: aimOn && charge.k === "shot" ? Object.assign({}, s.aim) : null }; charge = null; } }
         $("#pw").style.display = charge ? "block" : "none"; if (charge) $("#pw i").style.width = (charge.p * 100) + "%";
       } else if (I.passD || I.lobD || I.shootD || I.thruD) go = { k: I.lobD ? "lob" : I.thruD ? "thru" : "pass", p: .6, dir: I.dir, my: I.my, mx: I.mx };
     } else if (humanGK && wait > .5 && wait < 6) { if (I.passD || I.thruD) go = { k: "pass", dir: I.dir }; else if (I.lobD || I.shootD) go = { k: "lob", dir: I.dir }; }
@@ -1567,7 +1581,7 @@
       later(.3, () => { const gy = hd ? (lastI.dir != null && Math.abs(lastI.mx) > .3 ? Math.sign(lastI.mx * M.dirOf[t]) : 0) : (Math.random() < .35 ? sd : -sd); gkS[1 - t] = { mode: "dive", react: 0, t: .3, by: W / 2 + gy * 2.4, bz: hgt, pen: true, ws: gy !== 0 && gy === Math.sign(side) && Math.abs(side) < .92 && hgt < 2 ? Math.random() < .7 : gy === 0 && side === 0 }; });
       return; }
     if (s.type === "fk") { const dG = Math.hypot(gx - ball.x, W / 2 - ball.y);
-      if (go.aim) { requestKick(p, { k: "shot", fk: true, p: go.p, tx: gx + M.dirOf[t] * .2, ty: W / 2 + go.aim.y, tz: go.aim.z + (go.p > .85 ? (go.p - .85) * 6 : 0) }); wallJump(p); return; }
+      if (go.aim) { requestKick(p, { k: "shot", fk: true, curl: s.type === "pen" ? 0 : go.curl || 0, p: go.p, tx: gx + M.dirOf[t] * .2, ty: W / 2 + go.aim.y, tz: go.aim.z + (go.p > .85 ? (go.p - .85) * 6 : 0) }); wallJump(p); return; }
       else if (!s.indirect && ((go.ai && dG < 30 && Math.random() < .7) || go.k === "shot")) { const behind = dG < 35, side = go.ai ? (Math.random() < .5 ? -1 : 1) : (go.dir != null && Math.abs(behind ? go.mx : go.my) > .25 ? Math.sign(behind ? go.mx * M.dirOf[t] : go.my) : (Math.random() < .5 ? -1 : 1));
         requestKick(p, { k: "shot", fin: true, p: go.ai ? .6 + Math.random() * .2 : go.p, tx: gx + M.dirOf[t] * .2, ty: W / 2 + side * (GW / 2 - .45), tz: 1.6 + Math.random() * .5 });
         wallJump(p); return; } }
