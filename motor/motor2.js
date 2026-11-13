@@ -698,7 +698,7 @@
   /* ---------- posesión, toques y fuera de juego ---------- */
   function touchBy(p) {
     if (DR) drTouch(p);
-    if (M.pass && M.pass.offside && M.pass.offside.has(p) && M.phase === "play") { callOffside(p); return; }
+    if (!DR && M.pass && M.pass.offside && M.pass.offside.has(p) && M.phase === "play") { callOffside(p); return; }
     if (M.pass && p !== M.pass.from) { const k = M.pass.k, d = (M.pl = M.pl || {})[k] || (M.pl[k] = { n: 0, ok: 0, int: 0 }); if (p.t === M.pass.t) { TEAMS[p.t].stats.pc++; d.ok++; } else d.int++; }
     if (M.last && M.last !== p && M.last.t === p.t && !M.last.gk) M.assist = M.last; else if (M.last && M.last.t !== p.t) M.assist = null;
     if (M.owner && M.owner.t !== p.t || (!M.owner && M.last && M.last.t !== p.t)) { M.turnT = simT; M.turnLost = 1 - p.t; }
@@ -1000,7 +1000,7 @@
     const el = simT - A.at, o = M.owner;
     if (el > .5 && el < 2.2 && o && o.t === A.f.t) { M.adv = null; whistle(1); M.owner = null; M.phase = "stop"; msg("FALTA de " + A.f.name + A.card, 2); A.doCard(); later(1.3, () => startSet("fk", A.v.t, A.x, A.y)); return; }
     if (el >= 2.2) { M.adv = null; if (A.card) M.pendCard = A.doCard; } }
-  function callOffside(p) { if (M.phase !== "play") return; TEAMS[p.t].stats.off++; whistle(1); msg("FUERA DE JUEGO · " + p.name, 2); M.phase = "stop"; M.pass = null; const at = p.offAt || p; later(1.3, () => startSet("fk", 1 - p.t, at.x, at.y, true)); }
+  function callOffside(p) { if (M.phase !== "play" || DR) return; TEAMS[p.t].stats.off++; whistle(1); msg("FUERA DE JUEGO · " + p.name, 2); M.phase = "stop"; M.pass = null; const at = p.offAt || p; later(1.3, () => startSet("fk", 1 - p.t, at.x, at.y, true)); }
 
   /* ---------- humano: control del jugador y cambio ---------- */
   function setHuman(p) { if (M.lockOut || (M.lockP && p !== M.lockP)) return; if (M.human === p) return; M.human = p; if (p) p.req = null; }   // modo carrera de jugador: solo controlas a tu futbolista
@@ -1875,29 +1875,29 @@
     for (const a of OFF.splice(0)) a.wrap.visible = false;
     const keep = (list) => { for (const p of P.slice()) if (!p.gk && !list.includes(p)) { park(p); P.splice(P.indexOf(p), 1); } };
     const k = DR.k;
-    if (k === "rondo4" || k === "rondo5") { const nA = k === "rondo4" ? 4 : 5, nD = k === "rondo4" ? 2 : 3, R = k === "rondo4" ? 7 : 9; DR.goalN = k === "rondo4" ? 10 : 12; DR.time = 90; DR.noGK = [0, 1];
+    if (k === "rondo4" || k === "rondo5") { const nA = k === "rondo4" ? 4 : 5, nD = k === "rondo4" ? 2 : 3, R = k === "rondo4" ? 8 : 9; DR.goalN = k === "rondo4" ? 8 : 10; DR.time = 120; DR.noGK = [0, 1];
       const A = T0.slice(0, nA), D = T1.slice(0, nD); keep(A.concat(D)); A.forEach((p, i) => { const a = i / nA * Math.PI * 2; DR.spots.set(p, { x: cx + Math.cos(a) * R, y: cy + Math.sin(a) * R * .9 }); p.x = DR.spots.get(p).x; p.y = DR.spots.get(p).y; p.h = p.mh = Math.atan2(cy - p.y, cx - p.x); });
       D.forEach((p, i) => { p.x = cx + (i - (nD - 1) / 2) * 1.5; p.y = cy; }); DR.A = A; DR.D = D; DR.R = R;
       for (let i = 0; i < 12; i++) { const a = i / 12 * Math.PI * 2; dprop("cono", cx + Math.cos(a) * (R + 2.5), cy + Math.sin(a) * (R + 2.5) * .9, .45); }
       giveBall(A[0]); }
-    else if (k === "pases") { const m = T0.slice(0, 5); keep(m); DR.goalN = 8; DR.time = 70; DR.noGK = [0, 1]; DR.pivot = m[0]; m[0].x = cx; m[0].y = cy; DR.recv = m.slice(1);
+    else if (k === "pases") { const m = T0.slice(0, 5); keep(m); DR.goalN = 8; DR.time = 100; DR.noGK = [0, 1]; DR.pivot = m[0]; M.lockP = m[0];   /* tú eres siempre el del centro */ m[0].x = cx; m[0].y = cy; DR.recv = m.slice(1);
       [[-12, -9], [12, -9], [-12, 9], [12, 9]].forEach((s, i) => { const p = DR.recv[i]; p.x = cx + s[0]; p.y = cy + s[1]; DR.spots.set(p, { x: p.x, y: p.y }); });
       DR.ring = await dprop("aro", cx, cy, 1.6, { flat: true }); drTarget(); giveBall(m[0]); }
-    else if (k === "dianas") { const m = T0[0]; keep([m]); DR.goalN = 3; DR.maxTries = 8; DR.noGK = [0, 1]; DR.shooter = m;
+    else if (k === "dianas") { const m = T0[0]; keep([m]); DR.goalN = 3; DR.maxTries = 10; DR.noGK = [0, 1]; DR.shooter = m;
       for (const s of [-1, 1]) dprop("diana", gx + dir * .05, cy + s * (GW / 2 - .75), .9, { z: .7 });
       drShotReset(); }
-    else if (k === "eslalon") { const m = T0[0]; keep([m]); DR.goalN = 6; DR.time = 30; DR.noGK = [0, 1]; DR.gates = [];
+    else if (k === "eslalon") { const m = T0[0]; keep([m]); DR.goalN = 6; DR.time = 40; DR.noGK = [0, 1]; DR.gates = [];
       for (let i = 0; i < 6; i++) { const x = cx - dir * 20 + dir * i * 8, y = cy + (i % 2 ? 5 : -5); DR.gates.push({ x, y, ok: false }); dprop("pica", x, y - 1.6, 1.5); dprop("pica", x, y + 1.6, 1.5); }
       m.x = cx - dir * 28; m.y = cy; m.h = m.mh = dir > 0 ? 0 : Math.PI; giveBall(m); }
     else if (k === "faltas") { DR.goalN = 2; DR.maxTries = 8; DR.taker = T0[0]; keep(T0.slice(0, 1).concat(T1.slice(0, 4))); drFk(); }
     else if (k === "sprint") { const m = T0[0]; keep([m]); DR.goalN = 1; DR.time = 9; DR.noGK = [0, 1]; DR.t0 = null; m.x = cx - dir * 25; m.y = cy; m.h = m.mh = dir > 0 ? 0 : Math.PI; DR.fin = { x: cx + dir * 20, y: cy };
       dprop("porteria", DR.fin.x + dir * 1, cy, 1.1); dprop("escalera", m.x + dir * 3, cy + 2, .9, { flat: true }); for (const x of [-10, 0, 10]) for (const s of [-1, 1]) dprop("cono", cx + dir * x, cy + s * 3, .45); giveBall(m); }
-    else if (k === "control") { const m = T0.slice(0, 2); keep(m); DR.goalN = 6; DR.noGK = [0, 1]; DR.me = m[0]; DR.mate = m[1]; m[0].x = cx; m[0].y = cy; m[1].x = cx - dir * 15; m[1].y = cy; DR.spots.set(m[1], { x: m[1].x, y: m[1].y });
+    else if (k === "control") { const m = T0.slice(0, 2); keep(m); DR.goalN = 6; DR.noGK = [0, 1]; DR.me = m[0]; DR.mate = m[1]; M.lockP = m[0]; m[0].x = cx; m[0].y = cy; m[1].x = cx - dir * 15; m[1].y = cy; DR.spots.set(m[1], { x: m[1].x, y: m[1].y });
       DR.ring = await dprop("aro", cx, cy, 1.8, { flat: true }); drCtlNext(); }
     else if (k === "custom") { const sp = EMB.drillSpec || { items: [], start: [.3, .5], obj: "aros", goal: 1 }, X = u => dir > 0 ? u * L : L - u * L, Y = v => v * W;
       DRN.custom = sp.n || "Entreno personalizado";
       const cs = sp.items.filter(i => i.t === "comp"), ds = sp.items.filter(i => i.t === "def"), me = T0[0], mates = T0.slice(1, 1 + cs.length), Dd = T1.slice(0, ds.length);
-      keep([me].concat(mates, Dd)); DR.noGK = sp.gk ? [0] : [0, 1];
+      keep([me].concat(mates, Dd)); DR.noGK = sp.gk ? [0] : [0, 1]; M.lockP = me;
       DR.cu = { obj: sp.obj, start: { x: X(sp.start[0]), y: Y(sp.start[1]) }, gates: [], rings: [], minis: [], mates, defs: Dd, me };
       mates.forEach((p, i) => { const q = { x: X(cs[i].u), y: Y(cs[i].v) }; DR.spots.set(p, q); p.x = q.x; p.y = q.y; p.h = p.mh = Math.atan2(DR.cu.start.y - q.y, DR.cu.start.x - q.x); });
       Dd.forEach((p, i) => { const q = { x: X(ds[i].u), y: Y(ds[i].v) }; DR.spots.set(p, q); p.x = q.x; p.y = q.y; });
@@ -1913,6 +1913,13 @@
   }
   function drCuReset() { const c = DR.cu, me = c.me, dir = M.dirOf[0]; me.x = c.start.x; me.y = c.start.y; me.h = me.mh = dir > 0 ? 0 : Math.PI; me.one = null; me.req = null;
     for (const p of c.mates.concat(c.defs)) { const q = DR.spots.get(p); p.x = q.x; p.y = q.y; p.v = 0; p.req = null; } DR.shot = false; giveBall(me); setHuman(me); }
+  // rondo: tras robo o balón fuera, todos a su sitio, los defensores al centro y 1 segundo sin presión
+  function drRondoReset() { const cx = L / 2, cy = W / 2; for (const p of DR.A) { const q = DR.spots.get(p); p.x = q.x; p.y = q.y; p.v = 0; p.one = null; p.req = null; p.h = p.mh = Math.atan2(cy - p.y, cx - p.x); }
+    DR.D.forEach((p, i) => { p.x = cx + (i - (DR.D.length - 1) / 2) * 1.5; p.y = cy; p.v = 0; p.one = null; p.req = null; }); DR.grace = simT + 1.1; giveBall(DR.A[Math.floor(Math.random() * DR.A.length)]); }
+  // compañero con la línea de pase más limpia
+  function drOpenMate(p) { let b = null, bs = -1; for (const q of DR.A) { if (q === p) continue; const ax = q.x - p.x, ay = q.y - p.y, L2 = ax * ax + ay * ay || 1; let s = 99;
+      for (const z of DR.D) { const t = clamp(((z.x - p.x) * ax + (z.y - p.y) * ay) / L2, 0, 1); s = Math.min(s, Math.hypot(p.x + ax * t - z.x, p.y + ay * t - z.y)); }
+      s += Math.random() * .6; if (s > bs) { bs = s; b = q; } } return b; }
   function drTarget() { const c = DR.recv.filter(p => p !== DR.target); DR.target = c[Math.floor(Math.random() * c.length)]; DR.ring.position.copy(P3(DR.target.x, DR.target.y, .03)); }
   function drShotReset() { const m = DR.shooter, gx = opp(0), dir = M.dirOf[0], ys = [-6, 0, 6]; m.x = gx - dir * 22; m.y = W / 2 + ys[DR.tries % 3]; m.h = m.mh = Math.atan2(W / 2 - m.y, gx - m.x); m.one = null; m.req = null; DR.shot = false; giveBall(m); }
   function drFk() { const dir = M.dirOf[0]; DR.fkDone = false; DR.shot = false; startSet("fk", 0, opp(0) - dir * 21, W / 2 + (DR.tries % 2 ? 4 : -3)); }
@@ -1926,27 +1933,31 @@
       return dGo(p, sp.x, sp.y, false, Math.atan2(ball.y - p.y, ball.x - p.x), C); }
     if (k === "custom" && hasBall(p) && p !== DR.cu.me && p.t === 0) { if (!p.req && (p.drT = (p.drT || 0) + dt) > .6) { p.drT = 0; passTo(p, DR.cu.me, "pass", .5); } return dGo(p, p.x, p.y, false, null, C); }
     if ((k === "rondo4" || k === "rondo5") && p.t === 1) { const o = M.owner, i = DR.D.indexOf(p);
+      if (DR.grace && simT < DR.grace) return dGo(p, L / 2 + (i - (DR.D.length - 1) / 2) * 1.5, W / 2, false, null, C);
       if (!o || o.t === 1) { const ip = interceptPt(p); return dGo(p, ip.x, ip.y, true, null, C); }
-      if (i === 0) return dGo(p, o.x, o.y, true, null, C);
-      const mates = DR.A.filter(q => q !== o).sort((a, b) => dist(a, o) - dist(b, o)), tgt = mates[(i - 1) % mates.length]; return dGo(p, lerp(o.x, tgt.x, .5), lerp(o.y, tgt.y, .5), true, null, C); }
+      if (i === 0) { dGo(p, o.x, o.y, dist(p, o) > 3.5, null, C); if (dist(p, o) < 2.5) C.m = .8; return C; }   // el que presiona no llega siempre a tope
+      const mates = DR.A.filter(q => q !== o).sort((a, b) => dist(a, o) - dist(b, o)), tgt = mates[(i - 1) % mates.length];
+        /* tapa la línea con retraso (reacciona a donde estaba el balón hace un momento) y sin llegar a ponerse justo en medio */
+        p.lz = p.lz || { x: p.x, y: p.y }; const a = Math.min(1, dt * 1.6); p.lz.x += (lerp(o.x, tgt.x, .58) - p.lz.x) * a; p.lz.y += (lerp(o.y, tgt.y, .58) - p.lz.y) * a;
+        dGo(p, p.lz.x, p.lz.y, false, null, C); C.m = Math.min(C.m || 1, .7); return C; }
     if (hasBall(p)) { if (k === "pases" && p !== DR.pivot && !p.req) { requestKick(p, { k: "pass", p: .5, tx: DR.pivot.x, ty: DR.pivot.y, to: DR.pivot }); }
-      if ((k === "rondo4" || k === "rondo5") && !p.req && (p.drT = (p.drT || 0) + dt) > .7) { p.drT = 0; const m = DR.A.filter(q => q !== p).sort(() => Math.random() - .5)[0]; passTo(p, m, "pass", .5); }
+      if ((k === "rondo4" || k === "rondo5") && !p.req && (p.drT = (p.drT || 0) + dt) > .7) { p.drT = 0; const m = drOpenMate(p); passTo(p, m, "pass", .5); }
       return dGo(p, p.x, p.y, false, null, C); }
     if (!M.owner && !ball.hold && sp && Math.hypot(ball.x - sp.x, ball.y - sp.y) < 6 && Math.hypot(ball.vx, ball.vy) < 6) { const ip = interceptPt(p); return dGo(p, ip.x, ip.y, true, null, C); }
     if (M.pass && M.pass.to === p) { const ip = interceptPt(p); return dGo(p, ip.x, ip.y, true, null, C); }
     if (sp) return dGo(p, sp.x, sp.y, false, Math.atan2(ball.y - p.y, ball.x - p.x), C);
     return C; }
   function drTouch(p) { if (!DR || DR.state !== "play") return; const k = DR.k, pa = M.pass;
-    if (k === "rondo4" || k === "rondo5") { if (p.t === 1) { if (DR.cnt > 0) msg("¡Robo! Vuelta a empezar", 1.2); DR.cnt = 0; DR.steal = true; later(.8, () => { if (DR.state === "play") { DR.steal = false; giveBall(DR.A[Math.floor(Math.random() * DR.A.length)]); } }); }
-      else if (pa && pa.from && pa.from.t === 0 && pa.from !== p) { DR.cnt++; if (DR.cnt >= DR.goalN) drEnd(true); } drMsg(); }
-    if (k === "pases" && pa && pa.from === DR.pivot && p !== DR.pivot) { if (p === DR.target) { DR.cnt++; msg("¡Bien!", .8); if (DR.cnt >= DR.goalN) drEnd(true); else drTarget(); } else msg("Ese no era", .9); drMsg(); }
+    if (k === "rondo4" || k === "rondo5") { if (p.t === 1) { if (DR.cnt > 0) msg("¡Robo! Vuelta a empezar", 1.2); DR.cnt = 0; DR.steal = true; later(.8, () => { if (DR.state === "play") { DR.steal = false; drRondoReset(); } }); }
+      else if (pa && pa.from && pa.from.t === 0 && pa.from !== p && !pa.drc) { pa.drc = 1; DR.cnt++; if (DR.cnt >= DR.goalN) drEnd(true); } drMsg(); }   /* cada pase cuenta una sola vez */
+    if (k === "pases" && pa && pa.from === DR.pivot && p !== DR.pivot && !pa.drc) { pa.drc = 1; if (p === DR.target) { DR.cnt++; msg("¡Bien!", .8); if (DR.cnt >= DR.goalN) drEnd(true); else drTarget(); } else msg("Ese no era", .9); drMsg(); }
     if (k === "control" && p === DR.me && DR.phase === "pass") { DR.phase = "go"; DR.recvAt = simT; }
     if (k === "custom") { const c = DR.cu;
       if (p.t === 1 && !DR.wait) { msg("¡Te la han robado!", 1); drOut(); return; }
-      if (c.obj === "pases" && pa && pa.from === c.me && p !== c.me && p.t === 0) { DR.cnt++; msg("¡Bien!", .7); drMsg(); if (DR.cnt >= DR.goalN) drEnd(true); } } }
+      if (c.obj === "pases" && pa && pa.from === c.me && p !== c.me && p.t === 0 && !pa.drc) { pa.drc = 1; DR.cnt++; msg("¡Bien!", .7); drMsg(); if (DR.cnt >= DR.goalN) drEnd(true); } } }
   function drOut() { if (DR.state !== "play" || DR.wait) return; const k = DR.k; DR.wait = true;
     later(.9, () => { DR.wait = false; if (DR.state !== "play") return;
-      if (k === "rondo4" || k === "rondo5") { DR.cnt = 0; drMsg(); giveBall(DR.A[0]); }
+      if (k === "rondo4" || k === "rondo5") { DR.cnt = 0; drMsg(); drRondoReset(); }
       else if (k === "pases") giveBall(DR.pivot);
       else if (k === "dianas") { DR.tries++; drMsg(); if (DR.tries >= DR.maxTries) drEnd(DR.cnt >= DR.goalN, "Te faltaron dianas"); else drShotReset(); }
       else if (k === "faltas") { DR.tries++; drMsg(); if (DR.tries >= DR.maxTries) drEnd(DR.cnt >= DR.goalN, "Te faltaron goles"); else drFk(); }
@@ -1964,7 +1975,7 @@
     if ((k === "rondo4" || k === "rondo5") && !DR.steal && Math.hypot(ball.x - L / 2, ball.y - W / 2) > DR.R + 5 && !DR.wait) { msg("Fuera del rondo", 1); drOut(); }
     if (k === "dianas" || k === "faltas") { const sh = M.shot && M.shot.t > (DR.lastShotT || -1); if (sh) { DR.lastShotT = M.shot.t; DR.shot = true; DR.shotT = simT; } if (DR.shot && simT - DR.shotT > 3.5 && !DR.wait) drOut(); if (k === "faltas" && DR.shot && M.owner && M.owner.t === 1 && !DR.wait) drOut(); }
     if (k === "eslalon") { const m = team(0).find(q => !q.gk && !q.parked), g = DR.gates.find(q => !q.ok); if (g && hasBall(m) && Math.abs(m.x - g.x) < .9 && Math.abs(m.y - g.y) < 1.5) { g.ok = true; DR.cnt++; play("toque", .6); drMsg(); if (DR.cnt >= DR.goalN) drEnd(true); } if (g && (m.x - g.x) * dir > 2) drEnd(false, "Te saltaste una puerta"); }
-    if (k === "sprint") { const m = team(0).find(q => !q.gk && !q.parked); if (DR.t0 == null && m.v > 1) DR.t0 = DR.t; if (DR.t0 != null) { DR.time = 9; DR.tt = DR.t - DR.t0; if (DR.tt > 9) return drEnd(false, "Más de 9 segundos"); }
+    if (k === "sprint") { const m = team(0).find(q => !q.gk && !q.parked); if (DR.t0 == null && m.v > 1) DR.t0 = DR.t; if (DR.t0 != null) { DR.time = 11; DR.tt = DR.t - DR.t0; if (DR.tt > 11) return drEnd(false, "Más de 11 segundos"); }
       if (hasBall(m) && (m.x - DR.fin.x) * dir > -1 && Math.abs(m.y - DR.fin.y) < 3) { DR.cnt = 1; drEnd(true); } }
     if (k === "control" && DR.phase === "go") { if (Math.hypot(DR.me.x - DR.ringAt.x, DR.me.y - DR.ringAt.y) < 1.4 && hasBall(DR.me)) { DR.cnt++; msg("¡Bien!", .8); drMsg(); if (DR.cnt >= DR.goalN) return drEnd(true); DR.phase = "wait"; later(.8, drCtlNext); }
       else if (simT - DR.recvAt > 3) { msg("Más rápido", .9); DR.phase = "wait"; later(.8, drCtlNext); } }
@@ -1996,7 +2007,7 @@
       if (p.down > 0) p.down -= dt; if (p.dr.loose > 0) p.dr.loose -= dt;
       // recibir como en DLS: mientras sigas empujando el stick con el que diste el pase, el receptor va solo a por el balón; al soltarlo o moverlo a otro lado, vuelves a mandar tú
       if (p === M.human && M.pass && M.pass.to === p && !M.pass.free && (!lastI.dir || lastI.m < .35 || M.pass.stickH == null || Math.abs(angD(lastI.dir, M.pass.stickH)) > .9)) M.pass.free = simT - M.pass.at > .15 ? true : M.pass.free;
-      const recvAuto = p === M.human && M.pass && M.pass.to === p && M.pass.t === p.t && (!lastI.dir || lastI.m < .35 || !M.pass.free) && !hasBall(p);
+      const recvAuto = p === M.human && M.pass && M.pass.to === p && M.pass.t === p.t && (!lastI.dir || lastI.m < .35 || !M.pass.free) && !hasBall(p) || (DR && p === M.human && /rondo/.test(DR.k) && !hasBall(p) && (!lastI.dir || lastI.m < .2));   /* en el rondo, si no tocas el stick vuelves solo a tu sitio */
       let C = Object.assign({}, p === M.human && M.phase === "play" && !(M.set) && !recvAuto ? HC : HC2 && p === R2.human && M.phase === "play" && !M.set ? HC2 : (M.phase === "play" ? aiPlayer(p, dt) : { dir: null, m: 0 }));
       if (M.celeb && M.phase === "stop") C = celebC(p, C);
       if (p.sent) { C = p.y > -5 ? { dir: Math.atan2(-8 - p.y, L / 2 - p.x), m: 1, speed: 3.2 } : { dir: null, m: 0 }; if (p.y <= -5) p.wrap.visible = false; }
