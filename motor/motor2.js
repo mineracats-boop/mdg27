@@ -344,7 +344,7 @@
     if (o.onT && !o.fired && o.t >= o.onT) { o.fired = true; o.on(); }
     if (o.t >= end - (o.fadeOut || .15) * o.ts && (!o.onT || o.fired)) { a.lastOne = o; a.one = null; if (o.after) o.after(); }
   }
-  function place(a) { a.wrap.position.copy(P3(a.x, a.y, 0)); a.wrap.rotation.set(0, -a.h + Math.PI / 2, 0, "YXZ"); a.inner.rotation.z = a.lean; }
+  function place(a) { a.wrap.position.copy(P3(a.x, a.y, 0)); a.wrap.rotation.set(0, -a.h + Math.PI / 2, 0, "YXZ"); a.inner.rotation.z = a.leanT && a.leanT.until > simT ? lerp(a.inner.rotation.z, a.leanT.v, .35) : a.lean; }
 
   /* ---------- equipos ---------- */
   const TEAMS = [ { name: "MDG27", short: "MDG", kit: ["#c8102e", "#f4f4f4"], gkModel: "gn01", score: 0, stats: { sh: 0, ont: 0, pa: 0, pc: 0, fo: 0, co: 0, off: 0, pos: 0 } },
@@ -613,11 +613,12 @@
       // cruceta (botones 12-15, o eje en mandos no estándar) también mueve
       { let dx = (b(15) ? 1 : 0) - (b(14) ? 1 : 0), dy = (b(13) ? 1 : 0) - (b(12) ? 1 : 0); if (gp.mapping !== "standard" && gp.axes.length > 9) { const h = gp.axes[9]; if (Math.abs(h) < 1.05 && h !== 0) { const a = Math.round((h + 1) * 3.5); if (a === 0) dy = -1; else if (a === 2) dx = 1; else if (a === 4) dy = 1; else if (a === 6) dx = -1; } } if ((dx || dy) && Math.hypot(mx, my) < .2) { mx = dx; my = dy; } }
       // stick derecho: golpe lateral = amago, adelante = caño/conducción larga, en diagonal adelante = bicicleta
-      const rx = gp.axes[2] || 0, ry = gp.axes[3] || 0, rm = Math.hypot(rx, ry); if (rm > .75) { const ang = Math.atan2(ry, rx); I.rs = ang; if (Math.abs(ry) < .45) I.feint = true; else if (ry < -.8 && Math.abs(rx) < .35) I.nut = true; else if (ry < 0) I.step = true; } }
+      // (como el gesto de DLS) el regate sale según hacia dónde mueves el stick derecho respecto a donde corre tu jugador
+      const rx = gp.axes[2] || 0, ry = gp.axes[3] || 0, rm = Math.hypot(rx, ry); if (rm > .75) { I.rs = Math.atan2(ry, rx); I.rsk = true; } }
     { const tu = document.getElementById("tui"); if (tu) { const want = gp ? "none" : ""; if (tu.style.display !== want) tu.style.display = want; } }   // con mando conectado se quitan los botones táctiles
     let m = Math.min(1, Math.hypot(mx, my)); if (I.walk && m > .3) m = .4;
     I.m = m; I.dir = m > .05 ? Math.atan2(my, mx) : null; I.my = my; I.mx = mx;
-    for (const k of ["shoot", "pass", "lob", "thru", "sw", "spin", "stop", "feint", "nut", "step", "ctx"]) { I[k + "D"] = I[k] && !prevB[k]; I[k + "U"] = !I[k] && prevB[k]; prevB[k] = I[k]; }
+    for (const k of ["shoot", "pass", "lob", "thru", "sw", "spin", "stop", "feint", "nut", "step", "ctx", "rsk"]) { I[k + "D"] = I[k] && !prevB[k]; I[k + "U"] = !I[k] && prevB[k]; prevB[k] = I[k]; }
     return I;
   }
 
@@ -941,7 +942,7 @@
 
   /* ---------- entradas y faltas ---------- */
   function tackle(p, slide) {
-    if (p.one || p.down > 0) return;
+    if (p.one || p.down > 0 || (p.fooled && p.fooled.until > simT)) return;
     const o = M.owner; const poke = !slide && Math.random() < .5; const n = slide ? "SoccerTackle" : poke ? "SoccerTackle2" : "SoccerPass"; const a = Math.atan2(ball.y - p.y, ball.x - p.x);
     const ob = startOne(p, n, slide ? { ts: 1.25, h0: a, turnTo: a, turnT: .1, end: 1.5, fadeIn: .06 } : (poke ? { ts: 1.5, h0: a, turnTo: a, turnT: .2, end: .85, rootScale: 0, fadeIn: .06 } : { ts: 1.7, t0: .15, h0: a, turnTo: a, turnT: .2, end: .75, rootScale: .3, fadeIn: .06 }));
     if (!ob) return; p.h = a; ob.hitDone = false;
@@ -949,7 +950,7 @@
       const fR = footLocal(p, "R"), fL = footLocal(p, "L"), db = Math.min(Math.hypot(ball.x - fR.x, ball.y - fR.y), Math.hypot(ball.x - fL.x, ball.y - fL.y));
       const carrier = o && o.t !== p.t && hasBall(o) ? o : null;
       if (db < (slide ? .7 : .55) && ball.z < .5 && !ball.hold) {
-        oo.hitDone = true; const win = Math.random() < (slide ? .7 : .55) + (p.st.def - (carrier ? carrier.st.dri : 60)) * .01;
+        oo.hitDone = true; const win = Math.random() < (slide ? .7 : .55) + (p.st.def - (carrier ? carrier.st.dri : 60)) * .01 - (carrier && simT - (carrier.skillT || -9) < .6 ? .22 : 0);
         if (win || !carrier) { const k = slide ? 7 : 4, aa = a + (Math.random() - .5) * 1.2; ball.vx = Math.cos(aa) * k; ball.vy = Math.sin(aa) * k; ball.vz = slide ? .5 : 0; M.owner = null; M.last = p; p.dr.loose = .25; if (carrier) carrier.dr.loose = .6; sfx(160, .1, .3, "square"); }
       } else if (carrier && Math.hypot(carrier.x - p.x, carrier.y - p.y) < (slide ? 1.0 : .75)) {
         oo.hitDone = true; const behind = Math.cos(angD(carrier.h, Math.atan2(p.y - carrier.y, p.x - carrier.x))) < -.3;
@@ -1013,6 +1014,7 @@
     // regates: ruleta (R / stick derecho) y frenar el balón con la suela (T / stick izquierdo)
     if (I.ctx && M.owner && M.owner.t !== p.t) I.walk = true;   // REGATE defendiendo = contener
     if (hasBall(p) && !p.one && !charge && I.ctxD) { skillMove(p, ctxSkill(p, I), I); return { dir: null, m: 0 }; }
+    if (hasBall(p) && !p.one && !charge && I.rskD && I.rs != null) { const J = { dir: I.rs, m: 1, spr: I.spr }; skillMove(p, ctxSkill(p, J), J); return { dir: null, m: 0 }; }
     if (hasBall(p) && !p.one && !charge && (I.spinD || I.stopD || I.feintD || I.nutD || I.stepD)) { skillMove(p, I.spinD ? "spin" : I.stopD ? "stop" : I.feintD ? "feint" : I.nutD ? "nut" : "step", I); return { dir: null, m: 0 }; }
     const keys = { shot: I.shoot, pass: I.pass, lob: I.lob, thru: I.thru };
     if (hasBall(p) || (!M.owner && Math.hypot(ball.x - p.x, ball.y - p.y) < 2.2 && ball.z < .6)) {
@@ -1076,46 +1078,67 @@
     const d0 = nearestDef(p), close = d0 && dist(d0, p) < 3.5 && Math.abs(angD(p.h, Math.atan2(d0.y - p.y, d0.x - p.x))) < .9;
     if (I.dir == null || I.m < .3) return close ? "hat" : "stop";
     const rel = Math.abs(angD(p.h, I.dir));
-    if (rel < .55) return close ? "nut" : "nut";
+    if (rel < .5) return "nut";
+    if (rel < 1.05) return "step";
     if (rel > 2.3) return "spin";
     return I.spr ? "feint" : "croq"; }
+  // ¿se come el amago? como en DLS cuenta el momento: si el defensa viene lanzado hacia ti y está a 1-3 m, pica casi siempre
+  function foolChance(p, d0, base) { const d = dist(d0, p), toMe = Math.atan2(p.y - d0.y, p.x - d0.x), closing = (d0.v || 0) * Math.cos(angD(d0.h, toMe));
+    const timing = d > .9 && d < 3.2 ? .12 + clamp(closing / 6, 0, .2) : d < .9 ? -.15 : -.1;
+    return clamp(base + timing + (p.st.dri - d0.st.def) * .012, .15, .92); }
+  function fool(d0, x, y, t) { d0.fooled = { until: simT + t, x, y }; d0.v = Math.min(d0.v || 0, 1.2);
+    if (!d0.one && META.JoggingStumble && Math.random() < .55) startOne(d0, "JoggingStumble", { ts: 1.5, end: Math.min(1.1, t + .2), rootScale: .4, h0: d0.h, fadeIn: .08 }); }
   function skillMove(p, kind, I) {
-    const outH = I.dir != null ? I.dir : p.h;
+    const outH = I.dir != null ? I.dir : p.h; p.skillT = simT;
+    if (p === M.human && !window.STEP) { const NM = { spin: "RULETA", feint: "AMAGO", step: "BICICLETA", croq: "CROQUETA", hat: "SOMBRERO", stop: "FRENO", nut: nearestDef(p) && dist(nearestDef(p), p) < 3 ? "CAÑO" : "AUTOPASE" }; if (NM[kind] && !/CAÑO|SOMBRERO/.test(NM[kind])) msg(NM[kind], .55); }   // el nombre del regate, para aprender a hacerlos
     if (kind === "spin") { // ruleta: el balón va pegado al pie mientras gira, sale en la dirección del stick
       const o = startOne(p, "SoccerSpin", { ts: 1.25, h0: p.h, fadeIn: .08, end: 1.15 }); if (!o) return; p.dr.plan = null; p.skillT = simT;
       o.during = oo => { const k = oo.t / 1.15, a = p.h + k * .6; ball.x = lerp(ball.x, p.x + Math.cos(a) * .38, .5); ball.y = lerp(ball.y, p.y + Math.sin(a) * .38, .5); ball.vx = Math.cos(p.h) * p.v; ball.vy = Math.sin(p.h) * p.v; ball.z = 0; M.owner = p; };
-      o.after = () => { p.h = p.mh = outH; ball.vx = Math.cos(outH) * 3.4; ball.vy = Math.sin(outH) * 3.4; p.v = Math.max(p.v, 2.6); }; touchSfx(4); }
-    else if (kind === "feint" || kind === "step") { // amago / bicicleta: el cuerpo va a un lado y el balón sale por el otro; el defensa puede picar
+      o.after = () => { p.h = p.mh = outH; ball.vx = Math.cos(outH) * 3.8; ball.vy = Math.sin(outH) * 3.8; p.v = Math.max(p.v, 3.4); M.owner = p; }; touchSfx(4);
+      { const d0 = nearestDef(p); if (d0 && dist(d0, p) < 3.5 && Math.random() < foolChance(p, d0, .5)) fool(d0, d0.x + Math.cos(p.h) * 1.5, d0.y + Math.sin(p.h) * 1.5, 1.0); } }
+    else if (kind === "feint" || kind === "step") { // amago / bicicleta (como en DLS): el cuerpo engaña hacia un lado y sales hacia donde marcaste con el stick
       const d0 = nearestDef(p), side = I.dir != null ? (angD(p.h, I.dir) >= 0 ? 1 : -1) : (d0 ? (angD(p.h, Math.atan2(d0.y - p.y, d0.x - p.x)) >= 0 ? -1 : 1) : 1);
-      const n = side > 0 ? "JogStrafeLeft" : "JogStrafeRight", o = startOne(p, n, { ts: kind === "step" ? 1.6 : 1.3, end: kind === "step" ? .55 : .42, rootScale: .55, h0: p.h, fadeIn: .06 }); p.skillT = simT;
-      if (o) { o.during = () => { ball.x = lerp(ball.x, p.x + Math.cos(p.h) * .4, .4); ball.y = lerp(ball.y, p.y + Math.sin(p.h) * .4, .4); ball.vx = Math.cos(p.h) * p.v * .5; ball.vy = Math.sin(p.h) * p.v * .5; M.owner = p; };
-        o.after = () => { const out = p.h - side * .75; ball.vx = Math.cos(out) * 4; ball.vy = Math.sin(out) * 4; p.h = p.mh = out; p.v = Math.max(p.v, 3); }; }
-      if (d0 && dist(d0, p) < 4.5 && Math.random() < .52 + (p.st.dri - d0.st.def) * .012 + (kind === "step" ? .08 : 0)) d0.fooled = { until: simT + .8, x: p.x + Math.cos(p.h + side * 1.2) * 3, y: p.y + Math.sin(p.h + side * 1.2) * 3 };
+      const fakeN = side > 0 ? "SprintForwardRight" : "SprintForwardLeft", dur = kind === "step" ? .42 : .26;
+      p.leanT = { v: side * .3 * (kind === "step" ? 1.2 : 1), until: simT + dur * .55 };   // el cuerpo se inclina hacia el lado del engaño
+      if (kind === "step") later(dur * .5, () => { p.leanT = { v: -side * .32, until: simT + dur * .45 }; });   // bicicleta: cambia de lado a mitad
+      const o = startOne(p, META[fakeN] ? fakeN : (side > 0 ? "JogStrafeRight" : "JogStrafeLeft"), { ts: kind === "step" ? 1.15 : 1.5, end: dur, rootScale: .35, h0: p.h, fadeIn: .05 });
+      if (o) { o.during = () => { ball.x = lerp(ball.x, p.x + Math.cos(p.h) * .45, .45); ball.y = lerp(ball.y, p.y + Math.sin(p.h) * .45, .45); ball.vx = Math.cos(p.h) * p.v * .6; ball.vy = Math.sin(p.h) * p.v * .6; M.owner = p; };
+        o.after = () => { const out = p.h + side * .8; ball.vx = Math.cos(out) * 5; ball.vy = Math.sin(out) * 5; p.h = p.mh = out; p.v = Math.max(p.v, 4.4); M.owner = p; p.leanT = { v: -side * .25, until: simT + .3 }; }; }
+      if (d0 && dist(d0, p) < 4.5 && Math.random() < foolChance(p, d0, kind === "step" ? .58 : .52)) fool(d0, p.x + Math.cos(p.h - side * 1.2) * 3, p.y + Math.sin(p.h - side * 1.2) * 3, .85);
       touchSfx(2); }
     else if (kind === "nut") { // caño: si hay un rival delante, el balón pasa entre sus piernas; si no, conducción larga a la carrera
       const d0 = nearestDef(p), front = d0 && dist(d0, p) < 3 && Math.abs(angD(p.h, Math.atan2(d0.y - p.y, d0.x - p.x))) < .55;
-      if (front) { const ok = Math.random() < .46 + (p.st.dri - d0.st.def) * .014, a = Math.atan2(d0.y - ball.y, d0.x - ball.x);
-        if (ok) { const tx = d0.x + Math.cos(a) * 2.6, ty = d0.y + Math.sin(a) * 2.6, D = Math.hypot(tx - ball.x, ty - ball.y), v0 = rollV0(D, .7); ball.vx = Math.cos(a) * v0; ball.vy = Math.sin(a) * v0; d0.nutT = simT + .9; d0.fooled = { until: simT + .9, x: d0.x - Math.cos(a) * 1.5, y: d0.y - Math.sin(a) * 1.5 }; p.dr.plan = null; M.owner = p; p.dr.loose = 0; msg("¡CAÑO!", 1.1); crowdOoh(.8); M.crowdEx = Math.max(M.crowdEx || 0, .4); }
+      if (front) { const ok = Math.random() < foolChance(p, d0, .42), a = Math.atan2(d0.y - ball.y, d0.x - ball.x);
+        if (ok) { const tx = d0.x + Math.cos(a) * 2.6, ty = d0.y + Math.sin(a) * 2.6, D = Math.hypot(tx - ball.x, ty - ball.y), v0 = rollV0(D, .7); ball.vx = Math.cos(a) * v0; ball.vy = Math.sin(a) * v0; d0.nutT = simT + .9; fool(d0, d0.x - Math.cos(a) * 1.5, d0.y - Math.sin(a) * 1.5, .95); p.dr.plan = null; M.owner = p; p.dr.loose = 0; msg("¡CAÑO!", 1.1); crowdOoh(.8); M.crowdEx = Math.max(M.crowdEx || 0, .4); }
         else { ball.vx = Math.cos(a) * 5; ball.vy = Math.sin(a) * 5; p.dr.loose = .5; M.owner = null; } }
-      else { const a = I.dir != null ? I.dir : p.h, v0 = 9.5; ball.vx = Math.cos(a) * v0; ball.vy = Math.sin(a) * v0; p.dr.plan = null; p.dr.loose = .25; }
+      else { const a = I.dir != null ? I.dir : p.h, v0 = 7.2; ball.vx = Math.cos(a) * v0; ball.vy = Math.sin(a) * v0; p.dr.plan = null; p.dr.loose = .12; p.h = p.mh = a; p.v = Math.max(p.v, 5.5); }   // pase largo a sí mismo: arrancada
       kickSnd(6); }
     else if (kind === "croq") { // croqueta: el balón pasa de un pie a otro hacia un lado, rápido; el defensa que está delante puede quedarse clavado
       const d0 = nearestDef(p), side = I.dir != null ? (angD(p.h, I.dir) >= 0 ? 1 : -1) : 1, out = p.h + side * 1.15;
-      const o = startOne(p, side > 0 ? "JogStrafeRight" : "JogStrafeLeft", { ts: 1.9, end: .38, rootScale: .7, h0: p.h, fadeIn: .05 }); p.skillT = simT;
-      if (o) { o.during = () => { ball.x = lerp(ball.x, p.x + Math.cos(out) * .45, .5); ball.y = lerp(ball.y, p.y + Math.sin(out) * .45, .5); ball.vx = ball.vy = 0; M.owner = p; };
+      const cn = side > 0 ? "RunLeft" : "RunRight", o = startOne(p, META[cn] ? cn : (side > 0 ? "JogStrafeLeft" : "JogStrafeRight"), { ts: 1.7, end: .36, rootScale: .75, h0: p.h, fadeIn: .05 }); p.skillT = simT; p.leanT = { v: -side * .22, until: simT + .3 };
+      if (o) { o.during = () => { ball.x = lerp(ball.x, p.x + Math.cos(out) * .42, .55); ball.y = lerp(ball.y, p.y + Math.sin(out) * .42, .55); ball.vx = Math.cos(out) * Math.max(1.5, p.v * .8); ball.vy = Math.sin(out) * Math.max(1.5, p.v * .8); M.owner = p; };
         o.after = () => { const go = p.h + side * .55; ball.vx = Math.cos(go) * 4.2; ball.vy = Math.sin(go) * 4.2; p.h = p.mh = go; p.v = Math.max(p.v, 3.4); }; }
-      if (d0 && dist(d0, p) < 4 && Math.random() < .55 + (p.st.dri - d0.st.def) * .012) d0.fooled = { until: simT + .75, x: p.x - Math.sin(p.h) * side * 2.5, y: p.y + Math.cos(p.h) * side * 2.5 };
+      if (d0 && dist(d0, p) < 4 && Math.random() < foolChance(p, d0, .55)) fool(d0, p.x - Math.sin(p.h) * side * 2.5, p.y + Math.cos(p.h) * side * 2.5, .8);
       touchSfx(3); }
     else if (kind === "hat") { // sombrero: el balón sale por encima del rival y lo recoges detrás
-      const d0 = nearestDef(p), a = p.h, ok = !d0 || Math.random() < .5 + (p.st.dri - d0.st.def) * .012;
+      const d0 = nearestDef(p), a = p.h, ok = !d0 || Math.random() < foolChance(p, d0, .5);
       ball.vx = Math.cos(a) * 3.6; ball.vy = Math.sin(a) * 3.6; ball.vz = ok ? 4.4 : 2.2; ball.z = Math.max(ball.z, .1); M.owner = null; p.dr.plan = null; p.dr.loose = .15; p.skillT = simT;
       if (META.Chip) startOne(p, "Chip", { ts: 1.7, t0: Math.max(0, META.Chip.kick.t - .18), end: META.Chip.kick.t + .25, rootScale: 0, h0: a, fadeIn: .05 });
-      if (d0 && dist(d0, p) < 4.5) { if (ok) { d0.fooled = { until: simT + .9, x: d0.x - Math.cos(a) * 1.2, y: d0.y - Math.sin(a) * 1.2 }; msg("¡SOMBRERO!", 1); crowdOoh(.9); M.crowdEx = Math.max(M.crowdEx || 0, .4); } }
+      if (d0 && dist(d0, p) < 4.5) { if (ok) { fool(d0, d0.x - Math.cos(a) * 1.2, d0.y - Math.sin(a) * 1.2, .95); msg("¡SOMBRERO!", 1); crowdOoh(.9); M.crowdEx = Math.max(M.crowdEx || 0, .4); } }
       later(.12, () => { p.v = Math.max(p.v, 4.5); }); kickSnd(5); }
     else { // frenar: la suela para el balón y el jugador se clava
-      p.v = Math.min(p.v, 1); ball.vx = ball.vy = 0; ball.x = p.x + Math.cos(p.h) * .35; ball.y = p.y + Math.sin(p.h) * .35; p.dr.plan = null; touchSfx(3);
+      p.v = Math.min(p.v, 1); ball.vx = ball.vy = 0; ball.x = p.x + Math.cos(p.h) * .3; ball.y = p.y + Math.sin(p.h) * .3; p.dr.plan = null; touchSfx(3);
+      { const d0 = nearestDef(p); if (d0 && dist(d0, p) < 3.2 && (d0.v || 0) > 3 && Math.random() < foolChance(p, d0, .45)) fool(d0, d0.x + Math.cos(d0.h) * 2.5, d0.y + Math.sin(d0.h) * 2.5, .7); }   // el que venía lanzado se pasa de largo
       startOne(p, "StallSoccerball", { ts: 1.6, t0: .1, end: .75, rootScale: 0, fadeIn: .08, h0: p.h }); }
   }
+  // regate de la máquina con cabeza: mira dónde está el defensa y hacia qué lado hay sitio
+  function aiSkill(p, d0) { if (simT - (p.skillT || -9) < 2) return null; const toD = Math.atan2(d0.y - p.y, d0.x - p.x), rel = angD(p.h, toD), dd = dist(d0, p);
+    if (Math.abs(rel) > 1.4) return null;   // el defensa va por detrás o al lado: mejor correr
+    let sd = rel > 0 ? -1 : 1; const ny = p.y + Math.sin(p.h + sd * 1.2) * 4; if (ny < 2.5 || ny > W - 2.5) sd = -sd;   // hacia el lado con sitio (y lejos de la banda)
+    { const o2 = team(1 - p.t).find(q => q !== d0 && !q.gk && dist(q, p) < 5 && Math.sign(angD(p.h, Math.atan2(q.y - p.y, q.x - p.x))) === sd); if (o2 && Math.random() < .7) sd = -sd; }
+    const dirS = p.h + sd * 1.15, r = Math.random(), top = p.st.dri >= 84;
+    if (Math.abs(rel) < .5) { if (dd < 1.6 && top && r < .2) return { k: "nut", dir: p.h }; if (dd < 2.2 && top && r < .28) return { k: "hat", dir: p.h }; if (r < .55) return { k: "croq", dir: dirS }; if (r < .85) return { k: "feint", dir: dirS }; return { k: "step", dir: dirS }; }
+    if (r < .5) return { k: "croq", dir: dirS }; if (r < .75 && p.v > 4) return { k: "nut", dir: p.h + sd * .3 }; return { k: "spin", dir: p.h + sd * 1.5 }; }
   function mateInDir(p, dirH, maxD) { let b = null, bs = -1e9; for (const q of team(p.t)) { if (q === p || q.down > 0) continue; const dx = q.x - p.x, dy = q.y - p.y, d = Math.hypot(dx, dy); if (d < 3 || d > maxD) continue; const ang = Math.abs(angD(dirH, Math.atan2(dy, dx))); if (ang > .75) continue; const s = -ang * 22 - d * .35; if (s > bs) { bs = s; b = q; } } return b; }
   function passTo(p, q, k, pw = .55) {
     // destino: delante del compañero si corre (al hueco: más adelante, al espacio)
@@ -1257,7 +1280,7 @@
   function carrierAI(p, dt, C) {
     // regates de la IA: con un rival encima y buen regate, a veces amaga, hace la bicicleta, la ruleta o el caño
     { const d0 = !p.one && p.v > 1.5 ? nearestDef(p) : null; if (d0 && dist(d0, p) < 2.6 && Math.abs(angD(p.h, Math.atan2(d0.y - p.y, d0.x - p.x))) < .8 && Math.random() < dt * .3 * clamp((p.st.dri - 62) / 25, 0, 1.3)) {
-      const k = ["feint", "step", "spin", "nut"][Math.floor(Math.random() * 4)]; skillMove(p, k, { dir: prog(p.t, p.x) > .5 ? Math.atan2(W / 2 - p.y, opp(p.t) - p.x) : p.h }); return C; } }
+      const pk = aiSkill(p, d0); if (pk) { skillMove(p, pk.k, { dir: pk.dir, m: 1, spr: pk.k === "feint" }); return C; } } }
     const t = p.t, gx = opp(t), dG = Math.hypot(gx - p.x, W / 2 - p.y), ang = Math.abs(Math.atan2(W / 2 - p.y, gx - p.x) - (M.dirOf[t] > 0 ? 0 : Math.PI));
     const press = openness(p, t);
     // el compañero humano pide el balón: se la da en cuanto la línea de pase está limpia
@@ -1292,7 +1315,7 @@
     for (const o of team(1 - t)) { const dx = p.x - o.x, dy = p.y - o.y, d = Math.hypot(dx, dy); if (d < 6 && d > .1) { dirx += dx / d * (6 - d) * .25; diry += dy / d * (6 - d) * .35; } }
     if (p.y < 6) diry += (6 - p.y) * .35; else if (p.y > W - 6) diry -= (p.y - (W - 6)) * .35;   // no conducir hacia la banda: se sale
     { const d0 = nearestDef(p); if (d0 && dist(d0, p) < 2.6 && !p.one && simT - (p.skillT || -9) > 2.5 && Math.random() < dt * (.13 + Math.max(0, p.st.dri - 74) * .035)) {   // la máquina también regatea (más los buenos regateadores)
-        const k = ["croq", "croq", "feint", "hat", "spin", "nut"][Math.floor(Math.random() * 6)], sd = Math.random() < .5 ? 1 : -1; skillMove(p, k, { dir: p.h + sd * 1.2, m: 1, spr: false }); return { dir: null, m: 0 }; } }
+        const pk = aiSkill(p, d0); if (pk) { skillMove(p, pk.k, { dir: pk.dir, m: 1, spr: pk.k === "feint" }); return { dir: null, m: 0 }; } } }
     C.dir = Math.atan2(diry, dirx); C.m = 1; C.spr = press > 6 && prog(t, p.x) > .4;
     return C;
   }
@@ -1886,7 +1909,7 @@
       const auto = { puertas: DR.cu.gates.length, aros: DR.cu.rings.length, pases: 8, mini: 3, gol: 3 }[sp.obj] || 1;
       DR.goalN = Math.max(1, sp.goal || auto); if (sp.obj === "puertas") DR.goalN = Math.max(1, DR.cu.gates.length); if (sp.obj === "aros") DR.goalN = Math.min(DR.goalN, Math.max(1, DR.cu.rings.length));
       DR.time = sp.time || 0; DR.maxTries = sp.obj === "gol" || sp.obj === "mini" ? (sp.tries || 6) : 0; drCuReset(); }
-    setHuman(team(0).find(q => !q.gk && !q.parked)); drMsg(); msg(DRN[k].toUpperCase(), 1.8); { const sb = document.getElementById("sb"); if (sb) sb.style.display = "none"; }
+    setHuman(team(0).find(q => !q.gk && !q.parked)); drMsg(); msg(String(DRN[k] || k).toUpperCase(), 1.8); { const sb = document.getElementById("sb"); if (sb) sb.style.display = "none"; }
   }
   function drCuReset() { const c = DR.cu, me = c.me, dir = M.dirOf[0]; me.x = c.start.x; me.y = c.start.y; me.h = me.mh = dir > 0 ? 0 : Math.PI; me.one = null; me.req = null;
     for (const p of c.mates.concat(c.defs)) { const q = DR.spots.get(p); p.x = q.x; p.y = q.y; p.v = 0; p.req = null; } DR.shot = false; giveBall(me); setHuman(me); }
@@ -2093,7 +2116,7 @@
   // paso de simulación nunca mayor de 1/60 s: con pocos fps se hacen varios pasos (el balón no se queda atrás ni cambia el ritmo del juego)
   function frame(now) { const dt = Math.min(.1, (now - last) / 1000); last = now; if (!window.STEP) { const n = Math.min(3, Math.max(1, Math.ceil(dt * 30 - 1e-6))), h = dt / n; const gs = M.replay || M.intro ? 1 : 1.1; for (let i = 0; i < n; i++) tick(h * gs); /* ritmo DLS: el partido va un 10 % más rápido */ draw(dt); } requestAnimationFrame(frame); }
   window.__run = (n = 1, h = 1 / 30, noDraw) => { for (let i = 0; i < n; i++) tick(h); if (!noDraw) draw(h); return { clock: M.clock, half: M.half, phase: M.phase, score: [TEAMS[0].score, TEAMS[1].score], owner: M.owner && (M.owner.t + ":" + M.owner.role), set: M.set && M.set.type }; };
-  window.__test = { foul, OFF, P, M, ball, K, TEAMS, gkS, startSet, TIMERS, requestKick, GKP, passTo, startOne, pose, place, META, traj, headerPt, get simT() { return simT; } };
+  window.__skill = (k, d) => skillMove(M.human, k, { dir: d, m: 1 }); window.__test = { foul, OFF, P, M, ball, K, TEAMS, gkS, startSet, TIMERS, requestKick, GKP, passTo, startOne, pose, place, META, traj, headerPt, get simT() { return simT; } };
   M.lockP = EMB && EMB.lock ? P.find(q => q.u === EMB.lock && q.t === M.humanTeam) || null : null; if (EMB && EMB.lock && !M.lockP) M.lockOut = true;
   if (M.lockP) M.human = M.lockP; else if (M.humanTeam >= 0 && !M.lockOut) setHuman(team(M.humanTeam).find(q => q.cat === "fwd") || team(M.humanTeam)[10]); updHud(); startSet("kick", 0);
   /* ---------- ambiente de noche y clima (luces de estadio, lluvia y nieve) ---------- */
