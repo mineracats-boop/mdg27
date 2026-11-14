@@ -1896,6 +1896,8 @@
       else { // escenario de los campeones (como en la vida real): todos arriba, el capitán delante en el centro
         C.H = .55; const SW = 12, SD = 3.8, mt = new THREE.MeshStandardMaterial({ color: 0x1a2236, roughness: .55, metalness: .25 }), mtop = new THREE.MeshStandardMaterial({ color: 0x2a3550, roughness: .45, metalness: .3 });
         const st = new THREE.Mesh(new THREE.BoxGeometry(SW, C.H, SD), [mt, mt, mtop, mt, mt, mt]); st.position.copy(P3(cx, cy, C.H / 2)); st.castShadow = st.receiveShadow = true; S.add(st);
+        loadTex("obj_lona").then(t => { const lw = SW, lh = lw * t.image.height / t.image.width, lo = new THREE.Mesh(new THREE.PlaneGeometry(lw, lh), new THREE.MeshBasicMaterial({ map: t, toneMapped: false })); lo.position.copy(P3(cx, cy - SD / 2 - .15, C.H + .15 + lh / 2)); S.add(lo);
+          const pm = new THREE.MeshStandardMaterial({ color: 0x14181f, roughness: .5, metalness: .6 }); for (const sx of [-1, 1]) { const po = new THREE.Mesh(new THREE.BoxGeometry(.12, lh + C.H + .3, .12), pm); po.position.copy(P3(cx + sx * (lw / 2 + .06), cy - SD / 2 - .15, (lh + C.H + .3) / 2)); S.add(po); } }).catch(() => {});
         const esc = new THREE.Mesh(new THREE.BoxGeometry(3.2, C.H / 2, .7), [mt, mt, mtop, mt, mt, mt]); esc.position.copy(P3(cx, cy + SD / 2 + .35, C.H / 4)); esc.castShadow = esc.receiveShadow = true; S.add(esc);
         rest.forEach((q, i) => { const row = i < 5 ? 0 : 1, k = row ? i - 5 : i, n = row ? rest.length - 5 : 5, sx = (k + .5) / n - .5; q.x = cx + sx * (row ? 10 : 8.2) + (row ? 0 : (sx < 0 ? -.6 : .6)); q.y = row ? cy - .85 : cy + .95; q.h = Math.PI / 2 + (Math.random() - .5) * .4; q.one = null; });
         // el rival, hundido a un lado del escenario
