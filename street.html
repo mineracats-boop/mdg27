@@ -86,12 +86,13 @@ html,body{background:var(--bg)}
 .tsw{display:flex;align-items:center;gap:6px}.tsw i{width:18px;height:18px;border-radius:50%;background:var(--c);border:2px solid #fff8;display:inline-block}.tsw i.dos{background:linear-gradient(180deg,var(--c) 50%,var(--d) 50%)}#panel button.on,#bSk.on{border-color:var(--gold2);color:var(--gold2)}
 #panel{max-height:82vh;overflow:auto}#panel button.tsw{background:#ffffff14!important;border:1px solid #ffffff33!important;border-radius:99px!important;padding:6px 11px!important;font:700 12px system-ui!important;box-shadow:none!important;min-height:0!important;text-transform:none!important;letter-spacing:0!important}#panel .row{flex-wrap:wrap}
 #bTel em{margin-left:4px}
+#trab{position:fixed;left:12px;top:64px;z-index:12;background:#000b;border:2px solid #3cff8a;border-radius:14px;padding:8px 12px;color:#fff;font:600 14px system-ui;display:flex;flex-direction:column;align-items:center;gap:2px;min-width:170px}#trab i{font-style:normal;font-size:30px;color:#3cff8a;line-height:1}#trab button{margin-top:4px;padding:4px 10px!important;min-height:0!important;font-size:12px!important}
 #velo{position:fixed;left:50%;top:64px;transform:translateX(-50%);z-index:12;font:800 26px system-ui;color:#fff;background:#000a;border:2px solid var(--gold2,#e8c46a);border-radius:14px;padding:6px 16px;pointer-events:none}#bCar.on{border-color:var(--gold2)}
 #srvs .card{max-height:88vh;overflow:auto}.srow{display:flex;flex-direction:column;align-items:stretch;gap:6px;background:#ffffff10;border:1px solid #ffffff22;border-radius:12px;padding:8px 10px}.srow b{flex:1;text-align:left;font-size:17px}.srow small{display:block;font-weight:400;opacity:.7;font-size:12px}
 .sbtns{display:flex;gap:6px}.sbtns button{flex:1}.srow button{padding:8px 12px!important;min-height:0!important;font-size:13px!important}.srvmsg{min-height:18px;color:#ffd23a;font-size:14px}#bTel em:empty{display:none}
 </style></head><body>
 <div id="load"><img id="loadLogo" alt="Street"><div>Cargando el <b style="color:#f3d27a">barrio</b>…</div><div class="lbar"><i></i></div></div>
-<div id="hud"></div><div id="msg"></div><div id="tip"></div><div id="power"><i></i></div><div id="panel"></div><div id="velo" style="display:none"></div><div id="tel" class="modal" style="display:none" onclick="if(event.target===this)telCerrar()"><div id="telcaja"><div id="telpant"></div></div></div><div id="tcap" style="display:none"></div>
+<div id="hud"></div><div id="msg"></div><div id="tip"></div><div id="power"><i></i></div><div id="panel"></div><div id="velo" style="display:none"></div><div id="trab" style="display:none"></div><div id="tel" class="modal" style="display:none" onclick="if(event.target===this)telCerrar()"><div id="telcaja"><div id="telpant"></div></div></div><div id="tcap" style="display:none"></div>
 <div id="nbst"></div><div id="chat"></div><input id="chatin" maxlength="120" placeholder="Escribe y pulsa Enter" style="display:none" enterkeyhint="send">
 <div id="tb"><button id="bChat" onclick="chatOpen()" style="display:none"><img data-ui="ico_chat" alt="">Chat</button><button id="bRet" onclick="retosPanel()"><img data-ui="ico_moneda" alt=""><span id="bRetT">0</span></button><button id="bOn" onclick="nbMenu(true)"><img data-ui="ico_online" alt="">Online</button><button id="bCar" onclick="cocheFsubir()" style="display:none" title="Coche (F para subir y bajar · G para traerlo)">🚗 Coche</button><button id="bSk" onclick="skateToggle()" style="display:none" title="Skate (T)">🛹</button><button id="bTel" onclick="telAbrir()" style="display:none" title="Móvil (M)">📱 Móvil<em></em></button><button id="bMenu" onclick="hubMenu(true)"><img data-ui="ico_ajustes" alt="">Menú</button></div>
 <div id="nbon" class="modal" style="display:none" onclick="if(event.target===this)nbMenu(false)"><div class="card"><h3><img data-ui="ico_online" alt="" style="height:64px;width:auto;margin:0 auto 6px">Barrio online</h3><div class="col">
@@ -287,6 +288,73 @@ function cocheComprar(k) { const I = inv(), L = I.coches || []; if (!L.includes(
   invSet({ coches: L, coche: k }); if (miCoche && miCoche !== me.coche) { S.remove(miCoche.g); miCoche = null; } skateUI(); cochePanel(); }
 const GAS_PUERTA = () => [GAS.tienda[0], GAS.tienda[1] + GAS.tam[1] / 2 + 1.3];
 
+/* ---------- casas: se compran con monedas; dentro hay gimnasio, vitrina, ordenador, tele y garaje; las que no son tu casa se alquilan ---------- */
+const CASAS = {
+  casa_piso: { nom: "Piso de la calle Oeste", corto: "piso", precio: 3000, renta: 120, puerta: [WX + RW + ACE - .7, -60], salida: [WX + RW + ACE - 1.6, -60] },
+  casa_casa: { nom: "Casa del Bulevar", corto: "casa", precio: 8000, renta: 350, puerta: [-120, NZ - RW - ACE + .7], salida: [-120, NZ - RW - ACE + 1.6] },
+  casa_atico: { nom: "Ático de la calle Este", corto: "ático", precio: 20000, renta: 900, puerta: [EX - RW - ACE + .7, -90], salida: [EX - RW - ACE + 1.6, -90] } };
+const casasMias = () => store.get("casas", []), casaPrincipal = () => store.get("casaPrin", casasMias()[0] || "");
+function casasRegistrar() { let ix = -330; for (const [k, c] of Object.entries(CASAS)) {
+  INT[k] = ["casa_suelo.webp", "casa_gym.webp", "casa_fondo.webp", c.nom, "casa_vitrina.webp"]; INTPOS[k] = ix; ix -= 30;
+  SHOPS.push({ k, x: c.puerta[0], z: c.puerta[1], dx: c.puerta[0], ex: c.salida[0], ez: c.salida[1], casa: 1 }); DOORS.push({ k, x: c.puerta[0], z: c.puerta[1] }); } }
+// sitios de dentro de la casa (respecto al centro de la habitación)
+const CASA_SITIOS = [["gym", -3.6, 60, "Gimnasio · pulsa <b>E</b> para entrenar"], ["vitrina", 3.6, 58.8, "Vitrina de trofeos · pulsa <b>E</b>"], ["pc", 3.6, 61.3, "Ordenador · pulsa <b>E</b> para entrar en Ultimate Team"],
+  ["tele", 0, 57.7, "Tele · pulsa <b>E</b> para ver los vídeos del barrio"], ["garaje", -3.8, 62.9, "Garaje · pulsa <b>E</b> para elegir tu coche"]];
+function casaSitio() { if (!CASAS[place]) return null; const ox = INTPOS[place]; let b = null, bd = 1.7; for (const s of CASA_SITIOS) { const d = Math.hypot(me.x - (ox + s[1]), me.z - s[2]); if (d < bd) { bd = d; b = s; } } return b; }
+function casaUsar(s) { if (s[0] === "gym") return gymEmpezar(); if (s[0] === "vitrina") return vitrinaPanel(); if (s[0] === "pc") return nbAsk("¿Ir a tu <b>Ultimate Team</b>? Saldrás del barrio.", () => { location.href = "index.html"; }, () => {});
+  if (s[0] === "tele") { if (!inv().movil) return say("Necesitas un móvil para ver los vídeos en la tele", 1600); telAbrir(); return telApp("videos"); }
+  if (s[0] === "garaje") return garajePanel(); }
+function casaPanel(k) { const c = CASAS[k], mia = casasMias().includes(k), P = $("#panel"), prin = casaPrincipal() === k;
+  P.innerHTML = `<h3>${esc(c.nom).toUpperCase()}</h3><div>${mia ? (prin ? "Es tu casa." : `Es tuya y está <b>alquilada</b>: te da <b>${c.renta}</b> monedas al día.`) : `Se vende por <b>${c.precio}</b> monedas. Tienes <b>${coins()}</b>.`}</div>
+    <div class="tnote" style="margin-top:8px;text-align:left">Dentro tienes: <b>gimnasio</b> para subir de nivel a tu jugador, <b>vitrina</b> con tus trofeos, <b>ordenador</b> para tu Ultimate Team, <b>tele</b> con los vídeos del barrio y <b>garaje</b> para tus coches.<br>Las casas que tengas y no sean tu casa se <b>alquilan solas</b>: cada día te dan monedas.</div>
+    <div class="col" style="margin-top:10px">${mia ? `<button class="pri" onclick="casaEntrar('${k}')">Entrar</button>${prin ? "" : `<button onclick="store.set('casaPrin','${k}');casaPanel('${k}')">Que sea mi casa</button>`}` : `<button class="pri" onclick="casaComprar('${k}')">Comprar · ${c.precio} 🪙</button>`}<button onclick="this.closest('#panel').style.display='none'">Cerrar</button></div>`; P.style.display = "block"; }
+function casaComprar(k) { const L = casasMias(); if (L.includes(k)) return; if (!pagar(CASAS[k].precio, CASAS[k].nom)) return; L.push(k); store.set("casas", L); if (L.length === 1) store.set("casaPrin", k); store.set("rentaDia", today()); say("¡Ya es tuya!", 1600); casaPanel(k); }
+function casaEntrar(k) { $("#panel").style.display = "none"; const d = DOORS.find(d => d.k === k); if (d) { me.x = d.x; me.z = d.z; } interact(true); }
+function casaRentas() { const hoy = today(), ult = store.get("rentaDia", ""); if (!ult || ult === hoy) { if (!ult) store.set("rentaDia", hoy); return; }
+  const dias = Math.min(7, Math.max(1, Math.round((new Date(hoy) - new Date(ult)) / 864e5) || 1)), prin = casaPrincipal(); let n = 0; for (const k of casasMias()) if (k !== prin) n += CASAS[k].renta * dias;
+  store.set("rentaDia", hoy); if (n > 0) { store.set("monedas", coins() + n); updCoins(); const h = store.get("banco", []); h.unshift([Date.now(), n, "Alquileres"]); store.set("banco", h.slice(0, 60)); setTimeout(() => say("+" + n + " monedas de tus alquileres", 2400), 2500); } }
+// nivel del jugador: se sube en el gimnasio de casa (como mucho 3 sesiones al día) y te hace más rápido
+const nivel = () => store.get("nivel", { n: 1, xp: 0 }), velNivel = () => 1 + .03 * (Math.min(10, nivel().n) - 1);
+const GYM = { on: false, n: 0 };
+function gymEmpezar() { const hoy = today(), ses = store.get("gymHoy", { d: "", n: 0 }); if (ses.d === hoy && ses.n >= 3) return say("Por hoy ya has entrenado bastante. Vuelve mañana", 1800);
+  GYM.on = true; GYM.n = 0; const P = $("#panel"); P.innerHTML = `<h3>¡A ENTRENAR!</h3><div>Pulsa <b>E</b> (o el botón <b>A</b>) todo lo rápido que puedas durante 10 segundos.</div><div class="tbig" id="gymn" style="text-align:center;margin-top:10px">0</div>`; P.style.display = "block";
+  setTimeout(() => { GYM.on = false; const xp = GYM.n, N = nivel(); N.xp += xp; let sube = false; while (N.xp >= N.n * 60 && N.n < 10) { N.xp -= N.n * 60; N.n++; sube = true; } store.set("nivel", N);
+    store.set("gymHoy", { d: hoy, n: (ses.d === hoy ? ses.n : 0) + 1 }); P.innerHTML = `<h3>${sube ? "¡SUBES DE NIVEL!" : "ENTRENAMIENTO HECHO"}</h3><div>+${xp} de experiencia. Tu jugador es nivel <b>${N.n}</b> (${N.n >= 10 ? "nivel máximo" : N.xp + "/" + N.n * 60}). Cada nivel te hace un 3% más rápido.</div><div class="col" style="margin-top:10px"><button onclick="this.closest('#panel').style.display='none'">Vale</button></div>`; }, 10000); }
+function vitrinaPanel() { const N = nivel(), T = [["Nivel de tu jugador", N.n], ["Récord de toques", store.get("toques", 0)], ["Larguero (mejor serie)", store.get("larg", 0) + "/5"], ["Slalom (mejor tiempo)", store.get("slalom", 0) ? store.get("slalom", 0).toFixed(1) + " s" : "—"],
+  ["Rey de la pista", "banda " + store.get("rey", 0)], ["Trabajos hechos", store.get("trabHechos", 0)], ["Casas", casasMias().length], ["Coches", (inv().coches || []).length]];
+  const P = $("#panel"); P.innerHTML = `<h3>VITRINA DE TROFEOS</h3><div class="tlist">${T.map(([a, b]) => `<div><span>${a}</span><b>${b}</b></div>`).join("")}</div><div class="col" style="margin-top:10px"><button onclick="this.closest('#panel').style.display='none'">Cerrar</button></div>`; P.style.display = "block"; }
+function garajePanel() { const I = inv(), L = I.coches || [], P = $("#panel");
+  P.innerHTML = `<h3>GARAJE</h3><div>${L.length ? "Elige el coche que te espera en la puerta al salir." : "No tienes coches. Cómpralos en la gasolinera del fondo de la avenida."}</div><div class="col" style="margin-top:10px">` +
+    L.map(k => `<button class="${I.coche === k ? "on" : ""}" onclick="invSet({coche:'${k}'});GAR.sacar=1;garajePanel()">${COCHES[k].nom}${I.coche === k ? " · elegido" : ""}</button>`).join("") + `<button onclick="this.closest('#panel').style.display='none'">Cerrar</button></div>`; P.style.display = "block"; }
+const GAR = { sacar: 0 };
+/* ---------- trabajos: repartidor de pizzas, mensajero y taxista; cobras según lo rápido que lo hagas ---------- */
+const TRABAJOS = {
+  pizza: { nom: "Repartidor de pizzas", txt: "Recoge la pizza en la pizzería de la avenida y llévala a la dirección antes de que se enfríe.", base: 90, t: 75, n: 1, recoger: [AVX + RW + 1, -46], que: "la pizza" },
+  paquetes: { nom: "Mensajero", txt: "Recoge 3 paquetes en el quiosco de la avenida y entrégalos uno detrás de otro.", base: 60, t: 60, n: 3, recoger: [AVX - RW - 1, -80], que: "el paquete" },
+  taxi: { nom: "Taxista", txt: "Con tu coche: recoge al cliente y llévalo a su destino. Para despacio a su lado.", base: 160, t: 100, n: 1, coche: 1, que: "al cliente" } };
+const TRAB = { k: null, fase: 0, hecho: 0, t: 0, obj: null, mk: null };
+function puntoAcera(lejosDe) { const G = ACE_R.filter(r => (r.x1 - r.x0) * (r.z1 - r.z0) > 30); for (let k = 0; k < 40; k++) { const r = G[(Math.random() * G.length) | 0], x = r.x0 + .5 + Math.random() * Math.max(.1, r.x1 - r.x0 - 1), z = r.z0 + .5 + Math.random() * Math.max(.1, r.z1 - r.z0 - 1);
+  if (!lejosDe || Math.hypot(x - lejosDe[0], z - lejosDe[1]) > 70) return [x, z]; } return [ACE_R[0].x0 + 5, ACE_R[0].z0 + 1]; }
+function trabMarca(p) { if (!TRAB.mk) { const g = new THREE.Group(), m = new THREE.MeshBasicMaterial({ color: 0x3cff8a, transparent: true, opacity: .55, depthWrite: false });
+    const r = new THREE.Mesh(new THREE.RingGeometry(1.6, 2, 40), m); r.rotation.x = -Math.PI / 2; r.position.y = .25; const c = new THREE.Mesh(new THREE.CylinderGeometry(.35, .35, 30, 12, 1, true), new THREE.MeshBasicMaterial({ color: 0x3cff8a, transparent: true, opacity: .25, depthWrite: false })); c.position.y = 15; g.add(r, c); S.add(g); TRAB.mk = g; }
+  TRAB.mk.visible = true; TRAB.mk.position.set(p[0], 0, p[1]); TRAB.obj = p; }
+function trabajosPanel() { const P = $("#panel");
+  P.innerHTML = `<h3>TRABAJOS</h3><div>Gana monedas trabajando por la ciudad. Cuanto más rápido, más cobras.</div><div class="col" style="margin-top:10px">` + Object.entries(TRABAJOS).map(([k, t]) => `<button onclick="trabEmpezar('${k}')"><b>${t.nom}</b><small style="display:block;font-weight:400">${t.txt}</small></button>`).join("") +
+    `<button onclick="this.closest('#panel').style.display='none'">Cerrar</button></div>`; P.style.display = "block"; }
+function trabEmpezar(k) { const T = TRABAJOS[k]; $("#panel").style.display = "none"; telCerrar(); if (T.coche && !(inv().coches || []).length) return say("Para ser taxista necesitas un coche (gasolinera)", 2000);
+  if (place !== "calle") return say("Sal a la calle para trabajar", 1400); Object.assign(TRAB, { k, fase: 0, hecho: 0, t: T.t });
+  trabMarca(T.coche ? puntoAcera([me.x, me.z]) : T.recoger); $("#trab").style.display = ""; say(T.nom + ": ¡a trabajar!", 1400); }
+function trabFin(ok, msg) { if (TRAB.mk) TRAB.mk.visible = false; $("#trab").style.display = "none"; TRAB.k = null; if (msg) say(msg, 2400); }
+function stepTrabajo(dt) { if (!TRAB.k) return; const T = TRABAJOS[TRAB.k]; TRAB.t -= dt; if (TRAB.t <= 0) return trabFin(false, "Se acabó el tiempo. Trabajo perdido");
+  const o = TRAB.obj, d = Math.hypot(me.x - o[0], me.z - o[1]); const a = Math.atan2(o[1] - me.z, o[0] - me.x), ca = Math.atan2(-Math.cos(YAW), -Math.sin(YAW)), ang = a - ca;
+  const fase = TRAB.fase === 0 ? "Recoge " + T.que : "Entrega " + T.que + (T.n > 1 ? ` (${TRAB.hecho + 1}/${T.n})` : "");
+  $("#trab").innerHTML = `<b>${T.nom}</b><span>${fase}</span><i style="transform:rotate(${(ang * 180 / Math.PI).toFixed(0)}deg)">▲</i><span>${Math.round(d)} m · ${Math.ceil(TRAB.t)} s</span><button onclick="trabFin(false,'Trabajo cancelado')">Dejar</button>`;
+  const llega = d < (T.coche ? 5.5 : 2.6) && place === "calle" && (!T.coche || (me.coche && Math.abs(me.coche.v) < 2.5)); if (!llega) return;
+  if (T.coche && !me.coche) return; if (TRAB.fase === 0) { TRAB.fase = 1; trabMarca(puntoAcera(o)); TRAB.t += T.coche ? 0 : 10; say(T.coche ? "Cliente a bordo" : "¡Recogido! Ahora a entregarlo", 1400); return; }
+  TRAB.hecho++; const paga = Math.round(T.base + T.base * Math.max(0, TRAB.t) / T.t); store.set("monedas", coins() + paga); updCoins(); const h = store.get("banco", []); h.unshift([Date.now(), paga, T.nom]); store.set("banco", h.slice(0, 60));
+  if (TRAB.hecho >= T.n) { store.set("trabHechos", store.get("trabHechos", 0) + 1); misEv("trabajo"); return trabFin(true, "¡Trabajo hecho! +" + paga + " monedas"); }
+  say("+" + paga + " monedas · siguiente entrega", 1500); TRAB.fase = 0; TRAB.t = T.t; trabMarca(T.recoger); }
+
 function buildBarrio() {
   const land = new THREE.Mesh(new THREE.PlaneGeometry(X1 - X0 + 60, SEA_Z + 40), new THREE.MeshStandardMaterial({ color: 0x3b3a3d, roughness: 1 })); land.rotation.x = -Math.PI / 2; land.position.set((X0 + X1 + 60) / 2 - 4, 0, (SEA_Z - 40) / 2); land.receiveShadow = true; S.add(land);
   // mar: imagen de agua repetida que se mueve despacio (si aún no está la imagen, agua lisa)
@@ -345,16 +413,16 @@ Object.assign(INT, { ropa: ["tienda_ropa_suelo.webp", "tienda_ropa_pared.webp", 
 const INTPOS = { bar: -150, equip: -180, sobres: -210, ropa: -240, moviles: -270, skates: -300 }, MOSTR = { ropa: "madera", moviles: "blanco", skates: "madera" };   // el blanco es el mismo mostrador lacado en blanco
 const INTG = new THREE.Group(); INTG.visible = false;
 function buildInteriors() { const S0 = S; { const S = INTG; S0.add(INTG);
-  for (const [k, [fl, wa, bk]] of Object.entries(INT)) {
+  for (const [k, [fl, wa, bk, , w2]] of Object.entries(INT)) {
     const ox = INTPOS[k], W_ = 10, D_ = 8, H_ = 4;
     const f = new THREE.Mesh(new THREE.PlaneGeometry(W_, D_), mat(fl, [3, 2.4])); f.rotation.x = -Math.PI / 2; f.position.set(ox, .01, 60); f.receiveShadow = true; S.add(f);
     const c = new THREE.Mesh(new THREE.PlaneGeometry(W_, D_), new THREE.MeshStandardMaterial({ color: 0x1b1b1f })); c.rotation.x = Math.PI / 2; c.position.set(ox, H_, 60); S.add(c);
     const back = new THREE.Mesh(new THREE.PlaneGeometry(W_, H_), mat(bk, null, { emissive: 0xffffff, emissiveMap: tex(bk), emissiveIntensity: .25 })); back.position.set(ox, H_ / 2, 60 - D_ / 2); S.add(back);
-    for (const s of [-1, 1]) { const w = new THREE.Mesh(new THREE.PlaneGeometry(D_, H_), mat(wa, null, { emissive: 0xffffff, emissiveMap: tex(wa), emissiveIntensity: .15 })); w.position.set(ox + s * W_ / 2, H_ / 2, 60); w.rotation.y = -s * Math.PI / 2; S.add(w); }
+    for (const s of [-1, 1]) { const wi = s > 0 && w2 ? w2 : wa, w = new THREE.Mesh(new THREE.PlaneGeometry(D_, H_), mat(wi, null, { emissive: 0xffffff, emissiveMap: tex(wi), emissiveIntensity: .15 })); w.position.set(ox + s * W_ / 2, H_ / 2, 60); w.rotation.y = -s * Math.PI / 2; S.add(w); }
     const front = new THREE.Mesh(new THREE.PlaneGeometry(W_, H_), mat(wa, null, { emissive: 0xffffff, emissiveMap: tex(wa), emissiveIntensity: .15 })); front.position.set(ox, H_ / 2, 60 + D_ / 2); front.rotation.y = Math.PI; S.add(front);
     const pu = new THREE.Mesh(new THREE.PlaneGeometry(H_ * 1.49, H_), mat("puerta_int.webp", null, { emissive: 0xffffff, emissiveMap: tex("puerta_int.webp"), emissiveIntensity: .2 })); pu.position.set(ox, H_ / 2, 60 + D_ / 2 - .02); pu.rotation.y = Math.PI; S.add(pu);   // la puerta por la que se sale
     const l = new THREE.PointLight(0xfff0d0, 25, 18, 1.4); l.position.set(ox, 3.6, 60); INTG.add(l);   // solo existe dentro de la tienda
-    KEEPERS.push({ k, x: ox, z: 60 - 2.2 });
+    if (!CASAS[k]) KEEPERS.push({ k, x: ox, z: 60 - 2.2 });
     DOORS.push({ k: "salir", from: k, x: ox, z: 60 + D_ / 2 - .7 });
   }
 } }
@@ -463,7 +531,7 @@ const tip = t => { const e = $("#tip"); e.innerHTML = t || ""; e.style.opacity =
 function onBtn(c) {
   if (mode === "mini") { if (c === "KeyK" && MG.state === "aim" && charge < 0) charge = 0; return; }
   if (mode === "toques") { if (["KeyJ", "KeyE", "Space", "KeyK"].includes(c)) toqueHit(); return; }
-  if (mode === "hub") { if ($("#tel").style.display === "") return; if (c === "KeyF") return cocheFsubir(); if (c === "KeyG") return cocheTraer(); if (me.coche && c !== "KeyM") return; if (c === "KeyT") skateToggle(); if (c === "KeyM") telAbrir(); if (c === "KeyE") interact(); if (c === "KeyR" && NB.ws) { const p = nbNear(); if (p) nbReto(p); } return; }
+  if (mode === "hub") { if ($("#tel").style.display === "") return; if (GYM.on) { if (c === "KeyE") { GYM.n++; const g = $("#gymn"); if (g) g.textContent = GYM.n; } return; } if (c === "KeyF") return cocheFsubir(); if (c === "KeyG") return cocheTraer(); if (me.coche && c !== "KeyM") return; if (c === "KeyT") skateToggle(); if (c === "KeyM") telAbrir(); if (c === "KeyE") interact(); if (c === "KeyR" && NB.ws) { const p = nbNear(); if (p) nbReto(p); } return; }
   if (mode !== "match") return;
   if (c === "KeyJ") { if (G.owner === G.human) pass(G.human); else switchHuman(); }
   if (c === "KeyQ") switchHuman();
@@ -473,15 +541,17 @@ function onBtn(c) {
 function release() { if (charge < 0) return; const p = Math.min(1, charge); charge = -1; $("#power").style.opacity = 0; if (mode === "mini") { mgShot(p); return; } if (mode === "match" && G.owner === G.human) shoot(G.human, p); }
 // ---------- barrio: andar, tiendas ----------
 function nearDoor() { let best = null, bd = 2.2; for (const d of DOORS) { const dd = Math.hypot(me.x - (d.k === "salir" ? d.x : (SHOPS.find(s => s.k === d.k) || {}).dx || d.x), me.z - d.z); if (dd < bd) { bd = dd; best = d; } } return best; }
-function interact() {
+function interact(forzar) {
   if (place === "calle" && !me.coche) { const gp = GAS_PUERTA(); if (Math.hypot(me.x - gp[0], me.z - gp[1]) < 2.5) return cochePanel(); }
   const d = nearDoor();
   if (!d && place === "calle") { const mk = mgNear(); if (mk) return mgStart(mk); if (Math.hypot(me.x - REY.x, me.z - REY.z) < 2.2) return reyPanel(); }
   if (!d && place === "calle" && Math.hypot(me.x - TOQ.x, me.z - TOQ.z) < 1.6) return startToques();
   if (!d && place === "calle" && me.x > BEACH.x0 && me.x < BEACH.x1 && me.z > BEACH.z0 && me.z < BEACH.z1) return goMatch("playa");
   if (d && me.skate) skateToggle(false);
-  if (d) { if (d.k === "salir") { const s = SHOPS.find(s => s.k === d.from); me.x = s.dx; me.z = s.z + 2.2; place = "calle"; INTG.visible = false; $("#panel").style.display = "none"; S.fog = FOG; S.background = new THREE.Color(0xf2a86a); SNAP = 1; return; }
-    me.x = INTPOS[d.k]; me.z = 62.5; me.dir = -Math.PI / 2; place = d.k; INTG.visible = true; S.fog = null; S.background = new THREE.Color(0x0b0b10); SNAP = 1; tip(INT[d.k][3] + " · acércate al mostrador y pulsa E"); return; }
+  if (d) { if (d.k === "salir") { const s = SHOPS.find(s => s.k === d.from); me.x = s.ex != null ? s.ex : s.dx; me.z = s.ez != null ? s.ez : s.z + 2.2; if (GAR.sacar && CASAS[d.from]) { GAR.sacar = 0; setTimeout(cocheTraer, 400); } place = "calle"; INTG.visible = false; $("#panel").style.display = "none"; S.fog = FOG; S.background = new THREE.Color(0xf2a86a); SNAP = 1; return; }
+    if (CASAS[d.k] && !forzar && !casasMias().includes(d.k)) return casaPanel(d.k);
+    me.x = INTPOS[d.k]; me.z = 62.5; me.dir = -Math.PI / 2; place = d.k; INTG.visible = true; S.fog = null; S.background = new THREE.Color(0x0b0b10); SNAP = 1; tip(CASAS[d.k] ? "Estás en tu " + CASAS[d.k].corto : INT[d.k][3] + " · acércate al mostrador y pulsa E"); return; }
+  if (CASAS[place]) { const cs = casaSitio(); if (cs) casaUsar(cs); return; }
   if (place !== "calle" && Math.hypot(me.x - INTPOS[place], me.z - 59.2) < 2.6) shopPanel(place);
 }
 const KITC = ["#f4d21c", "#d3202c", "#1e6bff", "#14161c", "#f4f7ff", "#2e9e44", "#ff7a1a", "#7a2bd6", "#e83e8c", "#19c7c0"];
@@ -588,7 +658,7 @@ function stepNPCs(dt) {
   }
 }
 function stepHub(dt) {
-  let inp = input(); if ($("#tel").style.display === "") inp = { x: 0, y: 0, run: 0 }; const px = me.x, pz = me.z; if (me.coche) stepCoche(dt, inp); else { const d = camDir(inp.x, inp.y), m = Math.hypot(d.x, d.z), sp = m * (me.skate ? (inp.run ? 10.5 : 7) : (inp.run ? 6.8 : 3.4));
+  let inp = input(); if ($("#tel").style.display === "") inp = { x: 0, y: 0, run: 0 }; const px = me.x, pz = me.z; if (me.coche) stepCoche(dt, inp); else { const d = camDir(inp.x, inp.y), m = Math.hypot(d.x, d.z), sp = m * velNivel() * (me.skate ? (inp.run ? 10.5 : 7) : (inp.run ? 6.8 : 3.4));
   me.spd += (sp - me.spd) * Math.min(1, dt * 6); if (m > .1) { let a = Math.atan2(d.z, d.x) - me.dir; a = Math.atan2(Math.sin(a), Math.cos(a)); me.dir += a * Math.min(1, dt * 10); }
   me.x += Math.cos(me.dir) * me.spd * dt; me.z += Math.sin(me.dir) * me.spd * dt;
   if (place === "calle" && (me.z < -7.6 || pz < -7.6 || me.x < X0 || px < X0 || (me.x > EX - RW - ACE && me.x < X1 - 1 && me.z < -5))) { const ok = (x, z) => (x > X0 && x < X1 - 1 && z >= -7.6 && z <= SEA_Z - .8 && !(z > 5 && x < X0 + .4)) || andable(x, z);
@@ -605,8 +675,8 @@ function stepHub(dt) {
   const mk = place === "calle" ? mgNear() : null, nRey = place === "calle" && Math.hypot(me.x - REY.x, me.z - REY.z) < 2.2;
   const gp = GAS_PUERTA(), gasC = place === "calle" && Math.hypot(me.x - gp[0], me.z - gp[1]) < 2.5, cocC = miCoche && !me.coche && place === "calle" && Math.hypot(me.x - miCoche.x, me.z - miCoche.z) < 4;
   $("#velo").style.display = me.coche ? "" : "none";
-  if (me.coche) tip("<b>W</b> acelera · <b>S</b> frena · <b>A/D</b> giras · <b>F</b> para bajar"); else if (gasC) tip("Gasolinera · pulsa <b>E</b> para comprar un coche"); else if (cocC) tip("Pulsa <b>F</b> para subir a tu coche"); else if (np) tip(`<b>${esc(np.name)}</b> · pulsa <b>R</b> para retarle a un partido`); else if (mk) tip(`${MG_INFO[mk][0]}: pulsa <b>E</b> para empezar`); else if (nRey) tip("<b>Rey de la pista</b> · pulsa <b>E</b> para ver las bandas del barrio"); else if (place === "calle") tip(dd ? `Pulsa <b>E</b> para entrar en la ${INT[dd.k][3].toLowerCase()}` : nearToq ? `Toques: pulsa <b>E</b> para empezar (récord: ${store.get("toques", 0)})` : inBeach ? "Cancha de la playa: pulsa <b>E</b> para jugar un 4 contra 4 en la arena" : me.x > 55 ? "La jaula: entra para jugar un 4 contra 4" : "");
-  else tip(dd ? "Pulsa <b>E</b> para salir" : Math.hypot(me.x - INTPOS[place], me.z - 59.2) < 2.6 ? "Pulsa <b>E</b> en el mostrador" : INT[place][3]);
+  if (me.coche) tip("<b>W</b> acelera · <b>S</b> frena · <b>A/D</b> giras · <b>F</b> para bajar"); else if (gasC) tip("Gasolinera · pulsa <b>E</b> para comprar un coche"); else if (cocC) tip("Pulsa <b>F</b> para subir a tu coche"); else if (np) tip(`<b>${esc(np.name)}</b> · pulsa <b>R</b> para retarle a un partido`); else if (mk) tip(`${MG_INFO[mk][0]}: pulsa <b>E</b> para empezar`); else if (nRey) tip("<b>Rey de la pista</b> · pulsa <b>E</b> para ver las bandas del barrio"); else if (place === "calle") tip(dd ? (CASAS[dd.k] ? (casasMias().includes(dd.k) ? `Pulsa <b>E</b> para entrar en tu ${CASAS[dd.k].corto}` : `${CASAS[dd.k].nom} · <b>se vende</b> · pulsa <b>E</b>`) : `Pulsa <b>E</b> para entrar en la ${INT[dd.k][3].toLowerCase()}`) : nearToq ? `Toques: pulsa <b>E</b> para empezar (récord: ${store.get("toques", 0)})` : inBeach ? "Cancha de la playa: pulsa <b>E</b> para jugar un 4 contra 4 en la arena" : me.x > 55 ? "La jaula: entra para jugar un 4 contra 4" : "");
+  else tip(dd ? "Pulsa <b>E</b> para salir" : CASAS[place] ? ((casaSitio() || [])[3] || "Tu " + CASAS[place].corto + " · gimnasio a la izquierda, vitrina y ordenador a la derecha, tele al fondo, garaje junto a la puerta") : Math.hypot(me.x - INTPOS[place], me.z - 59.2) < 2.6 ? "Pulsa <b>E</b> en el mostrador" : INT[place][3]);
   stepYaw(dt); const fw = me.coche ? 9.5 : place === "calle" ? 7.5 : 3.8, fh = me.coche ? 4.2 : place === "calle" ? 3.6 : 2.2, want = new THREE.Vector3(me.x + Math.sin(YAW) * fw, fh, me.z + Math.cos(YAW) * fw);
   if (place !== "calle") { const ox = INTPOS[place]; want.x = clamp(want.x, ox - 4.6, ox + 4.6); want.z = clamp(want.z, 56.3, 63.8); }
   cam.position.lerp(want, SNAP ? 1 : Math.min(1, dt * 3)); SNAP = 0; cam.lookAt(me.x - Math.sin(YAW) * 1.5, 1.3, me.z - Math.cos(YAW) * 1.5);
@@ -861,7 +931,7 @@ function endMatch() { mode = "hub"; $("#hud").style.display = "none"; ring.posit
 // ---------- arranque ----------
 let ballM, ring;
 (async () => {
-  buildBarrio(); buildCiudad(); buildCiudadGrande(); buildLimites(); buildInteriors(); buildCage();
+  buildBarrio(); buildCiudad(); buildCiudadGrande(); casasRegistrar(); buildLimites(); buildInteriors(); buildCage();
   // coches: tráfico por el circuito de calles y el tuyo (modelos 3D de Meshy)
   cargarCoches().then(crearTrafico);
   ballM = new THREE.Mesh(new THREE.SphereGeometry(BR, 24, 16), new THREE.MeshStandardMaterial({ map: tex("../street/balon.webp"), roughness: .45 })); ballM.castShadow = true; S.add(ballM); ballM.position.set(CX, BR, 0);
@@ -872,12 +942,12 @@ let ballM, ring;
   const g = await loadModel("pj18"); me = { a: actor(g, kit.c1, kit.c2), x: -40, z: 3, dir: 0, spd: 0 };
   spawnNPCs(); addProps(); addTiendas(); addCiudad(); mgSetup(); updCoins();
   loadModel("entrenador1").then(g => { const a = actor(g, null, null); a.wrap.position.set(REY.x, gy(REY.x, REY.z), REY.z); a.wrap.rotation.y = -Math.PI + Math.PI / 2; play(a, "Idle"); const l = nbLabel("REY DE LA PISTA"); a.wrap.add(l); NPCS.push({ a, x: REY.x, z: REY.z, dir: Math.PI, walk: false, spd: 0, keeper: false, rey: 1 }); }).catch(() => {});
-  $("#load").remove(); try { const nb = JSON.parse(sessionStorage.getItem("street_nb") || "null"); if (nb && nbName()) { NB.srvNom = nb.nom || ""; nbJoin(nb.k, nb.sala); } else srvPanel(true); } catch (e) { srvPanel(true); } tip("Bienvenido al barrio. Entra en las tiendas o ve a la jaula del fondo para jugar.");
+  $("#load").remove(); casaRentas(); try { const nb = JSON.parse(sessionStorage.getItem("street_nb") || "null"); if (nb && nbName()) { NB.srvNom = nb.nom || ""; nbJoin(nb.k, nb.sala); } else srvPanel(true); } catch (e) { srvPanel(true); } tip("Bienvenido al barrio. Entra en las tiendas o ve a la jaula del fondo para jugar.");
   { const rs = new URLSearchParams(location.search).get("res"); if (rs && /^\d+-\d+$/.test(rs)) { const [a, b] = rs.split("-").map(Number); me.x = CX - CW / 2 - 4; me.z = 0; me.dir = Math.PI; SNAP = 1; applyResult(a, b); setTimeout(() => say(a > b ? "¡Ganaste " + a + "-" + b + "!" : a === b ? "Empate " + a + "-" + b : "Has perdido " + a + "-" + b, 2800), 300); history.replaceState(null, "", location.pathname); } }
   let last = performance.now(), fpsA = 60, lowQ = false;
   (function loop(now) { const dt = Math.min(.05, (now - last) / 1000); last = now;
     fpsA += (1 / Math.max(dt, .001) - fpsA) * .05; if (!lowQ && now > 8000 && fpsA < 32) { lowQ = true; R.setPixelRatio(Math.min(1, DPR())); R.shadowMap.enabled = false; S.traverse(o => { if (o.material) (Array.isArray(o.material) ? o.material : [o.material]).forEach(m => m.needsUpdate = true); }); }   // equipo justo: baja calidad sola
-    if (mode === "hub") { stepHub(dt); stepNPCs(dt); stepTrafico(dt); } else if (mode === "match") stepMatch(dt); else if (mode === "toques") stepToques(dt); else if (mode === "mini") stepMini(dt);
+    if (mode === "hub") { stepHub(dt); stepNPCs(dt); stepTrafico(dt); stepTrabajo(dt); } else if (mode === "match") stepMatch(dt); else if (mode === "toques") stepToques(dt); else if (mode === "mini") stepMini(dt);
     if (me) stepNet(dt);
     R.render(S, cam); requestAnimationFrame(loop); })(last);
 })();
@@ -997,7 +1067,7 @@ function telApp(a) {
   if (a === "chat") { if (nolog) return telPinta("Chat", NL); return telChat(); }
   if (a === "videos") { if (nolog) return telPinta("Vídeos", NL); return telFeed(); }
   if (a === "camara") { if (nolog) return telPinta("Cámara", NL); return telPinta("Cámara", `<div class="tnote">Guarda el móvil, encuadra con la cámara del juego (arrastra o usa Z / X) y dispara. Después puedes publicarlo en Vídeos.</div><div class="tcol"><button onclick="telCaptura('foto')">📸 Hacer una foto</button><button onclick="telCaptura('video')">⏺ Grabar un vídeo (6 s)</button></div>`); }
-  if (a === "juegos") { const J = [["larg", "Larguero", "Dale al larguero en 5 tiros"], ["pen", "Penaltis", "5 penaltis contra el portero"], ["sla", "Slalom", "Conduce por los aros"], ["toq", "Toques", "Récord: " + store.get("toques", 0)], ["rey", "Rey de la pista", "Las bandas del barrio"], ["jaula", "La jaula", "4 contra 4 en la cancha"], ["playa", "Cancha de la playa", "4 contra 4 en la arena"]];
+  if (a === "juegos") { const J = [["trab", "Trabajos", "Pizzas, paquetes y taxi: gana monedas"], ["larg", "Larguero", "Dale al larguero en 5 tiros"], ["pen", "Penaltis", "5 penaltis contra el portero"], ["sla", "Slalom", "Conduce por los aros"], ["toq", "Toques", "Récord: " + store.get("toques", 0)], ["rey", "Rey de la pista", "Las bandas del barrio"], ["jaula", "La jaula", "4 contra 4 en la cancha"], ["playa", "Cancha de la playa", "4 contra 4 en la arena"]];
     return telPinta("Juegos", `<div class="tcol">${J.map(([k, n, d]) => `<button onclick="telJuego('${k}')"><b>${n}</b><small>${d}</small></button>`).join("")}</div>`); }
   if (a === "mapa") return telPinta("Mapa", `<canvas id="tmap" width="600" height="260"></canvas><div class="tcol">${telSitios().map((s, i) => `<button onclick="telIr(${i})"><b>${s[0]}</b><small>Viaje rápido</small></button>`).join("")}</div>`), telMapa();
   if (a === "retos") { telCerrar(); return retosPanel(); }
@@ -1010,7 +1080,7 @@ function telApp(a) {
 }
 // mapa y viaje rápido
 function telSitios() { const L = [["Gasolinera", GAS_PUERTA()[0], GAS_PUERTA()[1] + 2], ["Bulevar norte", -68.5, NZ + RW + ACE + 1], ["Calle oeste", WX + RW + 1, -60], ["Calle este", EX - RW - 1, -60], ["La jaula", CX - CW / 2 - 3, 0], ["Cancha de la playa", (BEACH.x0 + BEACH.x1) / 2, BEACH.z0 - 1.5], ["Rey de la pista", REY.x - 2, REY.z + 2], ["Toques", TOQ.x + 2, TOQ.z]];
-  for (const s of SHOPS) L.push([INT[s.k][3], s.dx, s.z + 2.2]); return L; }
+  for (const s of SHOPS) if (!s.casa) L.push([INT[s.k][3], s.dx, s.z + 2.2]); for (const k of casasMias()) L.push(["Mi " + CASAS[k].corto, CASAS[k].salida[0], CASAS[k].salida[1]]); return L; }
 function telIr(i) { const s = telSitios()[i]; if (!s) return; telCerrar(); if (me.coche) { me.coche.v = 0; cocheBajar(); } if (place !== "calle") { place = "calle"; INTG.visible = false; S.fog = FOG; S.background = new THREE.Color(0xf2a86a); }
   me.x = s[1]; me.z = s[2]; SNAP = 1; say("Has viajado a: " + s[0], 1500); }
 function telMapa() { const c = $("#tmap"); if (!c) return; const g = c.getContext("2d"), x0 = WX - 22, x1 = CX + CW / 2 + 4, z0 = NZ - 22, z1 = SEA_Z + 2, sx = x => (x - x0) / (x1 - x0) * 600, sz = z => (z - z0) / (z1 - z0) * 260;
@@ -1019,7 +1089,7 @@ function telMapa() { const c = $("#tmap"); if (!c) return; const g = c.getContex
   g.fillStyle = "#e8d08c"; g.fillRect(sx(BEACH.x0), sz(BEACH.z0), sx(BEACH.x1) - sx(BEACH.x0), sz(BEACH.z1) - sz(BEACH.z0)); g.font = "bold 13px sans-serif"; g.textAlign = "center";
   telSitios().forEach(([n, x, z]) => { g.fillStyle = "#ffd23a"; g.beginPath(); g.arc(sx(x), sz(z), 5, 0, 7); g.fill(); });
   if (place === "calle") { g.fillStyle = "#ff3355"; g.beginPath(); g.arc(sx(me.x), sz(me.z), 7, 0, 7); g.fill(); g.fillStyle = "#fff"; g.fillText("TÚ", sx(me.x), sz(me.z) - 10); } }
-function telJuego(k) { telCerrar(); if (place !== "calle") telIr(0);
+function telJuego(k) { if (k === "trab") { telCerrar(); return trabajosPanel(); } telCerrar(); if (place !== "calle") telIr(0);
   if (k === "jaula") return telIr(0); if (k === "playa") { place = "calle"; return goMatch("playa"); } if (k === "rey") return telIr(2), reyPanel();
   if (k === "toq") { me.x = TOQ.x; me.z = TOQ.z; SNAP = 1; return startToques(); } const s = SPOTS[k]; me.x = s.x; me.z = s.z; SNAP = 1; mgStart(k); }
 // chat: grupo del barrio y privados
