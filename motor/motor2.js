@@ -1870,7 +1870,30 @@
   /* ---------- presentación de televisión: vuelo de cámara sobre el estadio lleno antes del saque ---------- */
   const intro = document.createElement("div"); Object.assign(intro.style, { position: "fixed", left: 0, right: 0, bottom: "14%", textAlign: "center", fontWeight: 900, fontStyle: "italic", textShadow: "0 4px 18px #000", pointerEvents: "none", transition: "opacity .4s", opacity: 0 });
   intro.innerHTML = `<div style="font-size:clamp(26px,5vw,56px)">${TEAMS[0].name} <span style="color:#ffd23a">vs</span> ${TEAMS[1].name}</div><div style="font-size:14px;font-style:normal;font-weight:600;opacity:.8;margin-top:8px">Pulsa cualquier botón para empezar</div>`; document.body.appendChild(intro);
-  M.intro = NET || DR ? null : { t: 0, dur: 7.5 };
+  /* ---------- celebración de un título (Modo Carrera): tus jugadores en el césped, el capitán levanta la copa, la grada canta ---------- */
+  const CEL = EMB && EMB.celebra ? Object.assign({ t: 0 }, EMB.celebra) : null; window.__CEL = CEL;
+  const CEL_A = ["Cheering", "StandingCheering", "Clapping", "FistPump", "StandingFistPump", "Happy", "Victory"].filter(n => META[n]);
+  function celebStep(dt) { const C = CEL, T0 = team(0);
+    if (!C.ini) { C.ini = 1; document.body.classList.add("celeb"); ballMesh.visible = false; for (const a of OFF) a.wrap.visible = false; for (const p of team(1)) { p.wrap.visible = false; p.x = -40; p.y = -40; }
+      const cx = L / 2, cy = W / 2 + 4; C.c = [cx, cy]; C.cap = T0[C.capi] || T0.find(q => !q.gk) || T0[0];
+      const rest = T0.filter(q => q !== C.cap); C.cap.x = cx; C.cap.y = cy + 1.2; C.cap.h = Math.PI / 2;
+      rest.forEach((q, i) => { const row = i < 5 ? 0 : 1, k = row ? i - 5 : i, n = row ? rest.length - 5 : 5, a = Math.PI * (.15 + .7 * (k + .5) / n), r = row ? 3.6 : 2.2; q.x = cx + Math.cos(a) * r * 1.25; q.y = cy + 1.2 - Math.sin(a) * r; q.h = Math.PI / 2 + (Math.random() - .5) * .5; q.one = null; });
+      for (const q of T0) { q.v = 0; q.mh = q.h; q.wrap.visible = true; }
+      const el = document.createElement("div"); el.id = "celeb"; el.innerHTML = `<small>CAMPEONES</small><b>${String(C.n || "").replace(/[<>&]/g, "")}</b><span>${String(C.club || "").replace(/[<>&]/g, "")}${C.s ? " · " + C.s : ""}</span><button id="celOk">Continuar</button>`; document.body.appendChild(el);
+      $("#celOk").onclick = () => { if (C.fin) return; C.fin = 1; parent.postMessage({ type: "mdg27celeb" }, "*"); };
+      asset("m_trofeo").then(t => GL().parseAsync(b64buf(t), "")).then(g => { const o = g.scene, bb = new THREE.Box3().setFromObject(o), k = .62 / (bb.max.y - bb.min.y); o.scale.setScalar(k); const c = bb.getCenter(new THREE.Vector3()); o.position.set(-c.x * k, -bb.min.y * k, -c.z * k);
+        o.traverse(m => { if (m.isMesh) { m.castShadow = true; if (m.material) { m.material.envMapIntensity = 1.4; } } }); C.tro = new THREE.Group(); C.tro.add(o); S.add(C.tro); }).catch(e => console.warn("trofeo", e));
+      later(.2, () => applause(6, 1.3)); }
+    C.t += dt; M.crowdEx = 1; if (CROWD) { CROWD.U.uT.value += dt; CROWD.U.uEx.value = 1; CROWD.U.uExT.value.set(1, 1); } crowdSound(); if ((C.ap = (C.ap || 0) - dt) <= 0) { C.ap = 5 + Math.random() * 2; applause(5, 1.2); }
+    const rt = (performance.now() - (C.t0 || (C.t0 = performance.now()))) / 1000; if (rt > 2.2) document.body.classList.add("celebT"); if (rt > 5) document.body.classList.add("celebB");
+    for (const q of T0) { if (!q.one) { const n = q === C.cap ? (C.capN = C.capN === "Victory" ? "StandingCheering" : "Victory") : CEL_A[Math.random() * CEL_A.length | 0]; startOne(q, n, { ts: .9 + Math.random() * .25, t0: q === C.cap ? 0 : Math.random() * .6, end: META[n].dur, rootScale: 0, h0: q.h, fadeIn: .3 }); }
+      stepOne(q, dt); q.x = clamp(q.x, 1, L - 1); pose(q, dt, FWD); place(q); }
+    if (C.tro) { const cp = C.cap; flushPose(cp); cp.hands[0].getWorldPosition(hv); cp.hands[1].getWorldPosition(hv2); hv.add(hv2).multiplyScalar(.5); const up = Math.min(1, C.t / .6);
+      C.tro.position.set(hv.x, hv.y + .05, hv.z); C.tro.rotation.y = -cp.h + Math.PI / 2; C.tro.visible = up > 0; }
+    // cámara: gira despacio alrededor del grupo, de abajo arriba
+    const [cx, cy] = C.c, a = Math.PI / 2 + Math.sin(C.t * .16) * 1.05, r = 10.5 - Math.min(3, C.t * .25), ce = P3(cx, cy, 0);
+    cam.position.set(ce.x + Math.cos(a) * r, 1.4 + Math.min(2.2, C.t * .18), ce.z + Math.sin(a) * r); cam.lookAt(ce.x, 1.55, ce.z); if (cam.fov !== 40) { cam.fov = 40; cam.updateProjectionMatrix(); } }
+  M.intro = NET || DR || CEL ? null : { t: 0, dur: 7.5 };
   function introStep(dt) { const I = input(), R = M.intro; if (R.t === 0) TS.tap = false; R.t += dt; if (R.t > .3) intro.style.opacity = 1;
     if (window.STEP || R.t >= R.dur || (R.t > .5 && (TS.tap || I.shootD || I.passD || I.lobD || I.thruD || Object.values(K).some(Boolean)))) { TS.tap = false; M.intro = null; intro.style.opacity = 0; camSnap = true; later(9, () => { const hp = $("#help"); if (hp) hp.style.display = "none"; }); M.fov = null; cam.fov = 26; cam.updateProjectionMatrix(); whistle(1); if (M.msgT > 0) $("#msg").style.opacity = 1; return; }
     const u = R.t / R.dur, e = u * u * (3 - 2 * u), a = Math.PI * lerp(.9, .38, e), h = lerp(24, 12, e); $("#msg").style.opacity = 0;
@@ -2106,6 +2129,7 @@
     { let gp = null; try { gp = navigator.getGamepads && [...navigator.getGamepads()].find(q => q && q.connected); } catch (e) {} const pi = gp ? padMapFor(gp).pause : 9, st = !!(gp && gp.buttons[pi] && gp.buttons[pi].pressed) && !PADCFG.on; if (st && !padStartPrev) setPause(!M.paused); padStartPrev = st; }
     uiPad();
     if (M.paused) return;
+    if (CEL) { celebStep(dt); return; }
     if (NET && NET.guest) { guestTick(dt); return; }
     if (NET && (!NET.ready || NET.ended)) { if (NET.ended && M.phase !== "end") { M.phase = "end"; showEnd(); } return; }
     if (M.intro) { introStep(dt); return; }

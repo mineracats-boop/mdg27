@@ -885,6 +885,12 @@ body.touch #mnarr{bottom:auto;top:calc(max(.8rem,env(safe-area-inset-top)) + 6.5
 .vida{justify-content:flex-start}.vida>.vcard{margin-top:auto}
 @media (max-height:520px){.vtop{position:static;margin-bottom:.6rem;flex-wrap:wrap;gap:.6rem;font-size:1.2rem}.vida{padding:.8rem}.vcard{padding:1rem 1.2rem;gap:.5rem}.vq{font-size:1.45rem}.vquote{font-size:1.35rem}.vtr{min-height:2.4rem;font-size:1.3rem;padding:.6rem .8rem}}
 
+.cportada{background:#f3eee2;color:#14110c;border-radius:.6rem;padding:2rem 2.4rem;font-family:Georgia,"Times New Roman",serif;text-align:center;box-shadow:inset 0 0 0 .3rem #14110c18}
+.cpd-top{font:700 1.2rem Georgia,serif;letter-spacing:.3em;border-bottom:.2rem solid #14110c;padding-bottom:.6rem;margin-bottom:1rem}
+.cpd-h{font:900 clamp(4rem,8vw,7.4rem) "BC",Impact,sans-serif;font-style:italic;color:#b3121f;line-height:1;letter-spacing:.02em}
+.cpd-s{font:700 2.2rem Georgia,serif;margin:.6rem 0}.cpd-t{font:400 1.5rem Georgia,serif;max-width:52rem;margin:0 auto 1.2rem;line-height:1.4}
+.cpd-v{border-top:.15rem solid #14110c55;padding-top:1rem;display:flex;flex-wrap:wrap;gap:.6rem 1.2rem;justify-content:center;font:700 1.4rem Georgia,serif}.cpd-v .lbl{width:100%;color:#14110c}.cpd-v small{opacity:.6;font-weight:400}
+
 .fl-de{background-image:url(data:image/webp;base64,UklGRlQCAABXRUJQVlA4WAoAAAAgAAAAPwAALwAASUNDUMgBAAAAAAHIAAAAAAQwAABtbnRyUkdCIFhZWiAH4AABAAEAAAAAAABhY3NwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAA9tYAAQAAAADTLQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAlkZXNjAAAA8AAAACRyWFlaAAABFAAAABRnWFlaAAABKAAAABRiWFlaAAABPAAAABR3dHB0AAABUAAAABRyVFJDAAABZAAAAChnVFJDAAABZAAAAChiVFJDAAABZAAAAChjcHJ0AAABjAAAADxtbHVjAAAAAAAAAAEAAAAMZW5VUwAAAAgAAAAcAHMAUgBHAEJYWVogAAAAAAAAb6IAADj1AAADkFhZWiAAAAAAAABimQAAt4UAABjaWFlaIAAAAAAAACSgAAAPhAAAts9YWVogAAAAAAAA9tYAAQAAAADTLXBhcmEAAAAAAAQAAAACZmYAAPKnAAANWQAAE9AAAApbAAAAAAAAAABtbHVjAAAAAAAAAAEAAAAMZW5VUwAAACAAAAAcAEcAbwBvAGcAbABlACAASQBuAGMALgAgADIAMAAxADZWUDggZgAAAFAFAJ0BKkAAMAA+LRCGQqGhDf+OAAwBYliAHYA/AD9jv5zyAXYD9gAK6ns+8ORK/4TEUAD+/w3bEiVP97K2D2Zy93I///8mObEJfumZQUNa/z86W5lajnRWmIEQv4mSE6/yGwYAAA==)}
 .fl-fr{background-image:url(data:image/webp;base64,UklGRooCAABXRUJQVlA4WAoAAAAgAAAAPwAALwAASUNDUMgBAAAAAAHIAAAAAAQwAABtbnRyUkdCIFhZWiAH4AABAAEAAAAAAABhY3NwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAA9tYAAQAAAADTLQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAlkZXNjAAAA8AAAACRyWFlaAAABFAAAABRnWFlaAAABKAAAABRiWFlaAAABPAAAABR3dHB0AAABUAAAABRyVFJDAAABZAAAAChnVFJDAAABZAAAAChiVFJDAAABZAAAAChjcHJ0AAABjAAAADxtbHVjAAAAAAAAAAEAAAAMZW5VUwAAAAgAAAAcAHMAUgBHAEJYWVogAAAAAAAAb6IAADj1AAADkFhZWiAAAAAAAABimQAAt4UAABjaWFlaIAAAAAAAACSgAAAPhAAAts9YWVogAAAAAAAA9tYAAQAAAADTLXBhcmEAAAAAAAQAAAACZmYAAPKnAAANWQAAE9AAAApbAAAAAAAAAABtbHVjAAAAAAAAAAEAAAAMZW5VUwAAACAAAAAcAEcAbwBvAGcAbABlACAASQBuAGMALgAgADIAMAAxADZWUDggnAAAAHAGAJ0BKkAAMAA+MRKHQqIhDKoAEAGCWIAzMKm/SBTgP6B+Ku9/5yB/VcgABBpttKkelUK/Mrxtnv2J8AD+/fuL//kB/bUvWD//Jsv5wFPXz3/Sk/+Nrn/zv7Ee+3+G0UFj//HAfNJejrRZepdrP//tcQ/8iZBh3cZZO7WWc5rL8MPEz/zPKKBhsNg34C9myuf9nlInlTaH84QAAA==)}
 .fl-es{background-image:url(data:image/webp;base64,UklGRtIDAABXRUJQVlA4WAoAAAAgAAAAPwAALwAASUNDUMgBAAAAAAHIAAAAAAQwAABtbnRyUkdCIFhZWiAH4AABAAEAAAAAAABhY3NwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAA9tYAAQAAAADTLQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAlkZXNjAAAA8AAAACRyWFlaAAABFAAAABRnWFlaAAABKAAAABRiWFlaAAABPAAAABR3dHB0AAABUAAAABRyVFJDAAABZAAAAChnVFJDAAABZAAAAChiVFJDAAABZAAAAChjcHJ0AAABjAAAADxtbHVjAAAAAAAAAAEAAAAMZW5VUwAAAAgAAAAcAHMAUgBHAEJYWVogAAAAAAAAb6IAADj1AAADkFhZWiAAAAAAAABimQAAt4UAABjaWFlaIAAAAAAAACSgAAAPhAAAts9YWVogAAAAAAAA9tYAAQAAAADTLXBhcmEAAAAAAAQAAAACZmYAAPKnAAANWQAAE9AAAApbAAAAAAAAAABtbHVjAAAAAAAAAAEAAAAMZW5VUwAAACAAAAAcAEcAbwBvAGcAbABlACAASQBuAGMALgAgADIAMAAxADZWUDgg5AEAAPAKAJ0BKkAAMAA+MRaJQyIhIRFXRCADBLUAPL35n+AH7AcdP2YswD8gMcB52foA3gDnr/Yk/a8myT+f8V/0n7ABdIk3BXwelooaVLGv0TPPW9ZuakZWv9TnmV+dLbZLYAD+/p9NH9kZv//mBF2U+xDx5sv0Bt82jzZf//9hlZ/2rSmNfLWHowy7pE/ZdItPrjtu9ceiLmd5mwo8vE42ORNinDty/FXyXk9cTzkkqH8cfUgDZ4rp1fFbyt8W5i8Nfw8O0PEXibQPf9QOt1//lhgPa5C5b406G1Mf2Hy7MRu7zgJEFyFpXxK0UY9Tvcx6PmKkfY6//MV2lUdVnwMG7N875ioIZnUK6342C7XMWXhss+frsbdJgmkvIdHZI5VMMGnd1zPjE5SJtzjN9fGIY5dYRMJnsE+BnsTSbz8/+onI1vs+2KyHx6qBbwstmQ0ushkZi/4x73/65heCXQf67pZ3bhcaz8P/8+dB6uRA1NnyXDhMzQ98uPj+CVcf7154uK9BJkjGRfp8E6EOGe/8dp5uE0SVPyocNV/kJB3OlU/NTO68ndao9K2/6qd/4st0sys+z+5a5CBQBWKPQ2yVJaRXt0PffkgryDC74Ochwe43Yukb+t48ZjkqjQD4dftYgDcAUAA=)}
@@ -7904,7 +7910,7 @@ ONSHOW.cfg = renderCfg;
 function cfgChange(k, d) {
   if (k === "pads") return padTest();
   if (k === "cuenta") return confirmDlg("Cerrar sesión", "¿Cerrar la sesión en este dispositivo? Tu progreso se guarda antes en la nube y se recupera al volver a entrar con tu usuario y contraseña.", "Cerrar sesión", () => cuentaSalir());
-  if (k === "cred") return dlg("Créditos", "MDG 27 · Rocket Jam (Antonio y Guille).<br><br>Estadio 3D: «Soccer Stadium» de R-LAB (@rakshaan) en Sketchfab, licencia CC BY 4.0 (creativecommons.org/licenses/by/4.0). Modificado: sin anuncios ni porterías, colores y geometría simplificados.<br><br>Street Football: «Skateboard» de Jamoues, «Counter» de gorzi, «Skatepark Rails & Ramps Resource Kit» de maxkeeley, «Gas station» de suvorovtim y «Gas station Props» de Elbolilloduro (Sketchfab, CC BY 4.0), con texturas reducidas.", [["Cerrar", closeDlg, true, ""]]);
+  if (k === "cred") return dlg("Créditos", "MDG 27 · Rocket Jam (Antonio y Guille).<br><br>Estadio 3D: «Soccer Stadium» de R-LAB (@rakshaan) en Sketchfab, licencia CC BY 4.0 (creativecommons.org/licenses/by/4.0). Copa de las celebraciones: «Golden Trophy» de incg5764 en Sketchfab, licencia CC BY 4.0. Modificado: sin anuncios ni porterías, colores y geometría simplificados.<br><br>Street Football: «Skateboard» de Jamoues, «Counter» de gorzi, «Skatepark Rails & Ramps Resource Kit» de maxkeeley, «Gas station» de suvorovtim y «Gas station Props» de Elbolilloduro (Sketchfab, CC BY 4.0), con texturas reducidas.", [["Cerrar", closeDlg, true, ""]]);
   if (k === "tut") { if (typeof startTutorial === "function") startTutorial(); return; }
   if (k === "app") return appInstalar();
   const c = CFG.find(x => x.k === k); if (!c || !c.type) return;
@@ -9775,8 +9781,10 @@ function startNew(cfg) {
   document.body.classList.add("inmatch"); MATCH_ON = true;
   const data = { teams: cfg.teams.map(T => ({ name: T.name, sh: T.sh, c1: T.c1, c2: T.c2, kits: teamKits(T), pl: T.pl.map(d => ({ n: d.n, role: d.role, st: d.st, ov: d.ov, u: d.u, num: d.num })), bench: (T.bench || []).map(d => ({ n: d.n, role: d.role, st: d.st, ov: d.ov, u: d.u, num: d.num })) })).map(dorsalesRellenar),
     human: cfg.humans && cfg.humans[0] ? cfg.humans[0].t : 0, cpu: cfg.cpuTeams || [], diff: cfg.diff, halfLen: cfg.halfLen, tod: cfg.tod || "Auto", padmap: store.get("padmap", {}), weather: cfg.weather === undefined ? undefined : cfg.weather, padKind: typeof padType !== "undefined" ? padType : "xbox", drill: cfg.drill || null, drillSpec: cfg.drillSpec || null, knockout: !!cfg.knockout, lock: cfg.lock || null };
+  if (cfg.celebra) data.celebra = cfg.celebra;
   const onMsg = e => { if (e.source !== fr.contentWindow) return; const d = e.data || {};
     if (d.type === "mdg27ready") fr.contentWindow.postMessage({ type: "mdg27cfg", cfg: data }, "*");
+    if (d.type === "mdg27celeb") { removeEventListener("message", onMsg); fr.remove(); document.body.classList.remove("inmatch"); MATCH_ON = false; if (cfg.onCeleb) cfg.onCeleb(); return; }
     if (d.type === "mdg27end" || d.type === "mdg27quit") { removeEventListener("message", onMsg); fr.remove(); document.body.classList.remove("inmatch"); MATCH_ON = false; setTimeout(() => fr.focus && window.focus(), 0);
       if (d.type === "mdg27quit") { if (cfg.drill && cfg.onAbandon) cfg.onAbandon(); return; }
       if (d.r && d.r.drill) { if (cfg.onDrill) cfg.onDrill(d.r.drill); return; }
@@ -13673,7 +13681,7 @@ function closeEvent(e, out) {
   }
 }
 function evName(e) { const C = e.C; if (e.kind === "liga") return `Jornada ${C.r + 1}`; if (e.kind === "md") return `Fase de liga · J${C.m + 1}`; if (e.kind === "super") return C.name; if (e.kind === "copa") return CUP_RN(C.alive.length); return C.ko.name + (C.ko.name === "Final" ? "" : C.ko.leg ? " (vuelta)" : " (ida)"); }
-function trophy(C, id) { if (id == null || C.tro) return; C.tro = 1; if (id === CAR.club) { CAR.trophies.push({ s: CAR.season, n: C.name }); CAR.junta = clamp(CAR.junta + 15, 0, 100); CAR.afi = clamp(CAR.afi + 15, 0, 100); }
+function trophy(C, id) { if (id == null || C.tro) return; C.tro = 1; if (id === CAR.club) { CAR.trophies.push({ s: CAR.season, n: C.name }); (CAR.celQ = CAR.celQ || []).push({ n: C.name, s: CAR.season }); CAR.junta = clamp(CAR.junta + 15, 0, 100); CAR.afi = clamp(CAR.afi + 15, 0, 100); }
   carNews("titulo", `¡${cname(id)} campeón de ${C.name}!`, id === CAR.club ? "Tus jugadores levantan el trofeo. La afición, entregada." : ""); }
 
 // avanza hasta el próximo partido del usuario (o el final de la semana)
@@ -13983,7 +13991,19 @@ function signPlayer(k, amt, sal, yrs) {
 function carLoadMode() { CAR = null; const c = store.get(CT.mode === "jug" ? "carj" : "car", null); eraUse(c && c.v === 1 ? c.era : CT.setup.era); if (c && c.v === 1) { CAR = c; carIndex(); NPOOL = null; natDirty(); if (!CAR.ntours) { natFill(); natSetupSeason(); } } return CAR; }
 ONSHOW.car = () => { CT.mode = null; CAR = null; renderCar(); };
 const meter = (lbl, v) => `<div class="cmeter"><span>${lbl}</span><i><b style="width:${v}%;background:${v >= 60 ? "#3ddc84" : v >= 35 ? "#ffd23a" : "#ff4d5e"}"></b></i><em>${Math.round(v)}</em></div>`;
-function renderCar() {
+/* ---------- celebración de títulos: escena en el estadio (motor 3D) y portada del diario ---------- */
+function carCelebraCheck() { if (!CAR || !CAR.celQ || !CAR.celQ.length || MATCH_ON || CT.celOn || !$("#carBody") || $("#carBody").offsetParent === null) return; CT.celOn = 1; setTimeout(carCelebra, 500); }
+function carCelebra() { const c = CAR.celQ[0]; if (!c) { CT.celOn = 0; return; }
+  const jug = CAR.mode === "jug", T = teamFor(CAR.club, !jug), rivalId = CLUBS.findIndex((x, i) => i !== CAR.club), R = teamFor(rivalId, false);
+  let capi = T.pl.findIndex(p => jug && p.u === CAR.me); if (capi < 0) { let b = -1; T.pl.forEach((p, i) => { if (i && (b < 0 || p.ov > T.pl[b].ov)) b = i; }); capi = b; }
+  const fin = () => { CAR.celQ.shift(); carSave(); carPortada(c); };
+  if (!useNewEngine({})) return fin();
+  startMatch({ teams: [T, R], humans: [{ t: 0, src: "any" }], cpuTeams: [1], diff: "Normal", halfLen: 60, tod: "Noche", celebra: { n: c.n, s: c.s, club: cname(CAR.club), capi }, onCeleb: fin, onEnd: () => "" }); }
+function carPortada(c) { const n = CAR.trophies.length, mismo = CAR.trophies.filter(t => t.n === c.n).length, jug = CAR.mode === "jug";
+  const sub = jug ? `${esc(pinfo(CAR.me).n)} levanta su ${mismo > 1 ? mismo + "ª " : "primera "}${esc(c.n)}` : `${esc(CAR.name)} ya suma ${n} título${n === 1 ? "" : "s"} en el banquillo`;
+  dlg("", "", [["Seguir", () => { closeDlg(); CT.celOn = 0; renderCar(); }, true]], `<div class="cportada"><div class="cpd-top">EL DIARIO DEPORTIVO · ${esc(c.s)}</div><div class="cpd-h">¡CAMPEONES!</div><div class="cpd-s">El ${esc(cname(CAR.club))} gana ${mismo > 1 ? "otra vez " : ""}la ${esc(c.n)}</div><div class="cpd-t">${sub}. La afición, entregada, celebra el título hasta la madrugada.</div>
+    <div class="cpd-v"><div class="lbl">VITRINA DEL CLUB</div>${CAR.trophies.slice().reverse().map(t => `<span>${esc(t.n)} <small>${esc(t.s)}</small></span>`).join("")}</div></div>`, { wide: true }); }
+function renderCar() { setTimeout(carCelebraCheck, 0);
   const B = $("#carBody");
   if (!CT.mode) return renderCarModes();
   if (!CAR) return CT.mode === "jug" ? renderJugSetup() : renderCarSetup();
