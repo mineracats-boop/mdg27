@@ -312,7 +312,7 @@ function casaComprar(k) { const L = casasMias(); if (L.includes(k)) return; if (
 function casaEntrar(k) { $("#panel").style.display = "none"; const d = DOORS.find(d => d.k === k); if (d) { me.x = d.x; me.z = d.z; } interact(true); }
 function casaRentas() { const hoy = today(), ult = store.get("rentaDia", ""); if (!ult || ult === hoy) { if (!ult) store.set("rentaDia", hoy); return; }
   const dias = Math.min(7, Math.max(1, Math.round((new Date(hoy) - new Date(ult)) / 864e5) || 1)), prin = casaPrincipal(); let n = 0; for (const k of casasMias()) if (k !== prin) n += CASAS[k].renta * dias;
-  store.set("rentaDia", hoy); if (n > 0) { store.set("monedas", coins() + n); updCoins(); const h = store.get("banco", []); h.unshift([Date.now(), n, "Alquileres"]); store.set("banco", h.slice(0, 60)); setTimeout(() => say("+" + n + " monedas de tus alquileres", 2400), 2500); } }
+  store.set("rentaDia", hoy); if (n > 0) { monedasMas(n); updCoins(); const h = store.get("banco", []); h.unshift([Date.now(), n, "Alquileres"]); store.set("banco", h.slice(0, 60)); setTimeout(() => say("+" + n + " monedas de tus alquileres", 2400), 2500); } }
 // nivel del jugador: se sube en el gimnasio de casa (como mucho 3 sesiones al día) y te hace más rápido
 const nivel = () => store.get("nivel", { n: 1, xp: 0 }), velNivel = () => 1 + .03 * (Math.min(10, nivel().n) - 1);
 const GYM = { on: false, n: 0 };
@@ -351,7 +351,7 @@ function stepTrabajo(dt) { if (!TRAB.k) return; const T = TRABAJOS[TRAB.k]; TRAB
   $("#trab").innerHTML = `<b>${T.nom}</b><span>${fase}</span><i style="transform:rotate(${(ang * 180 / Math.PI).toFixed(0)}deg)">▲</i><span>${Math.round(d)} m · ${Math.ceil(TRAB.t)} s</span><button onclick="trabFin(false,'Trabajo cancelado')">Dejar</button>`;
   const llega = d < (T.coche ? 5.5 : 2.6) && place === "calle" && (!T.coche || (me.coche && Math.abs(me.coche.v) < 2.5)); if (!llega) return;
   if (T.coche && !me.coche) return; if (TRAB.fase === 0) { TRAB.fase = 1; trabMarca(puntoAcera(o)); TRAB.t += T.coche ? 0 : 10; say(T.coche ? "Cliente a bordo" : "¡Recogido! Ahora a entregarlo", 1400); return; }
-  TRAB.hecho++; const paga = Math.round(T.base + T.base * Math.max(0, TRAB.t) / T.t); store.set("monedas", coins() + paga); updCoins(); const h = store.get("banco", []); h.unshift([Date.now(), paga, T.nom]); store.set("banco", h.slice(0, 60));
+  TRAB.hecho++; const paga = Math.round(T.base + T.base * Math.max(0, TRAB.t) / T.t); monedasMas(paga); updCoins(); const h = store.get("banco", []); h.unshift([Date.now(), paga, T.nom]); store.set("banco", h.slice(0, 60));
   if (TRAB.hecho >= T.n) { store.set("trabHechos", store.get("trabHechos", 0) + 1); misEv("trabajo"); return trabFin(true, "¡Trabajo hecho! +" + paga + " monedas"); }
   say("+" + paga + " monedas · siguiente entrega", 1500); TRAB.fase = 0; TRAB.t = T.t; trabMarca(T.recoger); }
 
@@ -565,7 +565,7 @@ function shopPanel(k) {
   if (k === "bar") h = `<h3>Bar deportivo</h3><div>Aquí se queda la gente a ver los partidos. Cuando tengamos servidor, desde aquí verás partidos de tus amigos en directo.</div><div class="row"><button onclick="this.closest('#panel').style.display='none'">Cerrar</button></div>`;
   P.innerHTML = h; P.style.display = "block";
 }
-function setKit(k, c) { const own = store.get("colores", []), ix = KITC.indexOf(c); if (ix >= 5 && !own.includes(c)) { if (coins() < 100) return say("Te faltan monedas (100)", 1500); store.set("monedas", coins() - 100); own.push(c); store.set("colores", own); updCoins(); shopPanel("equip"); } misEv("kit"); kit[k] = c; store.set("kit", kit); me.a.mats.forEach(m => m.userData.U[k === "c1" ? "k1" : "k2"].value.set(c)); }
+function setKit(k, c) { const own = store.get("colores", []), ix = KITC.indexOf(c); if (ix >= 5 && !own.includes(c)) { if (!pagar(100, "Color de equipación")) return; own.push(c); store.set("colores", own); updCoins(); shopPanel("equip"); } misEv("kit"); kit[k] = c; store.set("kit", kit); me.a.mats.forEach(m => m.userData.U[k === "c1" ? "k1" : "k2"].value.set(c)); }
 /* ---------- mobiliario urbano y playa (modelos de Sketchfab, CC BY: ver créditos) ---------- */
 function mergeGeoms(gs) {
   const has = n => gs.every(g => g.attributes[n]), names = ["position", "normal", "uv"].filter(has), out = new THREE.BufferGeometry();
@@ -747,8 +747,18 @@ function chatSend() { const i = $("#chatin"), t = i.value.trim().slice(0, 120); 
 function nbMenu(on) { $("#nbon").style.display = on ? "" : "none"; if (on) { $("#nbmsg").textContent = ""; $("#nbname").value = nbName(); $("#nbleave").style.display = NB.ws ? "" : "none"; hubMenu(false); } }
 function nbNameOk() { const v = $("#nbname").value.trim().replace(NB_BAD, "").replace(/[^\p{L}\p{N} _.-]/gu, "").slice(0, 14); if (v.length < 2) { $("#nbmsg").textContent = "Escribe un nombre (mínimo 2 letras)"; return false; } store.set("nombre", v); return true; }
 // ---------- monedas, misiones diarias, Rey de la pista ----------
-const coins = () => store.get("monedas", 0);
-function addCoins(n, why) { store.set("monedas", coins() + n); updCoins(); if (why) setTimeout(() => say("+" + n + " monedas · " + why, 1800), 900); }
+/* monedas: si has iniciado sesión son las mismas que en Ultimate Team y viven en el servidor; sin sesión, se guardan en este navegador */
+const CART = { on: false, coins: 0, cola: [], tm: 0 };
+const coins = () => CART.on ? CART.coins : store.get("monedas", 0);
+function monedasMas(n, why) { n = Math.round(n); if (!n) return; if (CART.on) { CART.coins += n; CART.cola.push({ id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), n, why: why || "barrio" }); clearTimeout(CART.tm); CART.tm = setTimeout(cartFlush, 800); } else store.set("monedas", coins() + n); updCoins(); }
+async function cartFlush() { if (!CART.on || !CART.cola.length) return; const env = CART.cola.slice(0, 100), j = await telOp("tx", { txs: env }); if (!j || !j.ok) { CART.tm = setTimeout(cartFlush, 15000); return; }
+  const ids = new Set(env.map(t => t.id)); CART.cola = CART.cola.filter(t => !ids.has(t.id)); CART.coins = j.coins + CART.cola.reduce((a, t) => a + t.n, 0); updCoins();
+  const rec = (j.res || []).reduce((a, [id, n]) => { const t = env.find(x => x.id === id); return a + (t ? t.n - n : 0); }, 0); if (rec > 0) say("Hoy ya has ganado el máximo de monedas en el barrio", 2200); }
+async function cartInit() { const ses = telSes(); if (!ses || !ses.tok) return; const j = await telOp("saldo"); if (!j || !j.ok) return;
+  CART.on = true; CART.coins = j.coins; const k = "migrado_" + ses.u, local = store.get("monedas", 0);
+  if (local > 0 && !store.get(k, false)) { store.set(k, true); store.set("monedas", 0); monedasMas(Math.min(local, 5000), "barrio_migra"); setTimeout(() => say("Tus monedas del barrio se han juntado con las de Ultimate Team", 2600), 1500); }
+  updCoins(); setInterval(async () => { if (CART.cola.length) return; const r = await telOp("saldo"); if (r && r.ok && !CART.cola.length) { CART.coins = r.coins; updCoins(); } }, 60000); }
+function addCoins(n, why) { monedasMas(n); updCoins(); if (why) setTimeout(() => say("+" + n + " monedas · " + why, 1800), 900); }
 function updCoins() { const b = $("#bRetT"); if (b) b.textContent = coins(); }
 const today = (o = 0) => { const d = new Date(Date.now() + o * 864e5); return d.getFullYear() + "-" + (d.getMonth() + 1) + "-" + d.getDate(); };
 const MIS = [
@@ -762,8 +772,8 @@ function misHoy() { let s = store.get("mis", null); if (!s || s.day !== today())
     for (let i = 0; i < 3; i++) ids.push(pool.splice((h >>> (i * 5)) % pool.length, 1)[0].id); s = { day: today(), ids, prog: {}, got: [], racha: (s && s.racha) || 0, lastFull: (s && s.lastFull) || "" }; store.set("mis", s); } return s; }
 function misEv(ev, v = 1) { const s = misHoy(); let ch = false;
   for (const id of s.ids) { const m = MIS.find(x => x.id === id); if (m.ev !== ev || s.got.includes(id)) continue; s.prog[id] = m.max ? Math.max(s.prog[id] || 0, v) : (s.prog[id] || 0) + v; ch = true;
-    if (s.prog[id] >= m.n) { s.got.push(id); store.set("monedas", coins() + m.p); setTimeout(() => say("Misión cumplida · +" + m.p, 2200), 1400); } }
-  if (ch && s.got.length === 3 && s.lastFull !== today()) { s.racha = s.lastFull === today(-1) ? s.racha + 1 : 1; s.lastFull = today(); const b = 50 * Math.min(7, s.racha); store.set("monedas", coins() + b); setTimeout(() => say("Racha de " + s.racha + " día" + (s.racha > 1 ? "s" : "") + " · +" + b, 2400), 3800); }
+    if (s.prog[id] >= m.n) { s.got.push(id); monedasMas(m.p); setTimeout(() => say("Misión cumplida · +" + m.p, 2200), 1400); } }
+  if (ch && s.got.length === 3 && s.lastFull !== today()) { s.racha = s.lastFull === today(-1) ? s.racha + 1 : 1; s.lastFull = today(); const b = 50 * Math.min(7, s.racha); monedasMas(b); setTimeout(() => say("Racha de " + s.racha + " día" + (s.racha > 1 ? "s" : "") + " · +" + b, 2400), 3800); }
   if (ch) { store.set("mis", s); updCoins(); } }
 const BANDAS = [["Los del Puerto", "PTO", "#3a6ea5", "#f2f2f2", -6, 50], ["La Viña FC", "VIÑ", "#7a1f3d", "#f4d21c", -3, 80], ["Santa María Crew", "SMC", "#1f7a4d", "#111111", 0, 120],
   ["Los de la Caleta", "CAL", "#f2f2f2", "#1e3a8a", 3, 160], ["Callejón Real", "CRL", "#111111", "#d4a017", 6, 220], ["Reyes del Muelle", "RDM", "#d3202c", "#111111", 10, 400]];
@@ -942,7 +952,7 @@ let ballM, ring;
   const g = await loadModel("pj18"); me = { a: actor(g, kit.c1, kit.c2), x: -40, z: 3, dir: 0, spd: 0 };
   spawnNPCs(); addProps(); addTiendas(); addCiudad(); mgSetup(); updCoins();
   loadModel("entrenador1").then(g => { const a = actor(g, null, null); a.wrap.position.set(REY.x, gy(REY.x, REY.z), REY.z); a.wrap.rotation.y = -Math.PI + Math.PI / 2; play(a, "Idle"); const l = nbLabel("REY DE LA PISTA"); a.wrap.add(l); NPCS.push({ a, x: REY.x, z: REY.z, dir: Math.PI, walk: false, spd: 0, keeper: false, rey: 1 }); }).catch(() => {});
-  $("#load").remove(); casaRentas(); try { const nb = JSON.parse(sessionStorage.getItem("street_nb") || "null"); if (nb && nbName()) { NB.srvNom = nb.nom || ""; nbJoin(nb.k, nb.sala); } else srvPanel(true); } catch (e) { srvPanel(true); } tip("Bienvenido al barrio. Entra en las tiendas o ve a la jaula del fondo para jugar.");
+  $("#load").remove(); cartInit().then(casaRentas); try { const nb = JSON.parse(sessionStorage.getItem("street_nb") || "null"); if (nb && nbName()) { NB.srvNom = nb.nom || ""; nbJoin(nb.k, nb.sala); } else srvPanel(true); } catch (e) { srvPanel(true); } tip("Bienvenido al barrio. Entra en las tiendas o ve a la jaula del fondo para jugar.");
   { const rs = new URLSearchParams(location.search).get("res"); if (rs && /^\d+-\d+$/.test(rs)) { const [a, b] = rs.split("-").map(Number); me.x = CX - CW / 2 - 4; me.z = 0; me.dir = Math.PI; SNAP = 1; applyResult(a, b); setTimeout(() => say(a > b ? "¡Ganaste " + a + "-" + b + "!" : a === b ? "Empate " + a + "-" + b : "Has perdido " + a + "-" + b, 2800), 300); history.replaceState(null, "", location.pathname); } }
   let last = performance.now(), fpsA = 60, lowQ = false;
   (function loop(now) { const dt = Math.min(.05, (now - last) / 1000); last = now;
@@ -1002,7 +1012,8 @@ const ROPA = {
 };
 const inv = () => store.get("inv", { gorras: [], conj: [], gorra: "", skate: false, movil: false });
 const invSet = o => store.set("inv", Object.assign(inv(), o));
-function pagar(n, que) { if (coins() < n) { say("Te faltan monedas (" + n + ")", 1600); return false; } store.set("monedas", coins() - n); updCoins();
+function pagar(n, que) { if (coins() < n) { say("Te faltan monedas (" + n + ")", 1600); return false; }
+  if (CART.on) { CART.coins -= n; telOp("pagar", { n, que }).then(j => { if (j && j.ok) { CART.coins = j.coins + CART.cola.reduce((a, t) => a + t.n, 0); updCoins(); } else if (j && j.coins != null) { CART.coins = j.coins; updCoins(); say("El servidor no ha aceptado la compra", 2000); } }); } else store.set("monedas", coins() - n); updCoins();
   const h = store.get("banco", []); h.unshift([Date.now(), -n, que]); store.set("banco", h.slice(0, 60)); return true; }
 function ropaAplicar() {
   if (!me) return; const g = inv().gorra, c = (ROPA.gorras.find(x => x[0] === g) || [])[1];
@@ -1072,8 +1083,7 @@ function telApp(a) {
   if (a === "mapa") return telPinta("Mapa", `<canvas id="tmap" width="600" height="260"></canvas><div class="tcol">${telSitios().map((s, i) => `<button onclick="telIr(${i})"><b>${s[0]}</b><small>Viaje rápido</small></button>`).join("")}</div>`), telMapa();
   if (a === "retos") { telCerrar(); return retosPanel(); }
   if (a === "fichajes") return telPinta("Fichajes", `<div class="tnote">El mercado de fichajes de tu Ultimate Team: compra y vende cartas con otros jugadores.</div><div class="tcol"><button onclick="location.href='index.html'"><b>Abrir Ultimate Team</b><small>Sales del barrio</small></button></div>`);
-  if (a === "banco") { const h = store.get("banco", []); telPinta("Banco", `<div class="tbig">${coins()} 🪙<small>Monedas del barrio</small></div><div class="tbig" id="tut">…<small>Monedas de Ultimate Team</small></div><div class="tlist">${h.length ? h.map(([t, n, q]) => `<div><span>${esc(q)}</span><b style="color:${n < 0 ? "#ff8a8a" : "#9dff9d"}">${n > 0 ? "+" : ""}${n}</b></div>`).join("") : `<div class="tnote">Aún no has gastado nada.</div>`}</div>`);
-    if (nolog) $("#tut").innerHTML = "—<small>Inicia sesión para verlas</small>"; else telOp("saldo").then(j => { const e = $("#tut"); if (e) e.innerHTML = (j.ok ? (j.coins != null ? j.coins : (j.w && j.w.coins) || 0) : "—") + " 🪙<small>Monedas de Ultimate Team</small>"; }); return; }
+  if (a === "banco") { const h = store.get("banco", []); telPinta("Banco", `<div class="tbig">${coins()} 🪙<small>${CART.on ? "Tus monedas: las mismas en el barrio y en Ultimate Team" : "Monedas de este navegador · inicia sesión en MDG 27 para juntarlas con las de Ultimate Team"}</small></div><div class="tlist">${h.length ? h.map(([t, n, q]) => `<div><span>${esc(q)}</span><b style="color:${n < 0 ? "#ff8a8a" : "#9dff9d"}">${n > 0 ? "+" : ""}${n}</b></div>`).join("") : `<div class="tnote">Aún no hay movimientos.</div>`}</div>`); return; }
   if (a === "ajustes") { const f = store.get("telFondo", "playa"), ses = telSes();
     return telPinta("Ajustes", `<div class="tnote">Cuenta: <b>${ses && ses.nombre ? esc(ses.nombre) : "sin iniciar sesión"}</b></div><div><b>Fondo de pantalla</b></div><div class="trow">${Object.keys(FONDOS).map(k => `<button class="${k === f ? "on" : ""}" style="background:${FONDOS[k]()}" onclick="store.set('telFondo','${k}');telApp('ajustes')"></button>`).join("")}</div>
       <div class="tnote" style="margin-top:12px">Créditos: skate «Skateboard» de Jamoues, mostrador «Counter» de gorzi, skatepark «Skatepark Rails & Ramps Resource Kit» de maxkeeley, surtidores «Gas station» de suvorovtim y tienda de la gasolinera «Gas station Props» de Elbolilloduro (Sketchfab, CC BY 4.0).</div>`); }
