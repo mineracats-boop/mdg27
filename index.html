@@ -2,7 +2,7 @@
 <html lang="es">
 <head><script>window.__SPRNEED=1</script><script src="three.js"></script><script>if(/github\.io$|workers\.dev$/.test(location.hostname)){(function(){var c=new AbortController();setTimeout(function(){c.abort()},3500);fetch("https://mdg27-online.onrender.com/ping",{signal:c.signal,cache:"no-store"}).then(function(r){if(r.ok)location.replace("https://mdg27-online.onrender.com"+location.pathname.replace(/^\/mdg27/,"")+location.search+location.hash)}).catch(function(){})})()}</script>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no"><link rel="manifest" href="manifest.json"><meta name="theme-color" content="#081028"><link rel="apple-touch-icon" href="icono192.png"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#050b1c">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -7869,14 +7869,25 @@ const CFG = [
   { k: "passAssist", lab: "Asistencia de pase", sub: "Manual: el pase va exactamente donde apuntas", type: "list", opts: ["Asistido", "Manual"] },
   { k: "narr", lab: "Narración en texto", sub: "Comentarios de las jugadas durante el partido", type: "bool" },
   { k: "tut", lab: "Tutorial de controles", sub: "Práctica guiada adaptada a tu dispositivo y tu mando" },
+  { k: "app", lab: "Instalar app", sub: "Acceso directo en tu pantalla de inicio, sin barra del navegador" },
   { k: "cred", lab: "Créditos", sub: "Equipo y recursos de terceros" }
 ];
+// instalar como app (PWA): el navegador ofrece instalarla; en iPhone hay que hacerlo desde Compartir
+let appPrompt = null; addEventListener("beforeinstallprompt", e => { e.preventDefault(); appPrompt = e; }); addEventListener("appinstalled", () => { appPrompt = null; toast("¡MDG 27 instalado! Ya lo tienes en tu pantalla de inicio"); if (current && current.id === "cfg") renderCfg(); });
+const appInstalada = () => matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+async function appInstalar() { if (appInstalada()) return info("Instalar app", "Ya estás usando MDG 27 como app.");
+  if (appPrompt) { appPrompt.prompt(); const r = await appPrompt.userChoice.catch(() => null); appPrompt = null; if (r && r.outcome === "accepted") toast("Instalando MDG 27…"); return; }
+  const ios = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  if (location.protocol === "file:") return info("Instalar app", "Para instalarla abre el juego desde su dirección web (no desde el archivo).");
+  info("Instalar app", ios ? "En iPhone o iPad: toca el botón <b>Compartir</b> de Safari (el cuadrado con la flecha) y elige <b>Añadir a pantalla de inicio</b>." : "Abre el menú del navegador (los tres puntos) y elige <b>Instalar aplicación</b> o <b>Añadir a pantalla de inicio</b>. Si no sale, espera unos segundos y vuelve a pulsar aquí."); }
+if ("serviceWorker" in navigator && /^https?:$/.test(location.protocol)) addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
 function renderCfg() {
   const list = $("#cfgList"); const keep = focused && focused.dataset.cfg;
   list.innerHTML = CFG.map(c => {
     let v = "";
     if (c.k === "tut") v = `<span>JUGAR</span><span class="arrow">▶</span>`;
     else if (c.k === "cred") v = `<span class="arrow">VER ▶</span>`;
+    else if (c.k === "app") v = `<span class="arrow">${appInstalada() ? "INSTALADA ✓" : "INSTALAR ▶"}</span>`;
     else if (c.k === "cuenta") v = `<span>${esc((typeof SES !== "undefined" && SES && SES.u) || "—")}${IS_ADMIN ? " · ADMIN" : ""}</span><span class="arrow">CERRAR SESIÓN ▶</span>`;
     else if (c.k === "pads") {
       const ps = connectedPads();
@@ -7895,6 +7906,7 @@ function cfgChange(k, d) {
   if (k === "cuenta") return confirmDlg("Cerrar sesión", "¿Cerrar la sesión en este dispositivo? Tu progreso se guarda antes en la nube y se recupera al volver a entrar con tu usuario y contraseña.", "Cerrar sesión", () => cuentaSalir());
   if (k === "cred") return dlg("Créditos", "MDG 27 · Rocket Jam (Antonio y Guille).<br><br>Estadio 3D: «Soccer Stadium» de R-LAB (@rakshaan) en Sketchfab, licencia CC BY 4.0 (creativecommons.org/licenses/by/4.0). Modificado: sin anuncios ni porterías, colores y geometría simplificados.<br><br>Street Football: «Skateboard» de Jamoues, «Counter» de gorzi, «Skatepark Rails & Ramps Resource Kit» de maxkeeley, «Gas station» de suvorovtim y «Gas station Props» de Elbolilloduro (Sketchfab, CC BY 4.0), con texturas reducidas.", [["Cerrar", closeDlg, true, ""]]);
   if (k === "tut") { if (typeof startTutorial === "function") startTutorial(); return; }
+  if (k === "app") return appInstalar();
   const c = CFG.find(x => x.k === k); if (!c || !c.type) return;
   if (c.type === "range") settings[k] = Math.max(0, Math.min(100, settings[k] + d * 10));
   if (c.type === "bool") settings[k] = !settings[k];
