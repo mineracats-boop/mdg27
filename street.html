@@ -140,13 +140,16 @@ function roomWindow(img, x, y, z, w, h, ry) {
 const SHOPS = [], DOORS = [], KEEPERS = [];
 // el barrio junto al mar: una calle larga con tiendas al norte y el paseo marítimo al sur; alrededor, el mar
 // ciudad: avenida hacia el norte por el hueco de la fachada nº 7 y plaza con gasolinera al fondo; skatepark en la plaza del oeste
+const GAS = { islas: [-74, -61, -48], z: -127, tienda: [-95, -138], isla: [6, 10], tam: [10, 11] };
 const AV_K = 7, AVX = -68.5, AVW = 13, AVZ1 = -102, PLZ = { x0: -110, x1: -27, z0: -150, z1: -102 }, SKP = { x: -122, z: 13, w: 16, d: 9.8 };
-const AVF = ["fachada_c_bar.webp", "fachada_c_cafeteria.webp", "fachada_c_panaderia.webp", "fachada_c_farmacia.webp", "fachada_c_barberia.webp", "fachada_c_fruteria.webp", "fachada_c_pizzeria.webp", "fachada_c_gimnasio.webp", "fachada_tienda_deportes.webp", "fachada_azulejos.webp", "fachada_colores.webp", "fachada_mural.webp"];
+const AVF = ["fachada_c_bar.webp", "fachada_c_cafeteria.webp", "fachada_c_panaderia.webp", "fachada_c_taller.webp", "fachada_c_farmacia.webp", "fachada_c_pizzeria.webp", "fachada_c_barberia.webp", "fachada_c_quiosco.webp", "fachada_c_fruteria.webp", "fachada_c_gimnasio.webp", "fachada_azulejos.webp", "fachada_colores.webp"];
 const SEA_Z = 22, X0 = -176, X1 = 64, BEACH = { x0: -96, x1: -66, z0: 10.5, z1: 20.5 }, TOQ = { x: -45, z: 15 };
 let seaM = null;
 const OBST = [[-150, 0, 1.9], [-61.5, 18.2, 1.8], [-140.2, -4.25, 1.4], [-76, -4.25, .9], [-10.2, -4.25, 1.4], [46, -4.25, .9]];
 // altura del suelo: aceras, paseo y arena están un poco por encima de la calzada (los pies no se hunden)
 const SKMESH = [], RAY = new THREE.Raycaster(), DOWN = new THREE.Vector3(0, -1, 0), RO = new THREE.Vector3();
+function gasChoca(x, z) { if (Math.abs(x - GAS.tienda[0]) < GAS.tam[0] / 2 + .4 && Math.abs(z - GAS.tienda[1]) < GAS.tam[1] / 2 + .4) return true;
+  for (const ix of GAS.islas) if (Math.abs(x - ix) < 1.6 && Math.abs(z - GAS.z) < 2.6) return true; return false; }
 function gyRampa(x, z) { const b = gy(x, z); if (!SKMESH.length || Math.abs(x - SKP.x) > SKP.w / 2 + 1 || Math.abs(z - SKP.z) > SKP.d / 2 + 1) return b;
   RO.set(x, 6, z); RAY.set(RO, DOWN); RAY.far = 7; const h = RAY.intersectObjects(SKMESH, false)[0]; return h ? Math.max(b, h.point.y) : b; }
 function gy(x, z) { if (z < -8.2) return z > PLZ.z1 && Math.abs(x - AVX) > 4.5 ? .18 : 0; if (x > BEACH.x0 && x < BEACH.x1 && z > BEACH.z0 && z < BEACH.z1) return .2; if (z >= 5 && z <= SEA_Z && x >= X0 - 1 && x <= X1 + 42) return .18; if (z <= -5 && z >= -8 && x >= X0 && x <= X1) return .18; return 0; }
@@ -431,6 +434,7 @@ function stepNPCs(dt) {
         else { let a = Math.atan2(dz, dx) - c.dir; a = Math.atan2(Math.sin(a), Math.cos(a)); c.dir += a * Math.min(1, dt * 3); c.spd += (1.25 - c.spd) * Math.min(1, dt * 3); } }
       const pd = Math.hypot(c.x - me.x, c.z - me.z); if (pd < 1.2 && place === "calle") { c.x += (c.x - me.x) / (pd || 1) * dt * 2; c.z += (c.z - me.z) / (pd || 1) * dt * 2; }   // se apartan
       c.x += Math.cos(c.dir) * c.spd * dt; c.z += Math.sin(c.dir) * c.spd * dt; c.z = clamp(c.z, c.zone[0], c.zone[1]);
+      if (Math.abs(c.x - SKP.x) < SKP.w / 2 + .5 && Math.abs(c.z - SKP.z) < SKP.d / 2 + .5) c.z = c.z < SKP.z ? SKP.z - SKP.d / 2 - .5 : SKP.z + SKP.d / 2 + .5;   // rodean el skatepark
     } else if (c.keeper || place === "calle") { const tgt = c.keeper || c.rey ? Math.atan2(me.z - c.z, me.x - c.x) : Math.PI / 2; let a = tgt - c.dir; a = Math.atan2(Math.sin(a), Math.cos(a)); c.dir += a * Math.min(1, dt * 2); }
     c.a.wrap.position.set(c.x, gy(c.x, c.z), c.z); c.a.wrap.rotation.y = -c.dir + Math.PI / 2; loco(c.a, c.spd, false); c.a.mixer.update(dt);
   }
@@ -439,7 +443,7 @@ function stepHub(dt) {
   let inp = input(); if ($("#tel").style.display === "") inp = { x: 0, y: 0, run: 0 }; const d = camDir(inp.x, inp.y), m = Math.hypot(d.x, d.z), sp = m * (me.skate ? (inp.run ? 10.5 : 7) : (inp.run ? 6.8 : 3.4));
   me.spd += (sp - me.spd) * Math.min(1, dt * 6); if (m > .1) { let a = Math.atan2(d.z, d.x) - me.dir; a = Math.atan2(Math.sin(a), Math.cos(a)); me.dir += a * Math.min(1, dt * 10); }
   const px = me.x, pz = me.z; me.x += Math.cos(me.dir) * me.spd * dt; me.z += Math.sin(me.dir) * me.spd * dt;
-  if (place === "calle" && (me.z < -7.6 || pz < -7.6)) { const ok = (x, z) => z >= -7.6 ? x > X0 && x < X1 - 1 : z > PLZ.z1 ? x > AVX - AVW / 2 + .6 && x < AVX + AVW / 2 - .6 : x > PLZ.x0 && x < PLZ.x1 && z > PLZ.z0;
+  if (place === "calle" && (me.z < -7.6 || pz < -7.6)) { const ok = (x, z) => z >= -7.6 ? x > X0 && x < X1 - 1 : z > PLZ.z1 ? x > AVX - AVW / 2 + .6 && x < AVX + AVW / 2 - .6 : x > PLZ.x0 && x < PLZ.x1 && z > PLZ.z0 && !gasChoca(x, z);
     if (!ok(me.x, me.z)) { if (ok(px, me.z)) me.x = px; else if (ok(me.x, pz)) me.z = pz; else { me.x = px; me.z = pz; } } }
   else if (place === "calle") { me.x = clamp(me.x, X0, CX + CW / 2 - 1); const inCage = me.x > CX - CW / 2 + .5; me.z = inCage ? clamp(me.z, -CH / 2 + .5, CH / 2 - .5) : me.x > X1 - 1 ? clamp(me.z, -7.6, 7.6) : clamp(me.z, -7.6, SEA_Z - .8);
     if (!inCage && me.x > CX - CW / 2 - 1 && Math.abs(me.z) > 1.6) me.x = Math.min(me.x, CX - CW / 2 - 1);
@@ -754,8 +758,14 @@ function buildCiudad() {
 async function addCiudad() {
   const load = n => (window.SA && SA["prop_" + n + ".glb"] ? Promise.resolve(SA["prop_" + n + ".glb"]) : fetch("street/prop_" + n + ".txt").then(r => r.text())).then(t => loader.parseAsync(b64buf(t), ""));
   try { const g = await load("skatepark"); for (const p of bakeProp(g.scene, SKP.w, "len")) { const m = new THREE.Mesh(p.g, p.m); m.position.set(SKP.x, .19, SKP.z); m.castShadow = m.receiveShadow = true; S.add(m); m.updateMatrixWorld(); SKMESH.push(m); } } catch (e) { console.warn("skatepark", e); }
-  try { const g = await load("gasolinera"), quita = []; g.scene.traverse(o => { if (o.isMesh && /6twelve|logo|sign|board/i.test(o.material.name + " " + o.name)) quita.push(o); }); quita.forEach(o => o.parent.remove(o));
-    for (const p of bakeProp(g.scene, 46, "len")) { const m = new THREE.Mesh(p.g, p.m); m.position.set(-66, .01, -128); m.rotation.y = 0; m.castShadow = m.receiveShadow = true; S.add(m); } } catch (e) { console.warn("gasolinera", e); }
+  // gasolinera: 3 islas con surtidor y marquesina («Gas station» de suvorovtim) y la tienda de la gasolinera («Gas station Props» de Elbolilloduro, solo el edificio)
+  try { const g = await load("surtidor"), P = bakeProp(g.scene, 6.4, "h"); for (const x of GAS.islas) for (const p of P) { const m = new THREE.Mesh(p.g, p.m); m.position.set(x, .01, GAS.z); m.castShadow = m.receiveShadow = true; S.add(m); }
+    P[0].g.computeBoundingBox(); const bb = new THREE.Box3(); P.forEach(p => { p.g.computeBoundingBox(); bb.union(p.g.boundingBox); }); GAS.isla = [bb.max.x - bb.min.x, bb.max.z - bb.min.z]; } catch (e) { console.warn("surtidor", e); }
+  try { const g = await load("gasolinera"), P = bakeProp(g.scene, 46, "len").filter(p => { p.g.computeBoundingBox(); const b = p.g.boundingBox; return b.max.x < -11.4 && b.min.x > -23 && !/Roof_tiles|Sign|MetalPlates|Asphalt|Concrete$|6twelve|Tree|Bush/i.test(p.m.name); });
+    const bb = new THREE.Box3(); P.forEach(p => bb.union(p.g.boundingBox)); const cx = (bb.min.x + bb.max.x) / 2, cz = (bb.min.z + bb.max.z) / 2;
+    for (const p of P) { const m = new THREE.Mesh(p.g, p.m); m.position.set(GAS.tienda[0] - cx, -bb.min.y + .02, GAS.tienda[1] - cz); m.castShadow = m.receiveShadow = true; S.add(m); }
+    GAS.tam = [bb.max.x - bb.min.x, bb.max.z - bb.min.z]; } catch (e) { console.warn("gasolinera", e); }
+  const lz = new THREE.PointLight(0xffe2b0, 60, 40, 1.2); lz.position.set(-60, 7, -126); S.add(lz);
 }
 /* ---------- tiendas nuevas: ropa (BARRIO WEAR), móviles (MÓVILES DEL BARRIO) y skates (SKATE CALETA) ---------- */
 // mostradores de Sketchfab (CC BY: «Counter» de gorzi); detrás está el dependiente
@@ -849,7 +859,7 @@ function telApp(a) {
     if (nolog) $("#tut").innerHTML = "—<small>Inicia sesión para verlas</small>"; else telOp("saldo").then(j => { const e = $("#tut"); if (e) e.innerHTML = (j.ok ? (j.coins != null ? j.coins : (j.w && j.w.coins) || 0) : "—") + " 🪙<small>Monedas de Ultimate Team</small>"; }); return; }
   if (a === "ajustes") { const f = store.get("telFondo", "playa"), ses = telSes();
     return telPinta("Ajustes", `<div class="tnote">Cuenta: <b>${ses && ses.nombre ? esc(ses.nombre) : "sin iniciar sesión"}</b></div><div><b>Fondo de pantalla</b></div><div class="trow">${Object.keys(FONDOS).map(k => `<button class="${k === f ? "on" : ""}" style="background:${FONDOS[k]()}" onclick="store.set('telFondo','${k}');telApp('ajustes')"></button>`).join("")}</div>
-      <div class="tnote" style="margin-top:12px">Créditos: skate «Skateboard» de Jamoues, mostrador «Counter» de gorzi (Sketchfab, CC BY 4.0).</div>`); }
+      <div class="tnote" style="margin-top:12px">Créditos: skate «Skateboard» de Jamoues, mostrador «Counter» de gorzi, skatepark «Skatepark Rails & Ramps Resource Kit» de maxkeeley, surtidores «Gas station» de suvorovtim y tienda de la gasolinera «Gas station Props» de Elbolilloduro (Sketchfab, CC BY 4.0).</div>`); }
 }
 // mapa y viaje rápido
 function telSitios() { const L = [["La jaula", CX - CW / 2 - 3, 0], ["Cancha de la playa", (BEACH.x0 + BEACH.x1) / 2, BEACH.z0 - 1.5], ["Rey de la pista", REY.x - 2, REY.z + 2], ["Toques", TOQ.x + 2, TOQ.z]];
