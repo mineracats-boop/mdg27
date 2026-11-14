@@ -145,7 +145,7 @@ const AV_K = 7, AVX = -68.5, AVW = 13, AVZ1 = -102, PLZ = { x0: -110, x1: -27, z
 const AVF = ["fachada_c_bar.webp", "fachada_c_cafeteria.webp", "fachada_c_panaderia.webp", "fachada_c_taller.webp", "fachada_c_farmacia.webp", "fachada_c_pizzeria.webp", "fachada_c_barberia.webp", "fachada_c_quiosco.webp", "fachada_c_fruteria.webp", "fachada_c_gimnasio.webp", "fachada_azulejos.webp", "fachada_colores.webp"];
 const SEA_Z = 22, X0 = -176, X1 = 64, BEACH = { x0: -96, x1: -66, z0: 10.5, z1: 20.5 }, TOQ = { x: -45, z: 15 };
 let seaM = null;
-const OBST = [[-150, 0, 1.9], [-61.5, 18.2, 1.8], [-140.2, -4.25, 1.4], [-76, -4.25, .9], [-10.2, -4.25, 1.4], [46, -4.25, .9]];
+const OBST = [[-150, 0, 1.9], [-57.5, 17.2, 1.8], [-140.2, -4.25, 1.4], [-76, -4.25, .9], [-10.2, -4.25, 1.4], [46, -4.25, .9]];
 // altura del suelo: aceras, paseo y arena están un poco por encima de la calzada (los pies no se hunden)
 const SKMESH = [], RAY = new THREE.Raycaster(), DOWN = new THREE.Vector3(0, -1, 0), RO = new THREE.Vector3();
 function gasChoca(x, z) { if (Math.abs(x - GAS.tienda[0]) < GAS.tam[0] / 2 + .4 && Math.abs(z - GAS.tienda[1]) < GAS.tam[1] / 2 + .4) return true;
@@ -153,6 +153,20 @@ function gasChoca(x, z) { if (Math.abs(x - GAS.tienda[0]) < GAS.tam[0] / 2 + .4 
 function gyRampa(x, z) { const b = gy(x, z); if (!SKMESH.length || Math.abs(x - SKP.x) > SKP.w / 2 + 1 || Math.abs(z - SKP.z) > SKP.d / 2 + 1) return b;
   RO.set(x, 6, z); RAY.set(RO, DOWN); RAY.far = 7; const h = RAY.intersectObjects(SKMESH, false)[0]; return h ? Math.max(b, h.point.y) : b; }
 function gy(x, z) { if (z < -8.2) return z > PLZ.z1 && Math.abs(x - AVX) > 4.5 ? .18 : 0; if (x > BEACH.x0 && x < BEACH.x1 && z > BEACH.z0 && z < BEACH.z1) return .2; if (z >= 5 && z <= SEA_Z && x >= X0 - 1 && x <= X1 + 42) return .18; if (z <= -5 && z >= -8 && x >= X0 && x <= X1) return .18; return 0; }
+// alto real (m) de cada fachada según las plantas que se ven en la foto; el ancho sale de la proporción de la imagen
+const FALTO = { "fachada_polideportivo.webp": 7, "st_grafiti1.webp": 6.5, "st_grafiti2.webp": 6.5, "fachada_bloque.webp": 21, "fachada_cadiz_blanca.webp": 13, "fachada_portal.webp": 11.5, "fachada_azulejos.webp": 7.5,
+  "fachada_ladrillo.webp": 16, "fachada_bar.webp": 10, "fachada_colores.webp": 14, "fachada_tienda_deportes.webp": 5.5, "fachada_desconchada.webp": 12, "fachada_persiana.webp": 10, "fachada_naves.webp": 10, "fachada_mural.webp": 13,
+  "fachada_tienda_ropa.webp": 6.8, "fachada_tienda_moviles.webp": 6.8, "fachada_tienda_skates.webp": 6.8, "fachada_c_bar.webp": 7.5, "fachada_c_pizzeria.webp": 7.5, "fachada_c_gimnasio.webp": 10, "fachada_c_cafeteria.webp": 11.5,
+  "fachada_c_panaderia.webp": 10.5, "fachada_c_farmacia.webp": 11, "fachada_c_barberia.webp": 10.5, "fachada_c_fruteria.webp": 9, "fachada_c_quiosco.webp": 9, "fachada_c_taller.webp": 6 };
+const FPROP = { "fachada_polideportivo.webp": 1024 / 469, "st_grafiti1.webp": 2, "st_grafiti2.webp": 2, "fachada_bloque.webp": 1300 / 1040, "fachada_cadiz_blanca.webp": 707 / 1024, "fachada_portal.webp": 687 / 1024, "fachada_azulejos.webp": 1024 / 655,
+  "fachada_ladrillo.webp": 1024 / 572, "fachada_bar.webp": 687 / 1024, "fachada_colores.webp": 1024 / 559, "fachada_tienda_deportes.webp": 825 / 541, "fachada_desconchada.webp": 572 / 1024, "fachada_persiana.webp": 687 / 1024, "fachada_naves.webp": 687 / 1024,
+  "fachada_mural.webp": 572 / 1024, "fachada_tienda_ropa.webp": 1024 / 683 };
+const PUERTA = { "fachada_tienda_ropa.webp": .76, "fachada_tienda_moviles.webp": .75, "fachada_tienda_skates.webp": .75, "fachada_tienda_deportes.webp": .82, "fachada_bar.webp": .5, "fachada_persiana.webp": .5 };
+const SHOPIMG = { ropa: "fachada_tienda_ropa.webp", moviles: "fachada_tienda_moviles.webp", skates: "fachada_tienda_skates.webp", bar: "fachada_bar.webp", equip: "fachada_tienda_deportes.webp", sobres: "fachada_persiana.webp" };
+// coloca una fila de fachadas entre a y b: cada una a su tamaño y todas escaladas un poco para que llenen el tramo justo
+function filaFachadas(lista, a, b, pon) { const img = f => SHOPIMG[f] || f, dim = f => { const h = FALTO[img(f)] || 9; return [h * (FPROP[img(f)] || 1024 / 687), h]; };
+  const tot = lista.reduce((t, f) => t + dim(f)[0], 0), k = Math.abs(b - a) / tot, sg = Math.sign(b - a); let p = a;
+  for (const f of lista) { const [w, h] = dim(f); pon(f, p + sg * w * k / 2, w * k, h * k); p += sg * w * k; } }
 function buildBarrio() {
   const land = new THREE.Mesh(new THREE.PlaneGeometry(X1 - X0 + 60, SEA_Z + 40), new THREE.MeshStandardMaterial({ color: 0x3b3a3d, roughness: 1 })); land.rotation.x = -Math.PI / 2; land.position.set((X0 + X1 + 60) / 2 - 4, 0, (SEA_Z - 40) / 2); land.receiveShadow = true; S.add(land);
   // mar: imagen de agua repetida que se mueve despacio (si aún no está la imagen, agua lisa)
@@ -173,11 +187,14 @@ function buildBarrio() {
   // fachadas en orden de oeste a este (las 4 primeras son la zona nueva del barrio); alto según la proporción de la imagen
   const ORD = ["fachada_polideportivo.webp", "st_grafiti1.webp", "fachada_bloque.webp", "fachada_cadiz_blanca.webp", "fachada_portal.webp", "fachada_azulejos.webp", "fachada_ladrillo.webp", "fachada_cadiz_blanca.webp", "fachada_bar.webp", "fachada_colores.webp", "fachada_bloque.webp", "st_grafiti2.webp", "fachada_tienda_deportes.webp", "fachada_azulejos.webp", "fachada_desconchada.webp", "fachada_persiana.webp", "fachada_naves.webp", "fachada_mural.webp"];
   const AR = { "fachada_polideportivo.webp": .46, "st_grafiti1.webp": .5, "st_grafiti2.webp": .5, "fachada_bloque.webp": .8, "fachada_cadiz_blanca.webp": 1.2, "fachada_azulejos.webp": .64, "fachada_tienda_deportes.webp": .66 };
-  const SHOPK = { 3: "ropa", 5: "moviles", 8: "bar", 10: "skates", 12: "equip", 15: "sobres" }, SHOPF = { ropa: "fachada_tienda_ropa.webp", moviles: "fachada_tienda_moviles.webp", skates: "fachada_tienda_skates.webp" };
-  Object.assign(AR, { "fachada_tienda_ropa.webp": .67, "fachada_tienda_moviles.webp": .67, "fachada_tienda_skates.webp": .67 });
-  const plan = []; let k = 0; for (let x = X0 + 13; x < X1 - 6; x += 13.5) { const sh = SHOPK[k], f = SHOPF[sh] || ORD[k % ORD.length]; plan.push([x, 13, AR[f] ? Math.round(13 * AR[f] * 10) / 10 : 9 + (k * 5) % 7, f, sh]); k++; }
-  plan.forEach(([x, w, h, f, shop], k) => { if (k === AV_K) return; const zf = -8, d = 12; box(w - .3, h, d, [side, side, roof, roof, mat(f, null), side], x, h / 2, zf - d / 2);
-    if (shop) { SHOPS.push({ k: shop, x, z: zf }); DOORS.push({ k: shop, x, z: zf + .9 }); } });
+  // cada fachada a su tamaño real: alto por las plantas que se ven en la foto y ancho por la proporción de la imagen; se colocan seguidas sin solaparse
+  const FILA_O = ["fachada_polideportivo.webp", "st_grafiti1.webp", "fachada_cadiz_blanca.webp", "ropa", "fachada_portal.webp", "moviles", "fachada_azulejos.webp", "fachada_ladrillo.webp"];
+  const FILA_E = ["bar", "fachada_colores.webp", "skates", "fachada_bloque.webp", "equip", "fachada_desconchada.webp", "fachada_naves.webp", "sobres", "fachada_mural.webp", "st_grafiti2.webp", "fachada_cadiz_blanca.webp"];
+  const SHOPF = { ropa: "fachada_tienda_ropa.webp", moviles: "fachada_tienda_moviles.webp", skates: "fachada_tienda_skates.webp", bar: "fachada_bar.webp", equip: "fachada_tienda_deportes.webp", sobres: "fachada_persiana.webp" };
+  const fz = -8, d = 12;
+  filaFachadas(FILA_O, X0 + .5, AVX - AVW / 2, (f, c, w, h) => { const sh = SHOPF[f] ? f : null, img = SHOPF[f] || f; box(w - .2, h, d, [side, side, roof, roof, mat(img, null), side], c, h / 2, fz - d / 2); if (sh) SHOPS.push({ k: sh, x: c, z: fz, dx: c + (PUERTA[img] - .5) * w }); });
+  filaFachadas(FILA_E, AVX + AVW / 2, X1 - .5, (f, c, w, h) => { const sh = SHOPF[f] ? f : null, img = SHOPF[f] || f; box(w - .2, h, d, [side, side, roof, roof, mat(img, null), side], c, h / 2, fz - d / 2); if (sh) SHOPS.push({ k: sh, x: c, z: fz, dx: c + (PUERTA[img] - .5) * w }); });
+  for (const sh of SHOPS) DOORS.push({ k: sh.k, x: sh.dx, z: fz + .9 });
   // farolas a lo largo del paseo y de la calle, bancos y papeleras
   const metal = new THREE.MeshStandardMaterial({ color: 0x2b2f35, roughness: .5, metalness: .6 }), bulbM = new THREE.MeshBasicMaterial({ color: 0xffd9a0 });
   for (let x = X0 + 4; x <= X1 + 40; x += 16) for (const z of [-5.3, SEA_Z - 1.2]) { if (z < 0 && x > X1) continue; const p = new THREE.Mesh(new THREE.CylinderGeometry(.08, .1, 6, 8), metal); p.position.set(x, 3, z); p.castShadow = true; S.add(p);
@@ -198,7 +215,7 @@ function buildBarrio() {
 
     sky.position.set(-40, 215 * 315 / 2048 / 2 - 4.2, 226); sky.rotation.y = Math.PI; S.add(sky); }
   // puertas de las tiendas iluminadas
-  for (const s of SHOPS) s.dx = s.x + 3.2;   // la puerta es la de la propia fachada
+  // (la puerta de cada tienda sale de dónde está en su foto: PUERTA)
 }
 window.STREET_IMG = window.STREET_IMG || ["mar.webp", "paseo.webp", "muro.webp", "fachada_blanca.webp", "chiringuito.webp", "st_arena.webp"];
 function SA_has(n) { return !!(window.SA && SA[n]) || !!(window.STREET_IMG && STREET_IMG.includes(n)); }
@@ -221,6 +238,13 @@ function buildInteriors() { const S0 = S; { const S = INTG; S0.add(INTG);
     DOORS.push({ k: "salir", from: k, x: ox, z: 60 + D_ / 2 - .7 });
   }
 } }
+// ---------- límites del barrio: donde no se puede pasar hay muro o barandilla ----------
+function buildLimites() { const muro = mat("muro.webp", [6, 1]), rail = new THREE.MeshStandardMaterial({ color: 0xf2f2ee, roughness: .4, metalness: .3 });
+  box(.6, 3, SEA_Z + 8.4, muro, X0 - .3, 1.5, (SEA_Z - 8.4) / 2);   // fin del barrio por el oeste
+  // fin del paseo junto a la jaula: murete con barandilla
+  const z0 = 7.8, z1 = SEA_Z - .3, len = z1 - z0; box(.5, .8, len, muro, 64.6, .4, (z0 + z1) / 2);
+  const r = new THREE.Mesh(new THREE.CylinderGeometry(.04, .04, len, 6), rail); r.rotation.x = Math.PI / 2; r.position.set(64.6, 1.15, (z0 + z1) / 2); S.add(r);
+  for (let z = z0; z <= z1; z += 2) { const pst = new THREE.Mesh(new THREE.CylinderGeometry(.035, .035, .4, 6), rail); pst.position.set(64.6, .95, z); S.add(pst); } }
 // ---------- jaula (cancha) ----------
 const CX = 85, CW = 40, CH = 22, GWs = 4, GHs = 1.8, GDs = 1;  // la cancha va de x=65 a 105, z de -11 a 11
 const CAGE = { x0: CX - CW / 2, z0: -CH / 2 };
@@ -382,30 +406,30 @@ async function addProps() {
     const palms = [], benches = [], bins = [];
     for (let x = X0 + 12; x < X1 + 36; x += 16) { if (inBeach(x)) continue; palms.push([x, SEA_Z - 2.7, rnd() * 6.28, .85 + rnd() * .35]); if ((x / 16 | 0) % 2 === 0) benches.push([x + 3.4, SEA_Z - 1.9, 0]); bins.push([x - 6.6, SEA_Z - 1.7, 0]); }
     for (let x = X0 + 20; x < X1 - 4; x += 32) bins.push([x, -5.75, 0]);
-    for (const x of [BEACH.x0 - 4, BEACH.x1 + 4]) for (const z of [BEACH.z0 - .2, BEACH.z1]) palms.push([x, z, rnd() * 6.28, .9 + rnd() * .3]);
+    for (const x of [BEACH.x0 - 4, BEACH.x1 + 4]) for (const z of [BEACH.z0 - .2]) palms.push([x, z, rnd() * 6.28, .9 + rnd() * .3]);
     instance(palmP, palms); instance(bench, benches); instance(bin, bins);
     // playa: arena alrededor de la cancha con sombrillas y tumbonas
     const sand = new THREE.Mesh(new THREE.PlaneGeometry(BEACH.x1 - BEACH.x0 + 12, BEACH.z1 - BEACH.z0 + 2), new THREE.MeshStandardMaterial({ color: 0xd8c08c, roughness: 1 })); sand.rotation.x = -Math.PI / 2; sand.position.set((BEACH.x0 + BEACH.x1) / 2, .195, (BEACH.z0 + BEACH.z1) / 2); sand.receiveShadow = true; S.add(sand);
     const um = bakeProp(umb.scene, 2.5), lg = bakeProp(lng.scene, 1.9, "len"), U = [], Lg = [];
     for (const x of [BEACH.x0 - 3.4, BEACH.x1 + 3.4]) for (const z of [BEACH.z0 + 1.6, (BEACH.z0 + BEACH.z1) / 2 + 1, BEACH.z1 - 1]) { U.push([x, z, rnd() * 6.28]); Lg.push([x + (x < BEACH.x0 ? -1.2 : 1.2), z - .6, Math.PI / 2]); }
     U.y = .2; Lg.y = .2; instance(um, U); instance(lg, Lg);
-    instance(bakeProp(cart.scene, 2.2, "len"), [[BEACH.x1 + 9, SEA_Z - 5.5, -.4], [TOQ.x + 9, TOQ.z - 3, .5], [X0 + 30, 9, 2.6]]);   // carritos de helados
+    instance(bakeProp(cart.scene, 2.2, "len"), [[-50.5, 15.5, -.4], [TOQ.x + 9, TOQ.z - 3, .5], [X0 + 30, 9, 2.6]]);   // carritos de helados
   } catch (e) { console.warn("props", e); }
   // ---- vida de barrio: modelos de Sketchfab (CC BY), cada uno se carga por separado para que un fallo no deje el barrio vacío ----
   const one = async (n, f) => { try { const g = await load(n); f(g); } catch (e) { console.warn("prop", n, e); } };
   const tint = (parts, c) => { parts.forEach(p => { p.m.color = new THREE.Color(c); if (p.m.map) p.m.color.multiplyScalar(1.6); }); return parts; };
   const doors = SHOPS.map(s => s.dx);
   one("terraza", g => instance(bakeProp(g.scene, .9), [[-56.5, 7.2, .1], [-51.5, 7.4, -.6], [-2, 7.3, .5]]));
-  one("vespa", g => { const b = g.scene.getObjectByName("Object_4") || g.scene; instance(bakeProp(b, 1.8, "len"), [[-149, -4.1, .12], [-87, -4.2, -.1], [-21, -4.1, Math.PI + .1], [31, -4.2, .05]]); });
-  one("bici", g => instance(bakeProp(g.scene, 1.75, "len"), [[-131, -7.35, 0], [-61, -7.35, 0], [9, -7.35, Math.PI], [-31, SEA_Z - .95, 0], [16, SEA_Z - .95, Math.PI]]));
+  one("vespa", g => { const b = g.scene.getObjectByName("Object_4") || g.scene; instance(bakeProp(b, 1.8, "len"), [[-149, -4.1, .12], [-87, -4.2, -.1], [-14.5, -4.1, Math.PI + .1], [40, -4.2, .05]]); });
+  one("bici", g => instance(bakeProp(g.scene, 1.75, "len"), [[-146, -7.35, 0], [-90, -7.35, 0], [6, -7.35, Math.PI], [-31, SEA_Z - .95, 0], [16, SEA_Z - .95, Math.PI]]));
   one("contenedor", g => { const b = g.scene.getObjectByName("group") || g.scene; instance(tint(bakeProp(b, 1.3), 0x2f6b3c), [[-141, -4.25, 0], [-139.3, -4.25, 0], [-76, -4.25, 0], [-11, -4.25, 0], [-9.3, -4.25, 0], [46, -4.25, 0]]); });
-  one("cajas", g => instance(bakeProp(g.scene, .3), [[-120.6, 8.6, Math.PI / 2], [-99.6, 13.2, .3]]));
+  one("cajas", g => instance(bakeProp(g.scene, .3), [[-108.6, 8.6, Math.PI / 2], [-104.2, 12.2, .3]]));
   one("fuente", g => instance(bakeProp(g.scene, 3.2), [[-150, 0, 0]]));
   one("planta", g => instance(bakeProp(g.scene, 1.45), doors.flatMap(x => [[x - 1.6, -7.45, 0], [x + 1.6, -7.45, 1]])));
   one("macetas", g => { const L = [[], [], []]; let i = 0; for (let x = X0 + 6; x < X1 - 4; x += 5.5 + (i % 3)) { if (doors.some(d => Math.abs(d - x) < 3)) continue; L[i % 3].push([x, -7.55, i * 1.7]); i++; }
     ["Pot", "Pot_9", "Pot_12"].forEach((n, k) => { const node = g.scene.getObjectByName(n); if (node && L[k].length) instance(bakeProp(node, [.75, .95, .85][k]), L[k]); }); });
-  one("socorrista", g => instance(bakeProp(g.scene, 3.4), [[-61.5, 18.2, Math.PI]]));
-  one("barca", g => instance(bakeProp(g.scene, 3.6, "len"), [[-101.5, 18.6, .5]]));
+  one("socorrista", g => instance(bakeProp(g.scene, 3.4), [[-57.5, 17.2, Math.PI]]));
+  one("barca", g => instance(bakeProp(g.scene, 3.6, "len"), [[-105.5, 18.4, .5]]));
 }
 
 /* ---------- gente del barrio (modelos del juego con sus animaciones) ---------- */
@@ -711,7 +735,7 @@ function endMatch() { mode = "hub"; $("#hud").style.display = "none"; ring.posit
 // ---------- arranque ----------
 let ballM, ring;
 (async () => {
-  buildBarrio(); buildCiudad(); buildInteriors(); buildCage();
+  buildBarrio(); buildCiudad(); buildLimites(); buildInteriors(); buildCage();
   // coches aparcados (modelos 3D de Meshy)
   const CARS = [["coche_compacto", 3.6], ["coche_berlina", 4.6], ["furgoneta", 5.2]];
   Promise.all(CARS.map(([n]) => (window.SA ? Promise.resolve(SA[n + ".glb"]) : fetch("street/" + n + ".txt").then(r => r.text())).then(t => loader.parseAsync(b64buf(t), "")))).then(gs => {
@@ -744,13 +768,15 @@ function buildCiudad() {
   const rd = new THREE.Mesh(new THREE.PlaneGeometry(9, L), asf); rd.rotation.x = -Math.PI / 2; rd.position.set(AVX, .012, -8 - L / 2); rd.receiveShadow = true; S.add(rd);
   for (const sx of [-1, 1]) { box(2, .18, L, acera, AVX + sx * 5.5, .09, -8 - L / 2); }
   // fachadas a los dos lados, mirando a la avenida
-  let i = 0; for (let z = -21 - 6.75; z > AVZ1 + 6; z -= 13.5) for (const sx of [-1, 1]) {
-    const f = AVF[i++ % AVF.length], h = 8.8, m = mat(f, null);
-    box(12, h, 13.2, sx < 0 ? [m, side, roof, roof, side, side] : [side, m, roof, roof, side, side], AVX + sx * (AVW / 2 + 6), h / 2, z); }
+  const LO = ["fachada_c_bar.webp", "fachada_c_panaderia.webp", "fachada_c_taller.webp", "fachada_c_farmacia.webp", "fachada_c_quiosco.webp", "fachada_c_gimnasio.webp"],
+    LE = ["fachada_c_cafeteria.webp", "fachada_c_pizzeria.webp", "fachada_c_barberia.webp", "fachada_c_fruteria.webp", "fachada_azulejos.webp", "fachada_cadiz_blanca.webp"];
+  for (const [sx, L] of [[-1, LO], [1, LE]]) filaFachadas(L, -20.5, AVZ1, (f, c, w, h) => { const m = mat(f, null); box(12, h, w - .2, sx < 0 ? [m, side, roof, roof, side, side] : [side, m, roof, roof, side, side], AVX + sx * (AVW / 2 + 6), h / 2, c); });
   // plaza del fondo
   const pw = PLZ.x1 - PLZ.x0, pd = PLZ.z1 - PLZ.z0, pl = new THREE.Mesh(new THREE.PlaneGeometry(pw, pd), mat("suelo_cemento.webp", [8, 4], { color: 0x6c6c70 })); pl.rotation.x = -Math.PI / 2; pl.position.set((PLZ.x0 + PLZ.x1) / 2, .011, (PLZ.z0 + PLZ.z1) / 2); pl.receiveShadow = true; S.add(pl);
   const muro = mat("muro.webp", [10, 1]); box(pw, 3, .6, muro, (PLZ.x0 + PLZ.x1) / 2, 1.5, PLZ.z0 - .3); for (const x of [PLZ.x0 - .3, PLZ.x1 + .3]) box(.6, 3, pd, muro, x, 1.5, (PLZ.z0 + PLZ.z1) / 2);
-  for (const sx of [-1, 1]) { const w = sx < 0 ? AVX - AVW / 2 - PLZ.x0 : PLZ.x1 - AVX - AVW / 2; box(w, 9, 12, [side, side, roof, roof, mat(AVF[(i++) % AVF.length], [Math.max(1, Math.round(w / 13)), 1]), side], (sx < 0 ? PLZ.x0 + w / 2 : PLZ.x1 - w / 2), 4.5, PLZ.z1 - 6 + 12); }
+  // edificios al fondo de la plaza a los lados de la avenida (sin pisar los de la avenida)
+  filaFachadas(["fachada_ladrillo.webp", "fachada_c_fruteria.webp"], PLZ.x0, AVX - AVW / 2 - 12, (f, c, w, h) => box(w - .2, h, 12, [side, side, roof, roof, mat(f, null), side], c, h / 2, PLZ.z1 + 6));
+  filaFachadas(["fachada_c_cafeteria.webp", "fachada_bloque.webp"], AVX + AVW / 2 + 12, PLZ.x1, (f, c, w, h) => box(w - .2, h, 12, [side, side, roof, roof, mat(f, null), side], c, h / 2, PLZ.z1 + 6));
   const sky = new THREE.Mesh(new THREE.PlaneGeometry(150, 150 * 9 / 21), new THREE.MeshBasicMaterial({ map: tex("fondo_ciudad.webp"), transparent: true, alphaTest: .4, fog: false, color: 0xffe2c8 })); sky.scale.y = 315 / 2048 * 21 / 9; sky.position.set((PLZ.x0 + PLZ.x1) / 2, 150 * 315 / 2048 / 2 - 1, PLZ.z0 - 40); S.add(sky);
   // suelo del skatepark (las rampas llegan después, son un modelo)
   const sk = new THREE.Mesh(new THREE.PlaneGeometry(SKP.w + 1, SKP.d + 1), mat("suelo_cemento.webp", [5, 3])); sk.rotation.x = -Math.PI / 2; sk.position.set(SKP.x, .19, SKP.z); sk.receiveShadow = true; S.add(sk);
