@@ -245,14 +245,15 @@ function cocheCabe(c, x, z, h) { const T = COCHES[c.tipo], ch = Math.cos(h), sh 
   for (const sx of [-T.len / 2, T.len / 2]) for (const sz of [-T.an / 2, T.an / 2]) { const px = x + ch * sx - sh * sz, pz = z + sh * sx + ch * sz; if (!enCalzada(px, pz) || gasChoca(px, pz) || OBST.some(([ox, oz, r]) => Math.hypot(px - ox, pz - oz) < r * .8)) return false; }
   for (const o of TRAF.concat(miCoche ? [miCoche] : [])) if (o !== c && Math.hypot(o.x - x, o.z - z) < (T.len + COCHES[o.tipo].len) / 2 - .3) return false; return true; }
 // rutas del tráfico: vuelta a la ciudad por la calle principal, la oeste, el bulevar y la este, en los dos sentidos, por el carril de la derecha
-const RUTA = [[EX, 0], [WX, 0], [WX, NZ], [EX, NZ]];
-function rutaPunto(sent, i) { const n = RUTA.length, P = j => RUTA[((j % n) + n) % n], a = P(i - sent), b = P(i), c = P(i + sent);
+// también vueltas cortas que suben y bajan por la avenida (los carriles pasan entre los surtidores)
+const RUTA = [[EX, 0], [WX, 0], [WX, NZ], [EX, NZ]], RUTA_O = [[AVX, 0], [WX, 0], [WX, NZ], [AVX, NZ]], RUTA_E = [[EX, 0], [AVX, 0], [AVX, NZ], [EX, NZ]];
+function rutaPunto(sent, i, R = RUTA) { const n = R.length, P = j => R[((j % n) + n) % n], a = P(i - sent), b = P(i), c = P(i + sent);
   const dir = (p, q) => { const dx = q[0] - p[0], dz = q[1] - p[1], l = Math.hypot(dx, dz); return [dx / l, dz / l]; }, d1 = dir(a, b), d2 = dir(b, c), o = 2.3;
   return [b[0] + (-d1[1] - d2[1]) * o, b[1] + (d1[0] + d2[0]) * o]; }
-function crearTrafico() { const tipos = ["compacto", "berlina", "furgoneta", "compacto", "berlina", "compacto"];
-  tipos.forEach((t, k) => { const sent = k % 2 ? 1 : -1, i = k % RUTA.length, p = rutaPunto(sent, i - sent), q = rutaPunto(sent, i), f = (k / 6) * .7 + .15;
-    const g = cocheMalla(t); if (!g) return; TRAF.push({ g, tipo: t, sent, i, x: p[0] + (q[0] - p[0]) * f, z: p[1] + (q[1] - p[1]) * f, h: Math.atan2(q[1] - p[1], q[0] - p[0]), v: 0 }); }); }
-function stepTrafico(dt) { for (const c of TRAF) { const q = rutaPunto(c.sent, c.i), dx = q[0] - c.x, dz = q[1] - c.z, d = Math.hypot(dx, dz); if (d < 3) { c.i += c.sent; continue; }
+function crearTrafico() { const tipos = ["compacto", "berlina", "furgoneta", "compacto", "berlina", "compacto", "berlina", "compacto", "furgoneta", "berlina"];
+  tipos.forEach((t, k) => { const R = k < 6 ? RUTA : k < 8 ? RUTA_O : RUTA_E, sent = k % 2 ? 1 : -1, i = k < 6 ? k % 4 : (k % 2 ? 1 : 3), p = rutaPunto(sent, i - sent, R), q = rutaPunto(sent, i, R), f = k < 6 ? (k / 6) * .7 + .15 : .5;
+    const g = cocheMalla(t); if (!g) return; TRAF.push({ g, tipo: t, sent, i, R, x: p[0] + (q[0] - p[0]) * f, z: p[1] + (q[1] - p[1]) * f, h: Math.atan2(q[1] - p[1], q[0] - p[0]), v: 0 }); }); }
+function stepTrafico(dt) { for (const c of TRAF) { const q = rutaPunto(c.sent, c.i, c.R), dx = q[0] - c.x, dz = q[1] - c.z, d = Math.hypot(dx, dz); if (d < 3) { c.i += c.sent; continue; }
     let a = Math.atan2(dz, dx) - c.h; a = Math.atan2(Math.sin(a), Math.cos(a)); c.h += clamp(a, -1.6 * dt, 1.6 * dt);
     let obj = d < 14 || Math.abs(a) > .4 ? 4 : 9; const fx = Math.cos(c.h), fz = Math.sin(c.h);
     const cosas = TRAF.filter(o => o !== c).map(o => [o.x, o.z]).concat(miCoche ? [[miCoche.x, miCoche.z]] : []).concat(place === "calle" && !me.coche ? [[me.x, me.z]] : []);
@@ -314,7 +315,10 @@ function casaRentas() { const hoy = today(), ult = store.get("rentaDia", ""); if
   const dias = Math.min(7, Math.max(1, Math.round((new Date(hoy) - new Date(ult)) / 864e5) || 1)), prin = casaPrincipal(); let n = 0; for (const k of casasMias()) if (k !== prin) n += CASAS[k].renta * dias;
   store.set("rentaDia", hoy); if (n > 0) { monedasMas(n); updCoins(); const h = store.get("banco", []); h.unshift([Date.now(), n, "Alquileres"]); store.set("banco", h.slice(0, 60)); setTimeout(() => say("+" + n + " monedas de tus alquileres", 2400), 2500); } }
 // nivel del jugador: se sube en el gimnasio de casa (como mucho 3 sesiones al día) y te hace más rápido
-const nivel = () => store.get("nivel", { n: 1, xp: 0 }), velNivel = () => 1 + .03 * (Math.min(10, nivel().n) - 1);
+const nivel = () => store.get("nivel", { n: 1, xp: 0 }), velNivel = () => (1 + .03 * (Math.min(10, nivel().n) - 1)) * boostK();
+/* comer en el bar o la pizzería te da energía un rato: corres un poco más */
+const boostK = () => { const b = store.get("boost", null); return b && b.t > Date.now() ? b.k : 1; };
+function comer(n, k, min, que) { const b = store.get("boost", null); if (b && b.t > Date.now() && b.k >= k) return say("Ya estás lleno, espera un poco", 1500); if (!pagar(n, que)) return; store.set("boost", { k, t: Date.now() + min * 6e4 }); bevAdd("comer"); say(que + ": ¡energía! +" + Math.round((k - 1) * 100) + "% de velocidad " + min + " min", 2200); $("#panel").style.display = "none"; }
 const GYM = { on: false, n: 0 };
 function gymEmpezar() { const hoy = today(), ses = store.get("gymHoy", { d: "", n: 0 }); if (ses.d === hoy && ses.n >= 3) return say("Por hoy ya has entrenado bastante. Vuelve mañana", 1800);
   GYM.on = true; GYM.n = 0; const P = $("#panel"); P.innerHTML = `<h3>¡A ENTRENAR!</h3><div>Pulsa <b>E</b> (o el botón <b>A</b>) todo lo rápido que puedas durante 10 segundos.</div><div class="tbig" id="gymn" style="text-align:center;margin-top:10px">0</div>`; P.style.display = "block";
@@ -333,6 +337,14 @@ const TRABAJOS = {
   paquetes: { nom: "Mensajero", txt: "Recoge 3 paquetes en el quiosco de la avenida y entrégalos uno detrás de otro.", base: 60, t: 60, n: 3, recoger: [AVX - RW - 1, -80], que: "el paquete" },
   taxi: { nom: "Taxista", txt: "Con tu coche: recoge al cliente y llévalo a su destino. Para despacio a su lado.", base: 160, t: 100, n: 1, coche: 1, que: "al cliente" } };
 const TRAB = { k: null, fase: 0, hecho: 0, t: 0, obj: null, mk: null };
+/* el cliente del taxi es una persona que te espera en la acera (y se baja al llegar) */
+const TAXI = { a: null, t: 0 };
+function taxiCli(p, baja) { if (!p) { if (TAXI.a) TAXI.a.wrap.visible = false; return; }
+  const pon = () => { const a = TAXI.a; a.wrap.visible = true; a.wrap.position.set(p[0], gy(p[0], p[1]), p[1]); a.wrap.rotation.y = -Math.atan2(me.z - p[1], me.x - p[0]) + Math.PI / 2 + (baja ? Math.PI : 0); play(a, baja ? "Casual_Walk" : "Idle"); TAXI.t = baja ? 2.2 : 0; };
+  if (TAXI.a) return pon(); loadModel("aficionado2").then(g => { if (!TAXI.a) TAXI.a = actor(g, null, null); if (TRAB.k === "taxi" || baja) pon(); }); }
+function stepTaxi(dt) { const a = TAXI.a; if (!a || !a.wrap.visible) return; a.mixer.update(dt);
+  if (TAXI.t > 0) { TAXI.t -= dt; const r = a.wrap.rotation.y; a.wrap.position.x += Math.sin(r) * 1.3 * dt; a.wrap.position.z += Math.cos(r) * 1.3 * dt; if (TAXI.t <= 0) a.wrap.visible = false; }
+  else if (TRAB.k === "taxi" && TRAB.fase === 0) a.wrap.rotation.y = -Math.atan2(me.z - a.wrap.position.z, me.x - a.wrap.position.x) + Math.PI / 2; }
 function puntoAcera(lejosDe) { const G = ACE_R.filter(r => (r.x1 - r.x0) * (r.z1 - r.z0) > 30); for (let k = 0; k < 40; k++) { const r = G[(Math.random() * G.length) | 0], x = r.x0 + .5 + Math.random() * Math.max(.1, r.x1 - r.x0 - 1), z = r.z0 + .5 + Math.random() * Math.max(.1, r.z1 - r.z0 - 1);
   if (!lejosDe || Math.hypot(x - lejosDe[0], z - lejosDe[1]) > 70) return [x, z]; } return [ACE_R[0].x0 + 5, ACE_R[0].z0 + 1]; }
 function trabMarca(p) { if (!TRAB.mk) { const g = new THREE.Group(), m = new THREE.MeshBasicMaterial({ color: 0x3cff8a, transparent: true, opacity: .55, depthWrite: false });
@@ -343,15 +355,20 @@ function trabajosPanel() { const P = $("#panel");
     `<button onclick="this.closest('#panel').style.display='none'">Cerrar</button></div>`; P.style.display = "block"; }
 function trabEmpezar(k) { const T = TRABAJOS[k]; $("#panel").style.display = "none"; telCerrar(); if (T.coche && !(inv().coches || []).length) return say("Para ser taxista necesitas un coche (gasolinera)", 2000);
   if (place !== "calle") return say("Sal a la calle para trabajar", 1400); Object.assign(TRAB, { k, fase: 0, hecho: 0, t: T.t });
-  trabMarca(T.coche ? puntoAcera([me.x, me.z]) : T.recoger); $("#trab").style.display = ""; say(T.nom + ": ¡a trabajar!", 1400); }
-function trabFin(ok, msg) { if (TRAB.mk) TRAB.mk.visible = false; $("#trab").style.display = "none"; TRAB.k = null; if (msg) say(msg, 2400); }
-function stepTrabajo(dt) { if (!TRAB.k) return; const T = TRABAJOS[TRAB.k]; TRAB.t -= dt; if (TRAB.t <= 0) return trabFin(false, "Se acabó el tiempo. Trabajo perdido");
+  trabMarca(T.coche ? puntoAcera([me.x, me.z]) : T.recoger); if (T.coche) taxiCli(TRAB.obj); $("#trab").style.display = ""; say(T.nom + ": ¡a trabajar!", 1400); }
+function pizzaRepartir() { $("#panel").style.display = "none"; const p = AVTIENDA.tacita; if (!p) return;
+  const s = SHOPS.find(s => s.k === "tacita"); me.x = s.ex; me.z = s.ez; place = "calle"; INTG.visible = false; S.fog = FOG; S.background = new THREE.Color(0xf2a86a); SNAP = 1; trabEmpezar("pizza"); if (TRAB.k === "pizza") { TRAB.fase = 1; TRAB.t += 10; trabMarca(puntoAcera(p)); say("¡Pizza recogida! Llévala a la marca verde", 1800); } }
+function barTele() { const P = $("#panel"), peers = [...NB.peers.values()].filter(p => p.ready).map(p => esc(p.name));
+  P.innerHTML = `<h3>LA TELE DEL BAR</h3><div><b>Récord de toques:</b> ${store.get("toques", 0)}</div><div><b>Trabajos hechos:</b> ${store.get("trabHechos", 0)}</div><div><b>Tu nivel:</b> ${nivel().n}</div>
+    <div style="margin-top:8px"><b>En el barrio ahora:</b> ${NB.ws ? (peers.length ? peers.join(", ") : "solo tú") : "no estás conectado a un servidor"}</div><div class="row"><button onclick="shopPanel('caleta')">Volver a la barra</button></div>`; P.style.display = "block"; }
+function trabFin(ok, msg) { if (TRAB.mk) TRAB.mk.visible = false; if (TRAB.k === "taxi" && !ok) taxiCli(null); $("#trab").style.display = "none"; TRAB.k = null; if (msg) say(msg, 2400); }
+function stepTrabajo(dt) { stepTaxi(dt); if (!TRAB.k) return; const T = TRABAJOS[TRAB.k]; TRAB.t -= dt; if (TRAB.t <= 0) return trabFin(false, "Se acabó el tiempo. Trabajo perdido");
   const o = TRAB.obj, d = Math.hypot(me.x - o[0], me.z - o[1]); const a = Math.atan2(o[1] - me.z, o[0] - me.x), ca = Math.atan2(-Math.cos(YAW), -Math.sin(YAW)), ang = a - ca;
   const fase = TRAB.fase === 0 ? "Recoge " + T.que : "Entrega " + T.que + (T.n > 1 ? ` (${TRAB.hecho + 1}/${T.n})` : "");
   $("#trab").innerHTML = `<b>${T.nom}</b><span>${fase}</span><i style="transform:rotate(${(ang * 180 / Math.PI).toFixed(0)}deg)">▲</i><span>${Math.round(d)} m · ${Math.ceil(TRAB.t)} s</span><button onclick="trabFin(false,'Trabajo cancelado')">Dejar</button>`;
   const llega = d < (T.coche ? 5.5 : 2.6) && place === "calle" && (!T.coche || (me.coche && Math.abs(me.coche.v) < 2.5)); if (!llega) return;
-  if (T.coche && !me.coche) return; if (TRAB.fase === 0) { TRAB.fase = 1; trabMarca(puntoAcera(o)); TRAB.t += T.coche ? 0 : 10; say(T.coche ? "Cliente a bordo" : "¡Recogido! Ahora a entregarlo", 1400); return; }
-  TRAB.hecho++; const paga = Math.round(T.base + T.base * Math.max(0, TRAB.t) / T.t); monedasMas(paga); updCoins(); const h = store.get("banco", []); h.unshift([Date.now(), paga, T.nom]); store.set("banco", h.slice(0, 60));
+  if (T.coche && !me.coche) return; if (TRAB.fase === 0) { TRAB.fase = 1; trabMarca(puntoAcera(o)); if (T.coche) taxiCli(null); TRAB.t += T.coche ? 0 : 10; say(T.coche ? "Cliente a bordo" : "¡Recogido! Ahora a entregarlo", 1400); return; }
+  TRAB.hecho++; if (T.coche) taxiCli([me.x + Math.cos(me.coche.h + Math.PI / 2) * 1.8, me.z + Math.sin(me.coche.h + Math.PI / 2) * 1.8], true); const paga = Math.round(T.base + T.base * Math.max(0, TRAB.t) / T.t); monedasMas(paga); updCoins(); const h = store.get("banco", []); h.unshift([Date.now(), paga, T.nom]); store.set("banco", h.slice(0, 60));
   if (TRAB.hecho >= T.n) { store.set("trabHechos", store.get("trabHechos", 0) + 1); bevAdd("trab"); misEv("trabajo"); return trabFin(true, "¡Trabajo hecho! +" + paga + " monedas"); }
   say("+" + paga + " monedas · siguiente entrega", 1500); TRAB.fase = 0; TRAB.t = T.t; trabMarca(T.recoger); }
 
@@ -411,6 +428,10 @@ function SA_has(n) { return !!(window.SA && SA[n]) || !!(window.STREET_IMG && ST
 const INT = { bar: ["tienda_bar_suelo.webp", "tienda_bar_pared.webp", "tienda_bar_fondo.webp", "Bar deportivo"], equip: ["tienda_equip_suelo.webp", "tienda_equip_pared.webp", "tienda_equip_fondo.webp", "Tienda de equipaciones"], sobres: ["tienda_sobres_suelo.webp", "tienda_sobres_pared.webp", "tienda_sobres_fondo.webp", "Tienda de sobres"] };
 Object.assign(INT, { ropa: ["tienda_ropa_suelo.webp", "tienda_ropa_pared.webp", "tienda_ropa_fondo.webp", "Tienda de ropa"], moviles: ["tienda_moviles_suelo.webp", "tienda_moviles_pared.webp", "tienda_moviles_fondo.webp", "Tienda de móviles"], skates: ["tienda_skates_suelo.webp", "tienda_skates_pared.webp", "tienda_skates_fondo.webp", "Tienda de skates"] });
 const INTPOS = { bar: -150, equip: -180, sobres: -210, ropa: -240, moviles: -270, skates: -300 }, MOSTR = { ropa: "madera", moviles: "blanco", skates: "madera" };   // el blanco es el mismo mostrador lacado en blanco
+// bar y pizzería de la avenida: se entra, hay mostrador con camarero y cosas que hacer
+Object.assign(INT, { caleta: ["tienda_bar_suelo.webp", "bar_pared.webp", "bar_fondo.webp", "Bar El Caleta"], tacita: ["casa_suelo.webp", "pizza_pared.webp", "pizza_fondo.webp", "Pizzería La Tacita"] });
+Object.assign(INTPOS, { caleta: -90, tacita: -120 }); Object.assign(MOSTR, { caleta: "madera", tacita: "blanco" });
+const AVTIENDA = {};
 const INTG = new THREE.Group(); INTG.visible = false;
 function buildInteriors() { const S0 = S; { const S = INTG; S0.add(INTG);
   for (const [k, [fl, wa, bk, , w2]] of Object.entries(INT)) {
@@ -613,7 +634,7 @@ async function addProps() {
   // ---- vida de barrio: modelos de Sketchfab (CC BY), cada uno se carga por separado para que un fallo no deje el barrio vacío ----
   const one = async (n, f) => { try { const g = await load(n); f(g); } catch (e) { console.warn("prop", n, e); } };
   const tint = (parts, c) => { parts.forEach(p => { p.m.color = new THREE.Color(c); if (p.m.map) p.m.color.multiplyScalar(1.6); }); return parts; };
-  const doors = SHOPS.map(s => s.dx);
+  const doors = SHOPS.filter(s => !s.av).map(s => s.dx);
   one("terraza", g => instance(bakeProp(g.scene, .9), [[-56.5, 7.2, .1], [-51.5, 7.4, -.6], [-2, 7.3, .5]]));
   one("vespa", g => { const b = g.scene.getObjectByName("Object_4") || g.scene; instance(bakeProp(b, 1.8, "len"), [[-149, -6.3, .12], [-87, -6.3, -.1], [-14.5, -6.3, Math.PI + .1], [40, -6.3, .05]]); });
   one("bici", g => instance(bakeProp(g.scene, 1.75, "len"), [[-146, -7.35, 0], [-90, -7.35, 0], [6, -7.35, Math.PI], [-31, SEA_Z - .95, 0], [16, SEA_Z - .95, Math.PI]]));
@@ -711,20 +732,29 @@ async function nbJoin(k, sala) {
   } catch (e) { st.textContent = e.message || String(e); nbLeave(true); return false; }
 }
 function nbLeave(quiet) { const ws = NB.ws; NB.ws = null; try { ws && ws.close(); } catch (e) {} for (const p of NB.peers.values()) nbDrop(p); NB.peers.clear(); NB.k = null; if (!quiet) try { sessionStorage.removeItem("street_nb"); } catch (e) {} nbStatus(); if (!NB.ws) $("#bChat").style.display = "none"; }
-function nbPose() { return { x: +me.x.toFixed(2), z: +me.z.toFixed(2), d: +me.dir.toFixed(2), s: +me.spd.toFixed(1), pl: place === "calle" ? (mode === "hub" ? "c" : "j") : place, k1: kit.c1, k2: kit.c2, nm: nbName() }; }
+function nbPose() { return { x: +me.x.toFixed(2), z: +me.z.toFixed(2), d: +me.dir.toFixed(2), s: +me.spd.toFixed(1), pl: place === "calle" ? (mode === "hub" ? "c" : "j") : place, k1: kit.c1, k2: kit.c2, nm: nbName(), sk: me.skate ? 1 : 0, gc: inv().gorra || "", car: miCoche && place === "calle" ? [miCoche.tipo, +miCoche.x.toFixed(2), +miCoche.z.toFixed(2), +miCoche.h.toFixed(2), me.coche ? 1 : 0] : 0 }; }
 function nbLabel(txt) { const c = document.createElement("canvas"); c.width = 256; c.height = 64; const x = c.getContext("2d"); x.font = "700 34px 'Barlow Condensed',system-ui"; const w = Math.min(250, x.measureText(txt).width + 24);
   x.fillStyle = "rgba(8,14,28,.75)"; x.beginPath(); x.roundRect((256 - w) / 2, 8, w, 46, 12); x.fill(); x.fillStyle = "#fff"; x.textAlign = "center"; x.textBaseline = "middle"; x.fillText(txt, 128, 32);
   const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), depthTest: false, transparent: true })); sp.scale.set(1.6, .4, 1); sp.position.y = 2.25; sp.renderOrder = 9; return sp; }
 function nbPeer(n, name) { if (NB.peers.has(n)) return NB.peers.get(n); const p = { n, name: name || "Jugador", x: 0, z: 0, tx: 0, tz: 0, dir: 0, td: 0, spd: 0, pl: "c", a: null, lbl: null, k1: "#888888", k2: "#222222", ready: false };
   NB.peers.set(n, p); loadModel("pj18").then(g => { if (!NB.peers.has(n)) return; p.a = actor(g, p.k1, p.k2); p.a.wrap.visible = false; p.lbl = nbLabel(p.name); p.a.wrap.add(p.lbl); }); nbStatus(); return p; }
-function nbDrop(p) { if (p.a) { S.remove(p.a.wrap); p.a.mixer.stopAllAction(); } }
+function nbDrop(p) { if (p.a) { S.remove(p.a.wrap); p.a.mixer.stopAllAction(); } if (p.cg) S.remove(p.cg); }
+/* lo que llevan los demás: skate, gorra y su coche (aparcado o conduciendo) */
+function nbExtras(p, d) { if (!p.a) return;
+  const sk = !!d.sk; if (sk !== !!p.sk) { if (sk && SKATE_P) { if (!p.skm) { p.skm = new THREE.Group(); for (const q of SKATE_P) { const m = new THREE.Mesh(q.g, q.m); m.castShadow = true; p.skm.add(m); } p.skm.rotation.y = Math.PI / 2; } p.a.wrap.add(p.skm); } else if (p.skm) p.a.wrap.remove(p.skm);
+    const inner = p.a.wrap.children[0]; if (inner && (sk ? SKATE_P : p.sk)) inner.position.y += sk ? .11 : -.11; p.sk = sk && !!SKATE_P; }
+  const gc = d.gc || ""; if (gc !== (p.gc || "")) { if (p.cap) { p.cap.parent && p.cap.parent.remove(p.cap); p.cap = null; } const c = (ROPA.gorras.find(x => x[0] === gc) || [])[1]; if (c) p.cap = gorraPoner(p.a, c); p.gc = gc; }
+  const car = Array.isArray(d.car) && COCHES[d.car[0]] ? d.car : null;
+  if (!car) { if (p.cg) { S.remove(p.cg); p.cg = null; } p.car = null; return; }
+  if (!p.cg || p.cgT !== car[0]) { if (p.cg) S.remove(p.cg); p.cg = cocheMalla(car[0]); p.cgT = car[0]; if (p.cg) { p.cg.position.set(car[1], 0, car[2]); p.cg.rotation.y = -car[3]; p.ch = car[3]; } }
+  p.car = car; }
 function nbRecv(d) {
   if (d.t === "entra") { nbPeer(d.n, d.name); chatLine("", (d.name || "Alguien") + " ha entrado en el barrio"); nbSend({ a: d.n, t: "p", ...nbPose(), full: 1 }); }
   else if (d.t === "sale") { const p = NB.peers.get(d.n); if (p) { chatLine("", p.name + " se ha ido"); nbDrop(p); NB.peers.delete(d.n); nbStatus(); } }
   else if (d.t === "p" && d.de != null) { const p = nbPeer(d.de, d.nm); const first = !p.ready; p.tx = d.x; p.tz = d.z; p.td = d.d; p.spd = d.s; p.pl = d.pl;
     if (d.nm && d.nm !== p.name && p.a) { p.name = d.nm; p.a.wrap.remove(p.lbl); p.lbl = nbLabel(p.name); p.a.wrap.add(p.lbl); } else if (d.nm) p.name = d.nm;
     if (p.a && (d.k1 !== p.k1 || d.k2 !== p.k2)) p.a.mats.forEach(m => { if (m.userData.U) { m.userData.U.k1.value.set(d.k1); m.userData.U.k2.value.set(d.k2); } }); p.k1 = d.k1; p.k2 = d.k2;
-    if (first) { p.x = d.x; p.z = d.z; p.dir = d.d; p.ready = true; } }
+    if (first) { p.x = d.x; p.z = d.z; p.dir = d.d; p.ready = true; } nbExtras(p, d); }
   else if (d.t === "c" && d.de != null) { const p = NB.peers.get(d.de); chatLine(p ? p.name : "?", String(d.m || "").slice(0, 120)); }
   else if (d.t === "reto" && d.de != null) { const p = NB.peers.get(d.de); if (!p || NB.retoDe != null || mode !== "hub") { nbSend({ a: d.de, t: "no" }); return; } NB.retoDe = d.de; nbAsk(`<b>${esc(p.name)}</b> te reta a un partido en la jaula`, () => { nbSend({ a: d.de, t: "si" }); say("¡Reto aceptado!", 1400); }, () => { nbSend({ a: d.de, t: "no" }); NB.retoDe = null; }); }
   else if (d.t === "no" && d.de != null) { const p = NB.peers.get(d.de); say((p ? p.name : "El rival") + " no acepta", 1600); NB.reto = null; }
@@ -741,7 +771,9 @@ function stepNet(dt) {
   if (!NB.ws) return; const now = performance.now();
   // mi posición: 6 veces por segundo si me muevo; cada 2 s si estoy quieto
   const ps = nbPose(), key = [ps.x, ps.z, ps.d, ps.pl].join(); if ((key !== NB.lastP && now - NB.last > 166) || now - NB.last > 2000) { NB.last = now; NB.lastP = key; nbSend({ t: "p", ...ps }); }
-  for (const p of NB.peers.values()) { if (!p.a) continue; const vis = p.ready && ((place === "calle" && (p.pl === "c" || p.pl === "j")) || p.pl === place); p.a.wrap.visible = vis && Math.hypot(p.tx - me.x, p.tz - me.z) < 70; if (!p.a.wrap.visible) continue;
+  for (const p of NB.peers.values()) { if (!p.a) continue; const vis = p.ready && ((place === "calle" && (p.pl === "c" || p.pl === "j")) || p.pl === place);
+    if (p.cg) { const k2 = Math.min(1, dt * 8), c = p.car; p.cg.visible = place === "calle" && p.ready && Math.hypot(c[1] - me.x, c[2] - me.z) < 90; p.cg.position.x += (c[1] - p.cg.position.x) * k2; p.cg.position.z += (c[2] - p.cg.position.z) * k2; let a = c[3] - p.ch; a = Math.atan2(Math.sin(a), Math.cos(a)); p.ch += a * k2; p.cg.rotation.y = -p.ch; }
+    p.a.wrap.visible = vis && !(p.car && p.car[4]) && Math.hypot(p.tx - me.x, p.tz - me.z) < 70; if (!p.a.wrap.visible) continue;
     const k = Math.min(1, dt * 10); p.x += (p.tx - p.x) * k; p.z += (p.tz - p.z) * k; let a = p.td - p.dir; a = Math.atan2(Math.sin(a), Math.cos(a)); p.dir += a * k;
     p.a.wrap.position.set(p.x, gy(p.x, p.z), p.z); p.a.wrap.rotation.y = -p.dir + Math.PI / 2; loco(p.a, p.spd, false); p.a.mixer.update(dt); }
 }
@@ -978,7 +1010,8 @@ function buildCiudad() {
   // fachadas a los dos lados, mirando a la avenida
   const LO = ["fachada_c_bar.webp", "fachada_c_panaderia.webp", "fachada_c_taller.webp", "fachada_c_farmacia.webp", "fachada_c_quiosco.webp", "fachada_c_gimnasio.webp"],
     LE = ["fachada_c_cafeteria.webp", "fachada_c_pizzeria.webp", "fachada_c_barberia.webp", "fachada_c_fruteria.webp", "fachada_azulejos.webp", "fachada_cadiz_blanca.webp"];
-  for (const [sx, L] of [[-1, LO], [1, LE]]) filaFachadas(L, -20.5, AVZ1, (f, c, w, h) => { const m = mat(f, null); box(12, h, w - .2, sx < 0 ? [m, side, roof, roof, side, side] : [side, m, roof, roof, side, side], AVX + sx * (AVW / 2 + 6), h / 2, c); });
+  for (const [sx, L] of [[-1, LO], [1, LE]]) filaFachadas(L, -20.5, AVZ1, (f, c, w, h) => { const m = mat(f, null); box(12, h, w - .2, sx < 0 ? [m, side, roof, roof, side, side] : [side, m, roof, roof, side, side], AVX + sx * (AVW / 2 + 6), h / 2, c);
+    const k = sx < 0 && f === "fachada_c_bar.webp" ? "caleta" : sx > 0 && f === "fachada_c_pizzeria.webp" ? "tacita" : null; if (k) { const x = AVX + sx * (AVW / 2 - .9); SHOPS.push({ k, x, z: c - 2.2, dx: x, ex: x - sx * .6, ez: c, av: 1 }); DOORS.push({ k, x, z: c }); AVTIENDA[k] = [x, c]; if (k === "tacita") TRABAJOS.pizza.recoger = [x - sx * .6, c]; } });
   // plaza del fondo
   const pw = PLZ.x1 - PLZ.x0, pd = PLZ.z1 - PLZ.z0, pl = new THREE.Mesh(new THREE.PlaneGeometry(pw, pd), mat("suelo_cemento.webp", [8, 4], { color: 0x6c6c70 })); pl.rotation.x = -Math.PI / 2; pl.position.set((PLZ.x0 + PLZ.x1) / 2, .011, (PLZ.z0 + PLZ.z1) / 2); pl.receiveShadow = true; S.add(pl);
   const muro = mat("muro.webp", [10, 1]); for (const x of [PLZ.x0 - .3, PLZ.x1 + .3]) box(.6, 3, pd, muro, x, 1.5, (PLZ.z0 + PLZ.z1) / 2);
@@ -1025,13 +1058,15 @@ function pagar(n, que) { if (coins() < n) { say("Te faltan monedas (" + n + ")",
 function ropaAplicar() {
   if (!me) return; const g = inv().gorra, c = (ROPA.gorras.find(x => x[0] === g) || [])[1];
   if (me_gorra) { me_gorra.parent && me_gorra.parent.remove(me_gorra); me_gorra = null; } if (!c) return;
-  let head = null; me.a.wrap.traverse(o => { if (!head && o.isBone && /head$/i.test(o.name)) head = o; }); if (!head) return;
-  me.a.wrap.updateMatrixWorld(true); const ws = new THREE.Vector3(); head.getWorldScale(ws); const s = 1 / (ws.y || 1);
+  me_gorra = gorraPoner(me.a, c); }
+function gorraPoner(A, c) {
+  let head = null; A.wrap.traverse(o => { if (!head && o.isBone && /head$/i.test(o.name)) head = o; }); if (!head) return null;
+  A.wrap.updateMatrixWorld(true); const ws = new THREE.Vector3(); head.getWorldScale(ws); const s = 1 / (ws.y || 1);
   const m = new THREE.MeshStandardMaterial({ color: c, roughness: .7 }), cap = new THREE.Group();
   const dome = new THREE.Mesh(new THREE.SphereGeometry(.118, 20, 12, 0, Math.PI * 2, 0, Math.PI / 2), m); dome.scale.set(1, .78, 1.08);
   const vis = new THREE.Mesh(new THREE.CylinderGeometry(.11, .11, .012, 20, 1, false, -Math.PI / 2, Math.PI), m); vis.scale.set(1, 1, .95); vis.position.set(0, .004, .08);
   const bt = new THREE.Mesh(new THREE.SphereGeometry(.014, 8, 6), m); bt.position.y = .092; cap.add(dome, vis, bt); cap.traverse(o => o.castShadow = true);
-  cap.scale.setScalar(s); cap.position.set(0, .135 * s, .012 * s); head.add(cap); me_gorra = cap;
+  cap.scale.setScalar(s); cap.position.set(0, .135 * s, .012 * s); head.add(cap); return cap;
 }
 function tiendaPanel(k) {
   const P = $("#panel"), I = inv(); let h = "";
@@ -1045,6 +1080,18 @@ function tiendaPanel(k) {
   }
   if (k === "skates") h = `<h3>SKATE CALETA</h3><div>Con el skate vas mucho más rápido por el barrio. Súbete y bájate con <b>T</b>, el botón <b>Y</b> del mando o el botón 🛹.</div>
     <div class="row" style="margin-top:10px">${I.skate ? `<button onclick="skateToggle();this.closest('#panel').style.display='none'">${me.skate ? "Bajarme" : "Subirme"} al skate</button>` : `<button onclick="skateComprar()">Comprar skate · 400 🪙</button>`}<button onclick="this.closest('#panel').style.display='none'">Cerrar</button></div><div style="opacity:.7;margin-top:6px">Tienes ${coins()} monedas.</div>`;
+  const quedan = () => { const b = store.get("boost", null); return b && b.t > Date.now() ? `<div style="opacity:.8;margin-top:6px">Energía activa: +${Math.round((b.k - 1) * 100)}% durante ${Math.ceil((b.t - Date.now()) / 6e4)} min</div>` : ""; };
+  if (k === "caleta") h = `<h3>BAR EL CALETA</h3><div>Pide algo en la barra y sal con energía: corres más rápido un rato. Tienes <b>${coins()}</b> monedas.</div><div class="col" style="margin-top:10px">
+    <button onclick="comer(20,1.08,3,'Refresco')"><b>Refresco · 20 🪙</b><small style="display:block;font-weight:400">+8% de velocidad 3 minutos</small></button>
+    <button onclick="comer(45,1.12,5,'Tapa de tortilla')"><b>Tapa de tortilla · 45 🪙</b><small style="display:block;font-weight:400">+12% de velocidad 5 minutos</small></button>
+    <button onclick="comer(90,1.18,8,'Montadito de pringá')"><b>Montadito de pringá · 90 🪙</b><small style="display:block;font-weight:400">+18% de velocidad 8 minutos</small></button>
+    <button onclick="barTele()"><b>Ver la tele del bar</b><small style="display:block;font-weight:400">Récords del barrio y quién está conectado</small></button>
+    <button onclick="this.closest('#panel').style.display='none'">Cerrar</button></div>${quedan()}`;
+  if (k === "tacita") h = `<h3>PIZZERÍA LA TACITA</h3><div>Cómete una porción o trabaja de repartidor: la pizza sale de aquí mismo. Tienes <b>${coins()}</b> monedas.</div><div class="col" style="margin-top:10px">
+    <button onclick="pizzaRepartir()"><b>Trabajar de repartidor</b><small style="display:block;font-weight:400">Coge la pizza y llévala a la dirección antes de que se enfríe</small></button>
+    <button onclick="comer(35,1.1,4,'Porción de pizza')"><b>Porción de pizza · 35 🪙</b><small style="display:block;font-weight:400">+10% de velocidad 4 minutos</small></button>
+    <button onclick="comer(110,1.2,10,'Pizza entera')"><b>Pizza entera · 110 🪙</b><small style="display:block;font-weight:400">+20% de velocidad 10 minutos</small></button>
+    <button onclick="this.closest('#panel').style.display='none'">Cerrar</button></div>${quedan()}`;
   if (k === "moviles") h = `<h3>MÓVILES DEL BARRIO</h3><div>Un móvil de verdad para el barrio: chat con los jugadores del servidor, vídeos y fotos, juegos, mapa con viaje rápido, retos y banco. Ábrelo con <b>M</b>, el botón <b>Select</b> del mando o el botón 📱.</div>
     <div class="row" style="margin-top:10px">${I.movil ? `<button onclick="this.closest('#panel').style.display='none';telAbrir()">Abrir mi móvil</button>` : `<button onclick="movilComprar()">Comprar móvil · 600 🪙</button>`}<button onclick="this.closest('#panel').style.display='none'">Cerrar</button></div><div style="opacity:.7;margin-top:6px">Tienes ${coins()} monedas.</div>`;
   P.innerHTML = h; P.style.display = "block";
