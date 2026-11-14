@@ -85,7 +85,9 @@ html,body{background:var(--bg)}
 #tmap{width:100%;border-radius:12px}#tcap{position:fixed;top:64px;left:50%;transform:translateX(-50%);z-index:35;display:flex;gap:8px}#tcap button{font:800 16px system-ui;padding:12px 20px;border-radius:99px;border:2px solid #fff;background:#d3202c;color:#fff;cursor:pointer;box-shadow:0 6px 20px #0008}#tcap button+button{background:#222a}
 .tsw{display:flex;align-items:center;gap:6px}.tsw i{width:18px;height:18px;border-radius:50%;background:var(--c);border:2px solid #fff8;display:inline-block}.tsw i.dos{background:linear-gradient(180deg,var(--c) 50%,var(--d) 50%)}#panel button.on,#bSk.on{border-color:var(--gold2);color:var(--gold2)}
 #panel{max-height:82vh;overflow:auto}#panel button.tsw{background:#ffffff14!important;border:1px solid #ffffff33!important;border-radius:99px!important;padding:6px 11px!important;font:700 12px system-ui!important;box-shadow:none!important;min-height:0!important;text-transform:none!important;letter-spacing:0!important}#panel .row{flex-wrap:wrap}
-#bTel em{margin-left:4px}#bTel em:empty{display:none}
+#bTel em{margin-left:4px}
+#srvs .card{max-height:88vh;overflow:auto}.srow{display:flex;flex-direction:column;align-items:stretch;gap:6px;background:#ffffff10;border:1px solid #ffffff22;border-radius:12px;padding:8px 10px}.srow b{flex:1;text-align:left;font-size:17px}.srow small{display:block;font-weight:400;opacity:.7;font-size:12px}
+.sbtns{display:flex;gap:6px}.sbtns button{flex:1}.srow button{padding:8px 12px!important;min-height:0!important;font-size:13px!important}.srvmsg{min-height:18px;color:#ffd23a;font-size:14px}#bTel em:empty{display:none}
 </style></head><body>
 <div id="load"><img id="loadLogo" alt="Street"><div>Cargando el <b style="color:#f3d27a">barrio</b>…</div><div class="lbar"><i></i></div></div>
 <div id="hud"></div><div id="msg"></div><div id="tip"></div><div id="power"><i></i></div><div id="panel"></div><div id="tel" class="modal" style="display:none" onclick="if(event.target===this)telCerrar()"><div id="telcaja"><div id="telpant"></div></div></div><div id="tcap" style="display:none"></div>
@@ -97,9 +99,10 @@ html,body{background:var(--bg)}
 <button onclick="nbNameOk()&&nbJoin('priv').then(ok=>ok&&nbMenu(false))">Crear barrio privado</button>
 <div style="display:flex;gap:8px"><input id="nbcode" class="nbi" maxlength="8" placeholder="CÓDIGO" style="text-transform:uppercase"><button onclick="nbNameOk()&&nbJoin('priv',$('#nbcode').value.trim()).then(ok=>ok&&nbMenu(false))">Unirse</button></div>
 <div id="nbmsg"></div><button id="nbleave" onclick="nbLeave();nbMenu(false)">Salir del online</button><button onclick="nbMenu(false)">Cerrar</button></div></div></div>
+<div id="srvs" class="modal" style="display:none"><div class="card"><h3><img data-ui="ico_online" alt="" style="height:64px;width:auto;margin:0 auto 6px">Servidores</h3><div class="col" id="srvbody"></div></div></div>
 <div id="nbask" class="modal" style="display:none"><div class="card"><h3><img data-ui="ico_reto" alt="" style="height:64px;width:auto;margin:0 auto 6px">¡Reto!</h3><p style="font-size:18px"></p><div class="col"><button class="pri">Aceptar</button><button class="no">Rechazar</button></div></div></div>
 <div id="hmenu" class="modal" style="display:none" onclick="if(event.target===this)hubMenu(false)"><div class="card"><h3><img data-ui="logo_street" alt="Street Football" style="width:min(360px,80%)"></h3><div class="col">
-<button class="pri" onclick="hubMenu(false)">Seguir jugando</button><button onclick="nbMenu(true)">Barrio online</button><button onclick="goOnline()">Partido online con código</button><button onclick="hubHelp(true)">Controles</button><button onclick="location.href='index.html'">Volver a MDG 27</button></div></div></div>
+<button class="pri" onclick="hubMenu(false)">Seguir jugando</button><button onclick="hubMenu(false);srvPanel(true)">Mis servidores</button><button onclick="nbMenu(true)">Barrio online</button><button onclick="goOnline()">Partido online con código</button><button onclick="hubHelp(true)">Controles</button><button onclick="location.href='index.html'">Volver a MDG 27</button></div></div></div>
 <div id="hhelp" class="modal" style="display:none" onclick="if(event.target===this)hubHelp(false)"><div class="card wide"><h3>Controles</h3><div class="kl">
 <kbd>WASD / flechas</kbd><span>Moverte</span><kbd>Shift</kbd><span>Correr</span><kbd>Z / X · arrastrar</kbd><span>Girar la cámara</span><kbd>E</kbd><span>Entrar en tiendas, usar, jugar en la cancha de la playa o los toques</span><kbd>Esc</kbd><span>Menú</span><kbd>Móvil</kbd><span>Joystick a la izquierda; botones a la derecha</span></div>
 <div style="margin-top:10px;opacity:.85">En los partidos de la jaula se usan los mismos controles que en el fútbol 11 (menú de pausa &gt; Controles).</div>
@@ -493,21 +496,21 @@ const NB_BAD = /\b(puta|puto|putas|mierda|gilipollas|cabr[oó]n|maric[oó]n|poll
 const nbName = () => store.get("nombre", "");
 async function nbSrv() { if (NB.srv) return NB.srv; for (const u of NB_LIST) { try { const c = new AbortController(), tm = setTimeout(() => c.abort(), u.includes("onrender") ? 70000 : 4000); const r = await fetch(u + "/ping", { signal: c.signal }); clearTimeout(tm); if (r.ok) return NB.srv = u; } catch (e) {} } throw new Error("No hay conexión con el servidor online. Si estás en España en día de partido, LaLiga puede estar bloqueándolo: prueba más tarde o con datos móviles."); }
 function nbSend(o) { try { if (NB.ws && NB.ws.readyState === 1) NB.ws.send(JSON.stringify(o)); } catch (e) {} }
-function nbStatus() { const e = $("#nbst"); if (!NB.ws) { e.style.display = "none"; return; } e.style.display = ""; e.innerHTML = `<b>${NB.k === "global" ? "GLOBAL" : "PRIVADO · " + NB.sala}</b> · ${NB.peers.size + 1} en el barrio`; $("#bChat").style.display = ""; }
+function nbStatus() { const e = $("#nbst"); if (!NB.ws) { e.style.display = "none"; return; } e.style.display = ""; e.innerHTML = `<b>${NB.k === "global" ? "GLOBAL" : NB.k === "srv" ? esc(NB.srvNom || "SERVIDOR") + " · " + NB.sala : "PRIVADO · " + NB.sala}</b> · ${NB.peers.size + 1} en el barrio`; $("#bChat").style.display = ""; }
 async function nbJoin(k, sala) {
   nbLeave(true); const st = $("#nbmsg"); st.textContent = "Conectando con el servidor…";
   try { const u = await nbSrv();
     if (k === "global") sala = (await fetch(u + "/plaza").then(r => r.json())).sala;
     else if (!sala) sala = (await fetch(u + "/nueva").then(r => r.json())).sala;
     sala = sala.toUpperCase(); if (!/^[A-Z0-9]{4,8}$/.test(sala)) throw new Error("Código no válido");
-    await new Promise((res, rej) => { const ws = new WebSocket(u.replace(/^http/, "ws") + "/sala/" + sala + "?max=" + (k === "global" ? 25 : 12) + "&nombre=" + encodeURIComponent(nbName())); NB.ws = ws;
+    await new Promise((res, rej) => { const ws = new WebSocket(u.replace(/^http/, "ws") + "/sala/" + sala + "?max=" + (k === "global" ? 25 : k === "srv" ? 30 : 12) + "&nombre=" + encodeURIComponent(nbName())); NB.ws = ws;
       const to = setTimeout(() => rej(new Error("El barrio está lleno o no responde")), 9000);
       ws.onmessage = e => { let d; try { d = JSON.parse(e.data); } catch (er) { return; } if (d.t === "hola") { clearTimeout(to); NB.me = d.n; for (const o of d.otros || []) if (o.n !== d.n) nbPeer(o.n, o.name); res(); } nbRecv(d); };
       ws.onerror = () => { clearTimeout(to); rej(new Error("No se puede entrar en el barrio")); };
       ws.onclose = () => { if (NB.ws === ws) { nbLeave(true); chatLine("", "Te has desconectado del barrio online"); } }; });
-    NB.k = k; NB.sala = sala; try { sessionStorage.setItem("street_nb", JSON.stringify({ k, sala: k === "global" ? "" : sala })); } catch (e) {}
+    NB.k = k; NB.sala = sala; try { sessionStorage.setItem("street_nb", JSON.stringify({ k, sala: k === "global" ? "" : sala, nom: NB.srvNom || "" })); } catch (e) {}
     nbSend({ t: "p", ...nbPose(), full: 1 }); $("#nbon").style.display = "none"; nbStatus();
-    chatLine("", k === "global" ? "Has entrado en el barrio global. Saluda en el chat (tecla Enter)." : "Barrio privado " + sala + ". Pasa el código a tus amigos."); return true;
+    chatLine("", k === "global" ? "Has entrado en el barrio global. Saluda en el chat (tecla Enter)." : k === "srv" ? "Has entrado en el servidor " + (NB.srvNom || sala) + ". Para invitar a tus amigos pásales el código " + sala + "." : "Barrio privado " + sala + ". Pasa el código a tus amigos."); return true;
   } catch (e) { st.textContent = e.message || String(e); nbLeave(true); return false; }
 }
 function nbLeave(quiet) { const ws = NB.ws; NB.ws = null; try { ws && ws.close(); } catch (e) {} for (const p of NB.peers.values()) nbDrop(p); NB.peers.clear(); NB.k = null; if (!quiet) try { sessionStorage.removeItem("street_nb"); } catch (e) {} nbStatus(); if (!NB.ws) $("#bChat").style.display = "none"; }
@@ -750,7 +753,7 @@ let ballM, ring;
   const g = await loadModel("pj18"); me = { a: actor(g, kit.c1, kit.c2), x: -40, z: 3, dir: 0, spd: 0 };
   spawnNPCs(); addProps(); addTiendas(); addCiudad(); mgSetup(); updCoins();
   loadModel("entrenador1").then(g => { const a = actor(g, null, null); a.wrap.position.set(REY.x, gy(REY.x, REY.z), REY.z); a.wrap.rotation.y = -Math.PI + Math.PI / 2; play(a, "Idle"); const l = nbLabel("REY DE LA PISTA"); a.wrap.add(l); NPCS.push({ a, x: REY.x, z: REY.z, dir: Math.PI, walk: false, spd: 0, keeper: false, rey: 1 }); }).catch(() => {});
-  $("#load").remove(); try { const nb = JSON.parse(sessionStorage.getItem("street_nb") || "null"); if (nb && nbName()) nbJoin(nb.k, nb.sala); } catch (e) {} tip("Bienvenido al barrio. Entra en las tiendas o ve a la jaula del fondo para jugar.");
+  $("#load").remove(); try { const nb = JSON.parse(sessionStorage.getItem("street_nb") || "null"); if (nb && nbName()) { NB.srvNom = nb.nom || ""; nbJoin(nb.k, nb.sala); } else srvPanel(true); } catch (e) { srvPanel(true); } tip("Bienvenido al barrio. Entra en las tiendas o ve a la jaula del fondo para jugar.");
   { const rs = new URLSearchParams(location.search).get("res"); if (rs && /^\d+-\d+$/.test(rs)) { const [a, b] = rs.split("-").map(Number); me.x = CX - CW / 2 - 4; me.z = 0; me.dir = Math.PI; SNAP = 1; applyResult(a, b); setTimeout(() => say(a > b ? "¡Ganaste " + a + "-" + b + "!" : a === b ? "Empate " + a + "-" + b : "Has perdido " + a + "-" + b, 2800), 300); history.replaceState(null, "", location.pathname); } }
   let last = performance.now(), fpsA = 60, lowQ = false;
   (function loop(now) { const dt = Math.min(.05, (now - last) / 1000); last = now;
@@ -948,4 +951,28 @@ function telPublicar(d, tipo) { TEL.cap = d; $("#tel").style.display = ""; TEL.a
     <div class="tcol"><button id="tpub" onclick="telSubir()"><b>Publicar en Vídeos</b><small>Lo verán todos los jugadores del barrio</small></button><button onclick="telApp('camara')"><b>Repetir</b></button></div>`); }
 async function telSubir() { const b = $("#tpub"); b.disabled = true; b.innerHTML = "<b>Subiendo…</b>"; const j = await telOp("feedSubir", { d: TEL.cap, txt: ($("#ttxt").value || "").trim() });
   if (!j.ok) { b.disabled = false; b.innerHTML = "<b>Publicar en Vídeos</b>"; return say(j.error || "No se pudo publicar", 1800); } TEL.cap = null; say("¡Publicado!", 1400); telApp("videos"); }
+
+/* ---------- servidores: al entrar en Street Football ves tus servidores (Amigos Cádiz, Fútbol…); si no tienes, creas uno ---------- */
+function srvPanel(on) { $("#srvs").style.display = on ? "" : "none"; if (!on) return; const B = $("#srvbody"), ses = telSes();
+  if (!ses || !ses.tok) { B.innerHTML = `<div class="tnote">Para tener tus propios servidores inicia sesión en MDG 27 (menú principal → Cuenta).</div>
+    <button class="pri" onclick="srvPanel(false);srvGlobal()">Barrio global · entra todo el mundo</button><button onclick="srvPanel(false)">Jugar solo</button>`; return; }
+  B.innerHTML = `<div class="tnote">Cargando tus servidores…</div>`;
+  telOp("srvMios").then(j => { const L = j.ok ? j.lista : null;
+    B.innerHTML = (L == null ? `<div class="tnote">No se puede conectar con el servidor ahora mismo (${esc(j.error || "")}).</div>` : L.length ? `<div class="sub">Tus servidores</div>` + L.map(v => `<div class="srow"><b>${esc(v.nombre)}<small>Código ${v.code} · ${v.n} miembro${v.n === 1 ? "" : "s"}${v.mio ? " · eres el dueño" : " · de " + esc(v.dueno || "")}</small></b><div class="sbtns">
+      <button class="pri" onclick="srvEntrar('${v.code}','${esc(v.nombre).replace(/'/g, "")}')">Entrar</button><button onclick="srvInvitar('${v.code}')">Invitar</button><button onclick="srvQuitar('${v.code}',${v.mio ? 1 : 0})">${v.mio ? "Borrar" : "Salir"}</button></div></div>`).join("")
+      : `<div class="tnote"><b>No tienes ningún servidor.</b> Crea uno y pon el nombre que quieras, por ejemplo «Amigos Cádiz» o «Fútbol». Luego pasa el código a tus amigos para que entren.</div>`) +
+      `<div class="sub">Crear un servidor</div><div style="display:flex;gap:8px"><input id="srvnom" class="nbi" maxlength="28" placeholder="NOMBRE"><button onclick="srvCrear()">Crear</button></div>
+      <div class="sub">Unirme al servidor de un amigo</div><div style="display:flex;gap:8px"><input id="srvcode" class="nbi" maxlength="8" placeholder="CÓDIGO" style="text-transform:uppercase"><button onclick="srvUnir()">Unirme</button></div>
+      <div class="srvmsg" id="srvmsg"></div><button onclick="srvPanel(false);srvGlobal()">Barrio global · entra todo el mundo</button><button onclick="srvPanel(false)">Jugar solo</button>`; }); }
+const srvMsg = t => { const e = $("#srvmsg"); if (e) e.textContent = t; };
+function srvNombre() { if (!nbName()) { const ses = telSes(); store.set("nombre", ((ses && (ses.nombre || ses.u)) || "Jugador").replace(/[^\p{L}\p{N} _.-]/gu, "").slice(0, 14)); } }
+async function srvCrear() { const n = ($("#srvnom").value || "").trim(); if (n.length < 3) return srvMsg("Ponle un nombre de al menos 3 letras"); srvMsg("Creando…");
+  const j = await telOp("srvCrear", { snom: n, yo: nbName() || (telSes() || {}).nombre }); if (!j.ok) return srvMsg(j.error || "No se pudo crear"); srvEntrar(j.srv.code, j.srv.nombre); }
+async function srvUnir() { const c = ($("#srvcode").value || "").trim().toUpperCase(); if (!/^[A-Z0-9]{4,8}$/.test(c)) return srvMsg("Ese código no es válido"); srvMsg("Buscando…");
+  const j = await telOp("srvUnir", { code: c }); if (!j.ok) return srvMsg(j.error || "No se pudo entrar"); srvEntrar(j.srv.code, j.srv.nombre); }
+async function srvEntrar(code, nombre) { srvNombre(); NB.srvNom = nombre; srvMsg("Entrando en " + nombre + "…"); const ok = await nbJoin("srv", code);
+  if (ok) { srvPanel(false); say("Estás en el servidor " + nombre, 1800); } else srvMsg($("#nbmsg").textContent || "No se pudo entrar"); }
+async function srvGlobal() { srvNombre(); NB.srvNom = ""; const ok = await nbJoin("global"); if (!ok) say($("#nbmsg").textContent || "No se pudo entrar", 2000); }
+function srvInvitar(code) { const t = "Únete a mi servidor de Street Football en MDG 27 con el código " + code; try { navigator.clipboard.writeText(t); srvMsg("Copiado: pásaselo a tus amigos (código " + code + ")"); } catch (e) { srvMsg("El código es " + code); } }
+async function srvQuitar(code, mio) { if (!confirm(mio ? "¿Borrar este servidor para todos?" : "¿Salir de este servidor?")) return; const j = await telOp("srvSalir", { code, borrar: mio ? 1 : 0 }); if (!j.ok) return srvMsg(j.error || "No se pudo"); if (NB.sala === code) nbLeave(); srvPanel(true); }
 </script></body></html>
