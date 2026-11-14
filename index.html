@@ -12542,14 +12542,14 @@ setTimeout(() => { try { if (!document.hidden) R3D.preload(); } catch (e) {} }, 
    ===================================================================== */
 const FIELD_ENT = { x0: -6.580, y0: -8.923, w: 118.21, h: 84.02 };   // campo_entreno.png calibrado (líneas a 105 x 68 m)
 const DRILLS = {
-  rondo4: { n: "Rondo 4 contra 2", d: "Da 10 pases seguidos sin que los 2 del medio la toquen.", ico: "aro" },
-  rondo5: { n: "Rondo 5 contra 3", d: "Da 12 pases seguidos contra 3 presionadores.", ico: "aro" },
-  pases: { n: "Pase preciso", d: "Pasa al compañero marcado con el aro: 8 pases buenos.", ico: "cono" },
-  dianas: { n: "Tiro a dianas", d: "Acierta 3 tiros cerca de los palos en 8 intentos.", ico: "diana" },
-  eslalon: { n: "Eslalon", d: "Cruza las 6 puertas de conos con el balón en 30 segundos.", ico: "pica" },
+  rondo4: { n: "Rondo 4 contra 2", d: "Da 8 pases seguidos sin que los 2 del medio la toquen (2 minutos).", ico: "aro" },
+  rondo5: { n: "Rondo 5 contra 3", d: "Da 10 pases seguidos contra 3 presionadores (2 minutos).", ico: "aro" },
+  pases: { n: "Pase preciso", d: "Pasa al compañero marcado con el aro: 8 pases buenos en 100 segundos.", ico: "cono" },
+  dianas: { n: "Tiro a dianas", d: "Mete 3 tiros pegados a los palos (en las dianas) en 10 intentos.", ico: "diana" },
+  eslalon: { n: "Eslalon", d: "Cruza las 6 puertas de picas con el balón, en orden, en 40 segundos.", ico: "pica" },
   faltas: { n: "Faltas", d: "Marca 2 faltas de 8 contra barrera y portero.", ico: "maniqui" },
-  sprint: { n: "Sprint con balón", d: "Lleva el balón hasta la portería pequeña en menos de 9 segundos.", ico: "escalera" },
-  control: { n: "Control orientado", d: "Recibe el pase y llega al aro antes de 3 segundos: 6 veces.", ico: "aro" }
+  sprint: { n: "Sprint con balón", d: "Lleva el balón hasta la portería pequeña en menos de 11 segundos sin perderlo.", ico: "escalera" },
+  control: { n: "Control orientado", d: "Recibe el pase y llega con el balón al aro en menos de 3 segundos: 6 veces.", ico: "aro" }
 };
 const UPG_REQ = [0, 1, 2, 3, 4, 6];                 // repetidas para pasar a +1 … +5
 const UPG_TIERS = [[95, 750000, 1000000], [90, 250000, 500000], [83, 50000, 125000], [75, 10000, 25000], [65, 3000, 7500], [0, 1000, 2500]];
@@ -12631,8 +12631,9 @@ function renderCiudad() {
       <div class="cdhead"><h5>Entrenamiento de hoy · ${done}/3</h5><div class="prog"><i style="width:${done / 3 * 100}%"></i></div>
       <p class="mute">${esc(fx.txt)}. Completa los 3 ejercicios para que tu equipo llegue mejor al partido (+250 monedas; cada 7 días de racha, un Sobre Oro).</p></div>${rows}</div>`;
   } else {
-    const list = S.cards.filter(c => lvOf(c) || dupsOf(c).length).filter((c, i, a) => a.findIndex(d => d.k === c.k && d.v === c.v && (lvOf(d) || 0) >= (lvOf(c) || 0)) === i || lvOf(c))
-      .sort((a, b) => ovOf(b) - ovOf(a));
+    const rank = c => (lvOf(c) || 0) * 10 + (inSquad(c.u) ? 5 : 0) + (onSale(c.u) ? -20 : 0), G = {};
+    for (const c of S.cards.filter(c => lvOf(c) || dupsOf(c).length)) { const key = c.k + "|" + c.v; if (!G[key] || rank(c) > rank(G[key])) G[key] = c; }
+    const list = Object.values(G).sort((a, b) => ovOf(b) - ovOf(a));
     body.innerHTML = tabs + `<div class="panel scroll cdpanel"><p class="mute">Usa cartas repetidas del mismo jugador y versión para subirle la media hasta +5. Repetidas necesarias: +1 = 1 · +2 = 2 · +3 = 3 (y monedas) · +4 = 4 · +5 = 6 (monedas y racha de 5 días). Las repetidas se gastan.</p>
       <div class="cgrid">${list.length ? list.map(c => { const s = upgState(c);
         return cardBtn(c, { a: "cdUpg", badge: lvOf(c) ? "+" + lvOf(c) : "", below: `<span class="cprice">${s.max ? "Nivel máximo" : `Repetidas ${s.have}/${s.need}`}</span>` }); }).join("")
@@ -12680,23 +12681,23 @@ function giveBall(p) { const b = M.ball; b.owner = null; b.x = p.x + .4; b.y = p
 function ring(cx, cy, r, n, k = "cono", off = 0) { const L = []; for (let i = 0; i < n; i++) { const a = off + i / n * 6.283; L.push({ k, x: cx + Math.cos(a) * r, y: cy + Math.sin(a) * r * .9, h: k === "cono" ? .45 : 1 }); } return L; }
 
 const SETUP = {
-  rondo4: D => rondoSetup(D, 4, 2, 7, 10),
-  rondo5: D => rondoSetup(D, 5, 3, 9, 12),
+  rondo4: D => rondoSetup(D, 4, 2, 7, 8),
+  rondo5: D => rondoSetup(D, 5, 3, 9, 10),
   pases: D => {
     const m = mineOut().slice(0, 5); keepPlayers([...m]);
     const cx = PW / 2, cy = PH / 2; m[0].x = cx; m[0].y = cy;
     const spots = [[-12, -9], [12, -9], [-12, 9], [12, 9]]; m.slice(1).forEach((p, i) => { p.x = cx + spots[i][0]; p.y = cy + spots[i][1]; p.hold = { x: p.x, y: p.y }; p.frozen = 1; });
-    D.pivot = m[0]; D.recv = m.slice(1); D.goalN = 8; D.time = 70;
+    D.pivot = m[0]; D.recv = m.slice(1); D.goalN = 8; D.time = 100;
     D.props = D.recv.map(p => ({ k: "aro", x: p.x, y: p.y + .05, h: .5, flat: 1, ref: p }));
     D.target = pick(D.recv); giveBall(m[0]);
   },
   dianas: D => {
-    const m = mineOut()[0]; keepPlayers([m]); D.shooter = m; D.goals = [1]; D.goalN = 3; D.maxTries = 8;
+    const m = mineOut()[0]; keepPlayers([m]); D.shooter = m; D.goals = [1]; D.goalN = 3; D.maxTries = 10;
     D.props = [{ k: "diana", x: PW + .05, y: GY0 + .75, z: 1.1, h: .9 }, { k: "diana", x: PW + .05, y: GY1 - .75, z: 1.1, h: .9 }, ...ring(PW - 21, PH / 2, 1.1, 4)];
     dianaReset(D);
   },
   eslalon: D => {
-    const m = mineOut()[0]; keepPlayers([m]); D.goalN = 6; D.time = 30;
+    const m = mineOut()[0]; keepPlayers([m]); D.goalN = 6; D.time = 40;
     D.gates = []; for (let i = 0; i < 6; i++) { const gx = 30 + i * 8, gy = PH / 2 + (i % 2 ? 5 : -5); D.gates.push({ x: gx, y: gy, ok: false }); }
     D.props = D.gates.flatMap(g => [{ k: "pica", x: g.x, y: g.y - 1.6, h: 1.5 }, { k: "pica", x: g.x, y: g.y + 1.6, h: 1.5 }]);
     m.x = 22; m.y = PH / 2; giveBall(m);
@@ -12707,7 +12708,7 @@ const SETUP = {
     faltaReset(D);
   },
   sprint: D => {
-    const m = mineOut()[0]; keepPlayers([m]); D.goalN = 1; D.time = 9;
+    const m = mineOut()[0]; keepPlayers([m]); D.goalN = 1; D.time = 11;
     m.x = 25; m.y = PH / 2; D.finish = { x: 70, y: PH / 2 };
     D.props = [{ k: "escalera", x: 28, y: PH / 2 + 2, h: .6, flat: 1 }, { k: "porteria", x: D.finish.x + 1, y: PH / 2, h: 1.1 }, ...[40, 50, 60].map(x => ({ k: "cono", x, y: PH / 2 - 3, h: .45 })), ...[40, 50, 60].map(x => ({ k: "cono", x, y: PH / 2 + 3, h: .45 }))];
     giveBall(m); D.t0 = null;
@@ -12720,7 +12721,7 @@ const SETUP = {
 };
 function rondoSetup(D, nA, nD, r, goalN) {
   const m = mineOut().slice(0, nA), d = theirOut().slice(0, nD); keepPlayers([...m, ...d]);
-  const cx = PW / 2, cy = PH / 2; D.cx = cx; D.cy = cy; D.r = r; D.goalN = goalN; D.time = 75; D.atk = m; D.def = d;
+  const cx = PW / 2, cy = PH / 2; D.cx = cx; D.cy = cy; D.r = r; D.goalN = goalN; D.time = 120; D.atk = m; D.def = d;
   m.forEach((p, i) => { const a = i / nA * 6.283; p.x = cx + Math.cos(a) * r; p.y = cy + Math.sin(a) * r * .9; p.hold = { x: p.x, y: p.y }; });
   d.forEach((p, i) => { p.x = cx + (i - (nD - 1) / 2) * 2; p.y = cy; });
   D.props = ring(cx, cy, r + 2.2, 10, "cono", .3);
@@ -12833,7 +12834,7 @@ function drillEnd(ok, why = "") {
 function drillResult(k, ok, why, done2d) {
     if (ok && !done2d) drillDone(k);
     { if (ok) { const T = ensureTrain(); info(trainedToday() ? "¡Entrenamiento del día completado!" : "Ejercicio completado", trainedToday() ? `Tus jugadores llegarán mejor al próximo partido (+${trainFx().b} de media). Racha: <b>${T.streak}</b> ${T.streak === 1 ? "día" : "días"}. +250 monedas.` : `Te quedan ${T.list.filter(x => !T.done[x]).length} ejercicios hoy.`); }
-    else info("Inténtalo otra vez", `${esc(why)}. Puedes repetir el ejercicio cuando quieras.`); }
+    else info("Inténtalo otra vez", `${why ? esc(why) + ". " : ""}Puedes repetir el ejercicio cuando quieras.`); }
 }
 function renderDrill() {
   const D = M.drill, el = $("#mtut"); if (!D || !el) return;
