@@ -1440,7 +1440,9 @@
         else if (central && dc < 16 * SC) { const a = Math.atan2(carrier.y - W / 2, carrier.x - gl), st = Math.min(3.5 * SC, dc * .22); target = { x: gl + Math.cos(a) * st, y: W / 2 + Math.sin(a) * st, set: true }; } }
       if (target && !target.air) {
         s.mode = "rush"; const dx = target.x - g.x, dy = target.y - g.y, d = Math.hypot(dx, dy); g.v = Math.min(target.set ? 3 : target.called ? 6.4 : target.one ? 5.2 : 6.2, d * 4); g.run = g.v > 1;
-        if (d > .05) { g.h += angD(g.h, Math.atan2(dy, dx)) * Math.min(1, dt * 8); g.mh = g.h; g.x += Math.cos(g.h) * g.v * dt; g.y += Math.sin(g.h) * g.v * dt; }
+        // siempre de cara al balón: si tiene que ir de lado o hacia atrás (1 contra 1 muy cerca) se desplaza sin darse la vuelta, con pasos laterales
+        if (d > .05) { const face = Math.atan2(ball.y - g.y, ball.x - g.x), mv = Math.atan2(dy, dx), rel = Math.abs(angD(face, mv)); if (rel > 1.1) g.v = Math.min(g.v, rel > 2.2 ? 3.2 : 4);
+          g.h += angD(g.h, face) * Math.min(1, dt * 10); g.mh = mv; g.x += Math.cos(mv) * g.v * dt; g.y += Math.sin(mv) * g.v * dt; }
         const db = Math.hypot(ball.x - g.x, ball.y - g.y);
         if (!target.set && db < (target.one ? (target.heavy ? 3.4 : 2.6) : 1.4)) { const n = ball.z > .6 ? "GoalkeeperCatch" : target.one ? "GoalkeeperBodyBlock1" : "GoalkeeperScoop"; const o = startOne(g, n, { ts: 1.5, end: 1.3, fadeIn: .1, h0: g.h });
           if (o) { o.rootScale = 0; o.warp = { x: ball.x - g.x - Math.cos(g.h) * .4, y: ball.y - g.y - Math.sin(g.h) * .4, t: .35 }; o.onT = .35; o.on = () => { if (Math.hypot(ball.x - g.x, ball.y - g.y) < 1.25 && ball.z < 1.6 && Math.random() < (target.one ? .8 + (g.st.gk - 80) * .01 + (target.heavy ? .1 : 0) : .97)) gkCatch(t); }; }
