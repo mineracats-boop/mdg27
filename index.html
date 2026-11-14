@@ -754,7 +754,7 @@ body.touch #mnarr{bottom:auto;top:calc(max(.8rem,env(safe-area-inset-top)) + 6.5
 .dpitch::before{content:"";position:absolute;left:50%;top:0;bottom:0;border-left:2px solid rgba(255,255,255,.25)}
 .dslot{position:absolute;transform:translate(-50%,0);width:8.6rem;padding:.35rem .2rem;border-radius:.5rem;background:rgba(5,11,28,.8);border:2px solid rgba(255,255,255,.2);text-align:center;display:flex;flex-direction:column;gap:.1rem}
 .dslot b{font:900 1.7rem "BC";color:var(--gold2)}.dslot span{font-size:1.1rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.dslot.on{border-color:var(--gold2);box-shadow:0 0 1.2rem rgba(243,210,122,.5)}.dslot.full{border-color:rgba(127,194,255,.5)}
+.dslot[data-a]{cursor:pointer}.dslot.fuera b{color:#ff8a8a}.dslot.on{border-color:var(--gold2);box-shadow:0 0 1.2rem rgba(243,210,122,.5)}.dslot.full{border-color:rgba(127,194,255,.5)}
 .dside{overflow:hidden}.dside h3{font:italic 900 2.8rem "BC";text-transform:uppercase}
 .dteam{display:flex;align-items:center;gap:1rem}.dteam .crest{width:6rem;height:6rem}
 .dbtns{display:flex;gap:.8rem;flex-wrap:wrap}.dbtns.col{flex-direction:column;align-items:stretch}
@@ -14670,6 +14670,8 @@ function draftRoll(sameClub) {   // dado: un equipo histórico al azar (o el mis
 }
 const draftRole = i => FORMS[DF.form][i][0];
 const draftPen = (pos, role) => luPen(pos, role);
+// elijas al jugador que elijas, va al hueco libre donde mejor encaja (Busquets → MCD; un delantero con la DC ocupada → banda o mediapunta)
+function draftHueco(pos) { let best = -1, bp = -1e9; DF.picks.forEach((k, i) => { if (k) return; const pen = draftPen(pos, draftRole(i)); if (pen > bp) { bp = pen; best = i; } }); return best; }
 function draftXI() { return DF.picks.map((k, i) => k ? { p: PBY[k], role: draftRole(i), ov: Math.max(20, PBY[k].ov + draftPen(PBY[k].pos, draftRole(i))) } : null); }
 function draftRating() { const xi = draftXI().filter(Boolean); return xi.length ? Math.round(xi.reduce((a, x) => a + x.ov, 0) / xi.length) : 0; }
 function draftTeamData() {
@@ -14687,16 +14689,17 @@ function renderDraft() {
       <p class="mute" style="margin-top:1rem">${HIST.length} equipos históricos · ${LEGS.filter(p => p.leg === "L").length} Leyendas y ${LEGS.filter(p => p.leg === "H").length} Héroes.</p></div>`; return; }
   const xi = draftXI(), F = FORMS[DF.form];
   const pitch = `<div class="dpitch">${F.map(([role, x, y], i) => { const s = xi[i];
-    return `<div class="dslot${i === DF.slot && DF.stage === "pick" ? " on" : ""}${s ? " full" : ""}" style="left:${y}%;bottom:${x * .92 + 2}%">${s ? `<b>${s.ov}</b><span>${esc(shortName(s.p.n))}</span>` : `<b>${role}</b><span>—</span>`}</div>`; }).join("")}</div>`;
+    return `<div class="dslot${DF.sel === i ? " on" : ""}${s ? " full" : ""}${s && draftPen(s.p.pos, role) < 0 ? " fuera" : ""}"${DF.stage !== "cup" ? ` data-nav data-a="drSlot" data-i="${i}"` : ""} style="left:${y}%;bottom:${x * .92 + 2}%">${s ? `<b>${s.ov}</b><span>${esc(shortName(s.p.n))}</span>` : `<b>${role}</b><span>—</span>`}</div>`; }).join("")}</div>`;
   const head = `<div class="dhead"><div><div class="lbl">MEDIA DEL EQUIPO</div><div class="dbig">${draftRating() || "—"}</div></div><div class="spacer"></div><button class="mbtn" data-nav data-a="drReset">Nuevo draft</button></div>`;
   let side = "";
   if (DF.stage === "pick") {
-    const T = HBY[DF.team], role = draftRole(DF.slot), sameY = HIST.filter(t => t.club === T.club && t.id !== T.id).length;
-    const opts = T.pl.slice().sort((a, b) => (draftPen(b.pos, role) - draftPen(a.pos, role)) || b.ov - a.ov);
-    side = `<div class="dteam"><div class="crest">${crestSVG(T.club, T.sh, T.c1, T.c2)}</div><div><div class="lbl">POSICIÓN ${DF.slot + 1}/11 · ${role}</div><h3>${esc(T.nombre)}</h3></div></div>
+    const T = HBY[DF.team], sameY = HIST.filter(t => t.club === T.club && t.id !== T.id).length, quedan = DF.picks.filter(x => !x).length;
+    const opts = T.pl.map(p => { const h = draftHueco(p.pos); return { p, h, role: draftRole(h), pen: draftPen(p.pos, draftRole(h)) }; }).sort((a, b) => (b.p.ov + b.pen) - (a.p.ov + a.pen));
+    side = `<div class="dteam"><div class="crest">${crestSVG(T.club, T.sh, T.c1, T.c2)}</div><div><div class="lbl">ELIGE UN JUGADOR · TE QUEDAN ${quedan} DE 11</div><h3>${esc(T.nombre)}</h3></div></div>
+      <p class="mute" style="margin:.2rem 0 .6rem">Puedes coger a cualquiera: va al hueco libre donde mejor encaja. Toca dos jugadores en el campo para cambiarlos de sitio.</p>
       <div class="dbtns"><button class="mbtn" data-nav data-a="drYear"${DF.yr && sameY ? "" : " disabled"}>Cambiar año (${DF.yr})</button><button class="mbtn" data-nav data-a="drTeam"${DF.eq ? "" : " disabled"}>Cambiar equipo (${DF.eq})</button></div>
-      <div class="dlist scroll">${opts.map(p => { const pen = draftPen(p.pos, role), taken = DF.picks.includes(p.k);
-        return `<button class="lurow${taken ? " nc" : ""}" data-nav data-a="drPick" data-k="${p.k}"${taken ? " disabled" : ""}><span class="lr">${p.pos}</span><span class="ln">${esc(p.n)} <i class="dleg ${p.leg}">${p.leg === "L" ? "LEYENDA" : "HÉROE"}</i></span><span class="lo${pen < 0 ? " bad" : ""}">${p.ov + pen}</span></button>`; }).join("")}</div>`;
+      <div class="dlist scroll">${opts.map(({ p, role, pen }) => { const taken = DF.picks.includes(p.k);
+        return `<button class="lurow${taken ? " nc" : ""}" data-nav data-a="drPick" data-k="${p.k}"${taken ? " disabled" : ""}><span class="lr">${p.pos}</span><span class="ln">${esc(p.n)} <i class="dleg ${p.leg}">${p.leg === "L" ? "LEYENDA" : "HÉROE"}</i><small class="mute"> → ${taken ? "ya en tu equipo" : role}</small></span><span class="lo${pen < 0 ? " bad" : ""}">${p.ov + pen}</span></button>`; }).join("")}</div>`;
   } else if (DF.stage === "done") {
     side = `<h3>¡Draft completado!</h3><p>Tu once tiene <b>${draftRating()}</b> de media. Ahora compite contra equipos históricos:</p>
       <div class="dbtns col"><button class="mbtn gold" data-nav data-a="drCup" data-m="play" data-first>Jugar el torneo (cuartos, semis y final)</button><button class="mbtn" data-nav data-a="drCup" data-m="sim">Simular el torneo</button></div>
@@ -14709,7 +14712,9 @@ ACT.drNew = el => { draftNew(el.dataset.k); renderDraft(); };
 ACT.drReset = () => confirmDlg("Nuevo draft", "Se perderá el draft actual.", "Empezar de nuevo", () => { DF = null; dSave(); renderDraft(); });
 ACT.drYear = () => { if (!DF.yr) return; DF.yr--; draftRoll(true); dSave(); renderDraft(); };
 ACT.drTeam = () => { if (!DF.eq) return; DF.eq--; draftRoll(false); dSave(); renderDraft(); };
-ACT.drPick = el => { const k = el.dataset.k; if (DF.picks.includes(k)) return; DF.picks[DF.slot] = k; DF.used.push(DF.team);
+ACT.drSlot = el => { const i = +el.dataset.i; if (DF.stage === "cup") return;
+  if (DF.sel == null) { if (DF.picks[i]) DF.sel = i; } else { if (DF.sel !== i) { const t = DF.picks[i]; DF.picks[i] = DF.picks[DF.sel]; DF.picks[DF.sel] = t; } DF.sel = null; } dSave(); renderDraft(); };
+ACT.drPick = el => { const k = el.dataset.k; if (DF.picks.includes(k)) return; const h = draftHueco(PBY[k].pos); if (h < 0) return; DF.picks[h] = k; DF.sel = null; DF.used.push(DF.team);
   const next = DF.picks.findIndex(x => !x); if (next < 0) { DF.stage = "done"; } else { DF.slot = next; draftRoll(false); } dSave(); renderDraft(); };
 // torneo del draft: cuartos, semifinal y final contra equipos históricos
 function draftCupStart(mode) {

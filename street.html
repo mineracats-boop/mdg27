@@ -794,17 +794,17 @@ function nbNameOk() { const v = $("#nbname").value.trim().replace(NB_BAD, "").re
 /* lo que haces en el barrio se apunta para los objetivos de MDG 27 (primeros pasos y semanales) */
 function bevAdd(k, n = 1, max) { try { const B = JSON.parse(localStorage.getItem("mdg27_bev") || "{}"), sem = Math.floor((Date.now() / 864e5 + 3) / 7); if (B.sem !== sem) { B.sem = sem; B.w = {}; } B.w = B.w || {}; B.t = B.t || {};
   if (max) { B.w[k] = Math.max(B.w[k] || 0, n); B.t[k] = Math.max(B.t[k] || 0, n); } else { B.w[k] = (B.w[k] || 0) + n; B.t[k] = (B.t[k] || 0) + n; } localStorage.setItem("mdg27_bev", JSON.stringify(B)); } catch (e) {} }
-/* monedas: si has iniciado sesión son las mismas que en Ultimate Team y viven en el servidor; sin sesión, se guardan en este navegador */
+/* monedas del barrio: aparte de las de Ultimate Team; con sesión viven en el servidor (monedero del barrio), sin sesión en este navegador */
 const CART = { on: false, coins: 0, cola: [], tm: 0 };
 const coins = () => CART.on ? CART.coins : store.get("monedas", 0);
 function monedasMas(n, why) { n = Math.round(n); if (!n) return; if (CART.on) { CART.coins += n; CART.cola.push({ id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), n, why: why || "barrio" }); clearTimeout(CART.tm); CART.tm = setTimeout(cartFlush, 800); } else store.set("monedas", coins() + n); updCoins(); }
-async function cartFlush() { if (!CART.on || !CART.cola.length) return; const env = CART.cola.slice(0, 100), j = await telOp("tx", { txs: env }); if (!j || !j.ok) { CART.tm = setTimeout(cartFlush, 15000); return; }
+async function cartFlush() { if (!CART.on || !CART.cola.length) return; const env = CART.cola.slice(0, 100), j = await telOp("bTx", { txs: env }); if (!j || !j.ok) { CART.tm = setTimeout(cartFlush, 15000); return; }
   const ids = new Set(env.map(t => t.id)); CART.cola = CART.cola.filter(t => !ids.has(t.id)); CART.coins = j.coins + CART.cola.reduce((a, t) => a + t.n, 0); updCoins();
   const rec = (j.res || []).reduce((a, [id, n]) => { const t = env.find(x => x.id === id); return a + (t ? t.n - n : 0); }, 0); if (rec > 0) say("Hoy ya has ganado el máximo de monedas en el barrio", 2200); }
-async function cartInit() { const ses = telSes(); if (!ses || !ses.tok) return; const j = await telOp("saldo"); if (!j || !j.ok) return;
-  CART.on = true; CART.coins = j.coins; const k = "migrado_" + ses.u, local = store.get("monedas", 0);
-  if (local > 0 && !store.get(k, false)) { store.set(k, true); store.set("monedas", 0); monedasMas(Math.min(local, 5000), "barrio_migra"); setTimeout(() => say("Tus monedas del barrio se han juntado con las de Ultimate Team", 2600), 1500); }
-  updCoins(); setInterval(async () => { if (CART.cola.length) return; const r = await telOp("saldo"); if (r && r.ok && !CART.cola.length) { CART.coins = r.coins; updCoins(); } }, 60000); }
+async function cartInit() { const ses = telSes(); if (!ses || !ses.tok) return; const k = "bmig_" + ses.u, local = store.get(k, false) || store.get("migrado_" + ses.u, false) ? 0 : store.get("monedas", 0);
+  const j = await telOp("bSaldo", { local }); if (!j || !j.ok) return; if (!store.get(k, false)) { store.set(k, true); if (local) store.set("monedas", 0); }
+  CART.on = true; CART.coins = j.coins;
+  updCoins(); setInterval(async () => { if (CART.cola.length) return; const r = await telOp("bSaldo"); if (r && r.ok && !CART.cola.length) { CART.coins = r.coins; updCoins(); } }, 60000); }
 function addCoins(n, why) { monedasMas(n); updCoins(); if (why) setTimeout(() => say("+" + n + " monedas · " + why, 1800), 900); }
 function updCoins() { const b = $("#bRetT"); if (b) b.textContent = coins(); }
 const today = (o = 0) => { const d = new Date(Date.now() + o * 864e5); return d.getFullYear() + "-" + (d.getMonth() + 1) + "-" + d.getDate(); };
@@ -1061,7 +1061,7 @@ const ROPA = {
 const inv = () => store.get("inv", { gorras: [], conj: [], gorra: "", skate: false, movil: false });
 const invSet = o => store.set("inv", Object.assign(inv(), o));
 function pagar(n, que) { if (coins() < n) { say("Te faltan monedas (" + n + ")", 1600); return false; }
-  if (CART.on) { CART.coins -= n; telOp("pagar", { n, que }).then(j => { if (j && j.ok) { CART.coins = j.coins + CART.cola.reduce((a, t) => a + t.n, 0); updCoins(); } else if (j && j.coins != null) { CART.coins = j.coins; updCoins(); say("El servidor no ha aceptado la compra", 2000); } }); } else store.set("monedas", coins() - n); updCoins();
+  if (CART.on) { CART.coins -= n; telOp("bPagar", { n, que }).then(j => { if (j && j.ok) { CART.coins = j.coins + CART.cola.reduce((a, t) => a + t.n, 0); updCoins(); } else if (j && j.coins != null) { CART.coins = j.coins; updCoins(); say("El servidor no ha aceptado la compra", 2000); } }); } else store.set("monedas", coins() - n); updCoins();
   const h = store.get("banco", []); h.unshift([Date.now(), -n, que]); store.set("banco", h.slice(0, 60)); return true; }
 function ropaAplicar() {
   if (!me) return; const g = inv().gorra, c = (ROPA.gorras.find(x => x[0] === g) || [])[1];
@@ -1145,7 +1145,7 @@ function telApp(a) {
   if (a === "mapa") return telPinta("Mapa", `<canvas id="tmap" width="600" height="260"></canvas><div class="tcol">${telSitios().map((s, i) => `<button onclick="telIr(${i})"><b>${s[0]}</b><small>Viaje rápido</small></button>`).join("")}</div>`), telMapa();
   if (a === "retos") { telCerrar(); return retosPanel(); }
   if (a === "fichajes") return telPinta("Fichajes", `<div class="tnote">El mercado de fichajes de tu Ultimate Team: compra y vende cartas con otros jugadores.</div><div class="tcol"><button onclick="location.href='index.html'"><b>Abrir Ultimate Team</b><small>Sales del barrio</small></button></div>`);
-  if (a === "banco") { const h = store.get("banco", []); telPinta("Banco", `<div class="tbig">${coins()} 🪙<small>${CART.on ? "Tus monedas: las mismas en el barrio y en Ultimate Team" : "Monedas de este navegador · inicia sesión en MDG 27 para juntarlas con las de Ultimate Team"}</small></div><div class="tlist">${h.length ? h.map(([t, n, q]) => `<div><span>${esc(q)}</span><b style="color:${n < 0 ? "#ff8a8a" : "#9dff9d"}">${n > 0 ? "+" : ""}${n}</b></div>`).join("") : `<div class="tnote">Aún no hay movimientos.</div>`}</div>`); return; }
+  if (a === "banco") { const h = store.get("banco", []); telPinta("Banco", `<div class="tbig">${coins()} 🪙<small>${CART.on ? "Monedas del barrio, guardadas en tu cuenta (aparte de las de Ultimate Team)" : "Monedas de este navegador · inicia sesión en MDG 27 para guardarlas en tu cuenta"}</small></div><div class="tlist">${h.length ? h.map(([t, n, q]) => `<div><span>${esc(q)}</span><b style="color:${n < 0 ? "#ff8a8a" : "#9dff9d"}">${n > 0 ? "+" : ""}${n}</b></div>`).join("") : `<div class="tnote">Aún no hay movimientos.</div>`}</div>`); return; }
   if (a === "ajustes") { const f = store.get("telFondo", "playa"), ses = telSes();
     return telPinta("Ajustes", `<div class="tnote">Cuenta: <b>${ses && ses.nombre ? esc(ses.nombre) : "sin iniciar sesión"}</b></div><div><b>Fondo de pantalla</b></div><div class="trow">${Object.keys(FONDOS).map(k => `<button class="${k === f ? "on" : ""}" style="background:${FONDOS[k]()}" onclick="store.set('telFondo','${k}');telApp('ajustes')"></button>`).join("")}</div>
       <div class="tnote" style="margin-top:12px">Créditos: skate «Skateboard» de Jamoues, mostrador «Counter» de gorzi, skatepark «Skatepark Rails & Ramps Resource Kit» de maxkeeley, surtidores «Gas station» de suvorovtim y tienda de la gasolinera «Gas station Props» de Elbolilloduro (Sketchfab, CC BY 4.0).</div>`); }
