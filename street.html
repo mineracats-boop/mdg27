@@ -111,7 +111,7 @@ html,body{background:var(--bg)}
 <div class="cr">Modelos 3D (CC BY, sketchfab.com): «Street Props» de syedraza · «Plant Series – Palm Tree» de UPWARD · «Beach Umbrella» de stealth86 · «Sun lounger 3D» de rodestrela · «Ice Cream Cart» de tylerlherring · «Furniture Pack For Summer Caffe» de kozlovchik · «Old Scooter» de ribitis · «Yellow bicycle» de volkovatatyana · «Trash can» de bazz4r · «Low-Poly Fruit Box Assets» de Bowen154 · «Medieval Fountain Empty» de wolfgar74 · «Tree S2» de snowvy · «Optimized Potted Plants» de Nicholas01 · «Lifeguard Tower» de Sololopenko · «Rowing Boat» de jw202471</div>
 <div style="text-align:center;margin-top:14px"><button class="pri" onclick="hubHelp(false)">Cerrar</button></div></div></div>
 <div class="tc" id="joy"><i></i></div><div class="tc tb" id="bA">PASE</div><div class="tc tb" id="bB">TIRO</div><div class="tc tb" id="bC">CORRER</div><div class="tc tb" id="bD">REGATE</div>
-<script src="three.js"></script>
+<script src="three.js"></script><script src="street/meshopt.js"></script>
 <script>
 const $ = s => document.querySelector(s), clamp = (v, a, b) => Math.max(a, Math.min(b, v)), rnd = Math.random;
 const b64buf = s => { const b = atob(s), u = new Uint8Array(b.length); for (let i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); return u.buffer; };
@@ -442,7 +442,7 @@ function buildCage() {
   const lineM = new THREE.MeshBasicMaterial({ color: 0xf2f2f2 }); const ln = (w, d, x, z) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(w, d), lineM); m.rotation.x = -Math.PI / 2; m.position.set(x, .03, z); S.add(m); };
   ln(.1, CH, CX, 0); const ring = new THREE.Mesh(new THREE.RingGeometry(3, 3.1, 48), lineM); ring.rotation.x = -Math.PI / 2; ring.position.set(CX, .03, 0); S.add(ring);
   for (const s of [-1, 1]) { ln(.1, 10, CX + s * (CW / 2 - 6), 0); ln(6, .1, CX + s * (CW / 2 - 3), -5); ln(6, .1, CX + s * (CW / 2 - 3), 5); }
-  const vt = TL.load(SU("vallas.png")); vt.colorSpace = THREE.SRGBColorSpace; vt.wrapS = THREE.RepeatWrapping;
+  const vt = TL.load(SU("vallas.webp")); vt.colorSpace = THREE.SRGBColorSpace; vt.wrapS = THREE.RepeatWrapping;
   const dark = new THREE.MeshStandardMaterial({ color: 0x15171c }), metal = new THREE.MeshStandardMaterial({ color: 0x30343a, metalness: .7, roughness: .4 });
   const board = (len, x, z, ry) => { const t = vt.clone(); t.needsUpdate = true; t.repeat.set(len / 9.1, 1); box(len, 1, .15, [dark, dark, dark, dark, new THREE.MeshStandardMaterial({ map: t, emissive: 0xffffff, emissiveMap: t, emissiveIntensity: .45 }), dark], x, .5, z, ry); };
   board(CW, CX, -CH / 2 - .1, 0); board(CW, CX, CH / 2 + .1, Math.PI);
@@ -466,7 +466,11 @@ function buildCage() {
 // ---------- personajes ----------
 let baseClips = {}, animRest = {}, hipsRestY = 1; const models = {};
 async function asset(n) { if (window.SA && SA["m3d/" + n]) return SA["m3d/" + n]; const r = await fetch("m3d/" + n + ".txt"); return r.text(); }
-const loader = new GLTFLoader();
+const loader = new GLTFLoader(); if (window.MeshoptDecoder) loader.setMeshoptDecoder(MeshoptDecoder);
+// los modelos comprimidos traen la geometría cuantizada: se pasa a números normales para poder combinar y mover las piezas
+{ const _pa = loader.parseAsync.bind(loader), desq = g => { for (const k of ["position", "normal", "uv", "uv1", "uv2", "color", "tangent"]) { const a = g.attributes[k]; if (!a || a.array instanceof Float32Array) continue;
+    const n = a.count, s = a.itemSize, f = new Float32Array(n * s); for (let i = 0; i < n; i++) { f[i * s] = a.getX(i); if (s > 1) f[i * s + 1] = a.getY(i); if (s > 2) f[i * s + 2] = a.getZ(i); if (s > 3) f[i * s + 3] = a.getW(i); } g.setAttribute(k, new THREE.BufferAttribute(f, s)); } };
+  loader.parseAsync = async (...x) => { const r = await _pa(...x); r.scene.traverse(o => { if (o.isMesh && !o.isSkinnedMesh && o.geometry) desq(o.geometry); }); return r; }; }
 function loadModel(n) { if (!models[n]) models[n] = asset("m_" + n).then(s => loader.parseAsync(b64buf(s), "")); return models[n]; }
 const clipCache = new WeakMap();
 function clipsFor(g) {

@@ -11,7 +11,7 @@ function serveFile(req, res, pathname) {
   if (!f.startsWith(WEB + path.sep) || top === "servidor" || top.startsWith(".") || top === "node_modules") { res.writeHead(404); return res.end("No encontrado"); }
   fs.stat(f, (err, st) => { if (err) { res.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" }); return res.end("No encontrado"); }
     if (st.isDirectory()) { res.writeHead(301, { Location: pathname.replace(/\/?$/, "/") }); return res.end(); }
-    const ext = path.extname(f).toLowerCase(), h = { "Content-Type": TYPES[ext] || "application/octet-stream", "Cache-Control": ext === ".html" ? "no-cache" : "public, max-age=3600", "Access-Control-Allow-Origin": "*", "Vary": "Accept-Encoding" };
+    const ext = path.extname(f).toLowerCase(), h = { "Content-Type": TYPES[ext] || "application/octet-stream", "Cache-Control": ext === ".html" ? "no-cache" : /^\/a\//.test(rel) ? "public, max-age=31536000, immutable" : "public, max-age=3600", "Access-Control-Allow-Origin": "*", "Vary": "Accept-Encoding" };
     if (GZ.has(ext) && /gzip/.test(req.headers["accept-encoding"] || "")) { const k = f + ":" + st.mtimeMs; let z = gzCache.get(k);
       if (!z) { z = zlib.gzipSync(fs.readFileSync(f), { level: 6 }); if (z.length < 60e6) gzCache.set(k, z); }
       h["Content-Encoding"] = "gzip"; h["Content-Length"] = z.length; res.writeHead(200, h); return res.end(req.method === "HEAD" ? undefined : z); }
