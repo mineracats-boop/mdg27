@@ -477,6 +477,9 @@
   const OFF = []; setLoad("árbitros y banquillos");
   if (!STREET) for (const [m, role, kit, x, y] of [["arbitro", "ref", ["#111111", "#111111"], L / 2 - 8, W / 2 + 6], ["juez", "ln0", ["#111111", "#111111"], L * .3, -1.2], ["juez", "ln1", ["#111111", "#111111"], L * .7, W + 1.2], ["entrenador1", "co0", null, L / 2 - 7, -2.4], ["entrenador2", "co1", null, L / 2 + 7, -2.4]]) {
     try { const a = await makeActor(m, kit, null); Object.assign(a, { role, x, y, h: Math.PI / 2, mh: Math.PI / 2, st: { agi: 75, acc: 72, pac: 70 }, ai: {}, dr: {}, down: 0, t: -1 }); OFF.push(a); } catch (e) { console.warn(m, e); } }
+  // reacción de los entrenadores en la banda: celebran los goles, se lamentan y protestan las faltas
+  function coachReact(t, k) { const a = OFF.find(o => o.role === "co" + t); if (!a) return; const L_ = { gol: ["Cheering", "FistPump", "Victory", "StandingFistPump"], encaja: ["Disappointed"], protesta: ["StandingArguing"] }[k].filter(n => META[n]); if (!L_.length) return;
+    const n = L_[Math.random() * L_.length | 0]; startOne(a, n, { ts: 1.1, rootScale: 0, h0: a.h, end: Math.min(META[n].dur, k === "gol" ? 3.4 : 2.8), fadeIn: .15, fadeOut: .4 }); }
   function offStep(a, dt) {
     let tx = a.x, ty = a.y, face = null;
     if (a.role === "ref" && a.goto && simT < a.goto.until) { tx = a.goto.x; ty = a.goto.y; face = Math.atan2(ball.y - a.y, ball.x - a.x); }
@@ -486,7 +489,8 @@
       // cada juez sigue al penúltimo defensor (o al balón si está más adelantado) en su mitad
       const t = (M.dirOf[0] > 0) === !!side ? 1 : 0, defs = team(t).map(q => q.x).sort((u, v) => side ? v - u : u - v); let lx = defs[1] != null ? defs[1] : L / 2; lx = side ? Math.max(lx, ball.x) : Math.min(lx, ball.x);
       tx = clamp(lx, half[0] + 2, half[1] - 1); ty = side ? W + 1.2 : -1.2; face = side ? -Math.PI / 2 : Math.PI / 2; }
-    else { face = Math.atan2(ball.y - a.y, ball.x - a.x); if (!a.one && Math.random() < dt * .04) startOne(a, Math.random() < .5 ? "Pointing" : "Clapping", { ts: 1, rootScale: 0, h0: a.h, fadeIn: .3, fadeOut: .4 }); }
+    else { face = Math.atan2(ball.y - a.y, ball.x - a.x); a.bx = a.bx == null ? a.x : a.bx; if (!a.one && Math.random() < dt * .05) a.tgx = a.bx + (Math.random() - .5) * 5; if (a.tgx != null && !a.one) tx = a.tgx;
+      if (!a.one && Math.random() < dt * .04) startOne(a, Math.random() < .5 ? "Pointing" : "Clapping", { ts: 1, rootScale: 0, h0: a.h, fadeIn: .3, fadeOut: .4 }); }
     const d = Math.hypot(tx - a.x, ty - a.y), C = d > .6 ? { dir: Math.atan2(ty - a.y, tx - a.x), m: 1, speed: clamp(d * .9, 1.2, 6.2), face: d < 12 ? face : null } : { dir: null, m: 0, face };
     if (C.dir == null && face != null) a.h += clamp(angD(a.h, face), -3 * dt, 3 * dt), a.mh = a.h;
     moveP(a, dt, C); stepOne(a, dt);
@@ -1013,7 +1017,7 @@
     const up = new THREE.Vector3(Math.cos(-a.h + Math.PI / 2) * 0, 1, 0); const fw = new THREE.Vector3(Math.cos(a.h), 0, Math.sin(a.h)); up.addScaledVector(fw, .25).normalize(); aimBone(A, F, up); aimBone(F, H, up);
     // la tarjeta mira hacia delante (de cara al jugador y a la cámara)
     H.getWorldQuaternion(_q2); _q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.atan2(fw.x, fw.z)); cardMesh.quaternion.copy(_q2.invert().multiply(_q)); }
-  function showCard(col, f, red) { play("grada_silba", red ? .5 : .3); if (!refA) return; if (!f.one && !f.gk) startOne(f, "StandingArguing", { t0: 1.5, ts: 1.1, end: 4.6, rootScale: 0, fadeIn: .2, h0: Math.atan2(refA.y - f.y, refA.x - f.x) }); cardMesh.material.color.setHex(col); refA.h = refA.mh = Math.atan2(f.y - refA.y, f.x - refA.x);
+  function showCard(col, f, red) { if (f && f.t != null) coachReact(f.t, "protesta"); play("grada_silba", red ? .5 : .3); if (!refA) return; if (!f.one && !f.gk) startOne(f, "StandingArguing", { t0: 1.5, ts: 1.1, end: 4.6, rootScale: 0, fadeIn: .2, h0: Math.atan2(refA.y - f.y, refA.x - f.x) }); cardMesh.material.color.setHex(col); refA.h = refA.mh = Math.atan2(f.y - refA.y, f.x - refA.x);
     refA.cardT = simT + 2.2; cardMesh.visible = true; later(2.2, () => { cardMesh.visible = false; });
     if (red) { f.sent = true; if (M.lockP === f) { M.lockP = null; M.human = null; M.lockOut = true; } if (M.human === f) { const c = team(f.t).find(q => !q.gk && q !== f); if (c) setHuman(c); } } }
   function knockDown(p, a) { p.down = 2.4; p.dr.plan = null; const o = startOne(p, Math.random() < .5 ? "SoccerTrip" : "FallFlat", { ts: 1.1, h0: a, end: 2.2, fadeIn: .08 }); if (o) o.after = () => { startOne(p, "GettingUp", { ts: 1.5, t0: .4, end: 2.4, rootScale: 0 }); }; }
@@ -1652,9 +1656,20 @@
       if (lt === defT) later(0.8, () => startSet("corner", 1 - defT, endX, y < W / 2 ? 0 : W)); else later(0.8, () => startSet("goalkick", defT, endX, y)); }
   }
 
+  /* ---------- charla en el vestuario al descanso (Modo Carrera): cambia la moral de tu equipo en la segunda parte ---------- */
+  function halfTalk(go) { const dif = TEAMS[0].score - TEAMS[1].score, el = document.createElement("div"); el.id = "htalk"; M.paused = true;
+    const O = [["motivar", "Motivar", "«¡Salid a por ellos, este partido es nuestro!»"], ["calma", "Calma", "«Tranquilos, seguid con el plan y llegará.»"], ["exigir", "Exigir", "«Esto no vale. Quiero otra actitud ya.»"]];
+    el.innerHTML = `<div class="ht"><small>VESTUARIO · DESCANSO</small><b>${TEAMS[0].name} ${TEAMS[0].score} - ${TEAMS[1].score} ${TEAMS[1].name}</b><span>¿Qué les dices a tus jugadores?</span>${O.map((o, i) => `<button data-k="${o[0]}"><em>${i + 1}</em> ${o[1]}<i>${o[2]}</i></button>`).join("")}<p id="htr"></p></div>`; document.body.appendChild(el);
+    let done = false; const pickT = k => { if (done) return; done = true; clearTimeout(tm); removeEventListener("keydown", kd);
+      const d = k === "motivar" ? (dif <= 0 ? 3 : 1) : k === "calma" ? (dif > 0 ? 3 : dif === 0 ? 1 : -1) : (dif < 0 ? 4 : dif === 0 ? 1 : -2);
+      for (const p of team(0)) for (const x in p.st) if (typeof p.st[x] === "number") p.st[x] = clamp(p.st[x] + d, 20, 99);
+      $("#htr").innerHTML = d >= 3 ? "¡El vestuario sale enchufado!" : d > 0 ? "Los jugadores asienten. Algo de ánimo." : "Caras largas: no les ha sentado bien."; $("#htr").className = d > 0 ? "up" : "dn";
+      setTimeout(() => { el.remove(); M.paused = false; go(); }, 1600); };
+    el.querySelectorAll("button").forEach(b => b.onclick = () => pickT(b.dataset.k)); const kd = e => { const i = +e.key - 1; if (O[i]) pickT(O[i][0]); }; addEventListener("keydown", kd);
+    const tm = setTimeout(() => pickT("calma"), 25000); }
   /* ---------- goles, reloj y partido ---------- */
   function goalScored(side) { if (DR) { drGoal(side); return; } M.crowdEx = 1; if (M.so) { M.phase = "stop"; netSnd(); soResult(true); return; } M.evH++; if (M.shotLog && M.shotLog.length) M.shotLog[M.shotLog.length - 1].goal = true;
-    const t = own(0) === (side ? L : 0) ? 1 : 0; TEAMS[t].score++; M.goalT = simT; M.goalTeam = t; M.phase = "stop"; M.owner = null;
+    const t = own(0) === (side ? L : 0) ? 1 : 0; TEAMS[t].score++; M.goalT = simT; M.goalTeam = t; M.phase = "stop"; M.owner = null; coachReact(t, "gol"); later(.4, () => coachReact(1 - t, "encaja"));
     const sc = M.last && M.last.t === t ? M.last : null, mins = curMin();
     M.goals.push({ m: Math.max(1, mins), s: t, sc: sc ? sc.name : (M.last ? M.last.name + " (p.p.)" : "—"), as: sc && M.assist && M.assist !== sc && M.assist.t === t ? M.assist.name : null, u: sc ? sc.u : null }); msg("¡GOOOL!", 2.4); later(1.2, () => tvGoal(t, sc ? sc.name : (M.last ? M.last.name + " (p.p.)" : "—"), Math.max(1, mins))); netSnd(); later(.12, () => SND.gol ? play("gol", .9) : applause(4, 1.4)); later(SND.gol ? 9 : 2.5, chant); updHud(); try { $("#sb").animate([{ transform: "scale(1)" }, { transform: "scale(1.18)", filter: "brightness(1.6)" }, { transform: "scale(1)" }], { duration: 900, iterations: 2 }); } catch (e) {}
     // celebración: el goleador corre hacia la esquina y se desliza de rodillas; los compañeros van a abrazarle
@@ -1730,7 +1745,7 @@
     if (over >= M.addMin * len / perMin(M.half) && M.phase === "play" && !(M.owner && prog(M.owner.t, M.owner.x) > .75 && over < (M.addMin + .5) * len / perMin(M.half))) {
       whistle(3); M.phase = "stop"; const draw = TEAMS[0].score === TEAMS[1].score, KO = EMB ? !!EMB.knockout : QS.get("ko") === "1";
       const next = (h, dir, kt, txt) => { msg(txt, 3); later(3.2, () => { M.half = h; M.clock = 0; M.addShown = false; M.addMin = 0; M.evH = 0; M.dirOf = dir; startSet("kick", kt); }); };
-      if (M.half === 1) { tvStats("DESCANSO"); M.phase = "stop"; const nx = next; later(2.8, () => nx(2, [-1, 1], 1, "SEGUNDA PARTE")); }
+      if (M.half === 1) { tvStats("DESCANSO"); M.phase = "stop"; const nx = next; if (EMB && EMB.charla && M.humanTeam === 0) later(2.6, () => halfTalk(() => nx(2, [-1, 1], 1, "SEGUNDA PARTE"))); else later(2.8, () => nx(2, [-1, 1], 1, "SEGUNDA PARTE")); }
       else if (M.half === 2 && KO && draw) next(3, [1, -1], 0, "PRÓRROGA");
       else if (M.half === 3) next(4, [-1, 1], 1, "DESCANSO DE LA PRÓRROGA");
       else if (M.half === 4 && draw) { msg("TANDA DE PENALTIS", 3); later(3.2, startShootout); }
@@ -1874,24 +1889,24 @@
   const CEL = EMB && EMB.celebra ? Object.assign({ t: 0 }, EMB.celebra) : null; window.__CEL = CEL;
   const CEL_A = ["Cheering", "StandingCheering", "Clapping", "FistPump", "StandingFistPump", "Happy", "Victory"].filter(n => META[n]);
   function celebStep(dt) { const C = CEL, T0 = team(0);
-    if (!C.ini) { C.ini = 1; document.body.classList.add("celeb"); ballMesh.visible = false; for (const a of OFF) a.wrap.visible = false; for (const p of team(1)) { p.wrap.visible = false; p.x = -40; p.y = -40; }
+    if (!C.ini) { C.ini = 1; document.body.classList.add("celeb"); M.human = null; M.humanTeam = -1; ring.visible = false; aimMesh.visible = false; ballMesh.visible = false; for (const a of OFF) a.wrap.visible = false; for (const p of team(1)) { p.wrap.visible = false; p.x = -40; p.y = -40; }
       const cx = L / 2, cy = W / 2 + 4; C.c = [cx, cy]; C.cap = T0[C.capi] || T0.find(q => !q.gk) || T0[0];
-      const rest = T0.filter(q => q !== C.cap); C.cap.x = cx; C.cap.y = cy + 1.2; C.cap.h = Math.PI / 2;
+      const rest = T0.filter(q => q !== C.cap); C.cap.x = cx; C.cap.y = cy + 1.2; C.cap.h = Math.PI / 2; C.pre = C.tipo === "presenta"; if (C.pre) for (const q of rest) { q.wrap.visible = false; q.x = -40; q.y = -40; }
       rest.forEach((q, i) => { const row = i < 5 ? 0 : 1, k = row ? i - 5 : i, n = row ? rest.length - 5 : 5, a = Math.PI * (.15 + .7 * (k + .5) / n), r = row ? 3.6 : 2.2; q.x = cx + Math.cos(a) * r * 1.25; q.y = cy + 1.2 - Math.sin(a) * r; q.h = Math.PI / 2 + (Math.random() - .5) * .5; q.one = null; });
-      for (const q of T0) { q.v = 0; q.mh = q.h; q.wrap.visible = true; }
-      const el = document.createElement("div"); el.id = "celeb"; el.innerHTML = `<small>CAMPEONES</small><b>${String(C.n || "").replace(/[<>&]/g, "")}</b><span>${String(C.club || "").replace(/[<>&]/g, "")}${C.s ? " · " + C.s : ""}</span><button id="celOk">Continuar</button>`; document.body.appendChild(el);
+      for (const q of T0) { q.v = 0; q.mh = q.h; q.wrap.visible = !C.pre || q === C.cap; }
+      const el = document.createElement("div"); el.id = "celeb"; if (C.tipo === "presenta") el.className = "pre"; el.innerHTML = C.pre ? `<small>NUEVO FICHAJE</small><b>${String(C.n || "").replace(/[<>&]/g, "")}</b><span>${String(C.club || "").replace(/[<>&]/g, "")}${C.num ? " · dorsal " + C.num : ""}</span><button id="celOk">Continuar</button>` : `<small>CAMPEONES</small><b>${String(C.n || "").replace(/[<>&]/g, "")}</b><span>${String(C.club || "").replace(/[<>&]/g, "")}${C.s ? " · " + C.s : ""}</span><button id="celOk">Continuar</button>`; document.body.appendChild(el);
       $("#celOk").onclick = () => { if (C.fin) return; C.fin = 1; parent.postMessage({ type: "mdg27celeb" }, "*"); };
-      asset("m_trofeo").then(t => GL().parseAsync(b64buf(t), "")).then(g => { const o = g.scene, bb = new THREE.Box3().setFromObject(o), k = .62 / (bb.max.y - bb.min.y); o.scale.setScalar(k); const c = bb.getCenter(new THREE.Vector3()); o.position.set(-c.x * k, -bb.min.y * k, -c.z * k);
+      if (!C.pre) asset("m_trofeo").then(t => GL().parseAsync(b64buf(t), "")).then(g => { const o = g.scene, bb = new THREE.Box3().setFromObject(o), k = .62 / (bb.max.y - bb.min.y); o.scale.setScalar(k); const c = bb.getCenter(new THREE.Vector3()); o.position.set(-c.x * k, -bb.min.y * k, -c.z * k);
         o.traverse(m => { if (m.isMesh) { m.castShadow = true; if (m.material) { m.material.envMapIntensity = 1.4; } } }); C.tro = new THREE.Group(); C.tro.add(o); S.add(C.tro); }).catch(e => console.warn("trofeo", e));
       later(.2, () => applause(6, 1.3)); }
     C.t += dt; M.crowdEx = 1; if (CROWD) { CROWD.U.uT.value += dt; CROWD.U.uEx.value = 1; CROWD.U.uExT.value.set(1, 1); } crowdSound(); if ((C.ap = (C.ap || 0) - dt) <= 0) { C.ap = 5 + Math.random() * 2; applause(5, 1.2); }
     const rt = (performance.now() - (C.t0 || (C.t0 = performance.now()))) / 1000; if (rt > 2.2) document.body.classList.add("celebT"); if (rt > 5) document.body.classList.add("celebB");
-    for (const q of T0) { if (!q.one) { const n = q === C.cap ? (C.capN = C.capN === "Victory" ? "StandingCheering" : "Victory") : CEL_A[Math.random() * CEL_A.length | 0]; startOne(q, n, { ts: .9 + Math.random() * .25, t0: q === C.cap ? 0 : Math.random() * .6, end: META[n].dur, rootScale: 0, h0: q.h, fadeIn: .3 }); }
+    for (const q of T0) { if (C.pre && q !== C.cap) continue; if (!q.one) { const n = C.pre ? ["Happy", "Clapping", "Pointing", "StandingCheering", "FistPump"].filter(x => META[x])[(C.pn = (C.pn || 0) + 1) % 5] || "Happy" : q === C.cap ? (C.capN = C.capN === "Victory" ? "StandingCheering" : "Victory") : CEL_A[Math.random() * CEL_A.length | 0]; startOne(q, n, { ts: .9 + Math.random() * .25, t0: q === C.cap ? 0 : Math.random() * .6, end: META[n].dur, rootScale: 0, h0: q.h, fadeIn: .3 }); }
       stepOne(q, dt); q.x = clamp(q.x, 1, L - 1); pose(q, dt, FWD); place(q); }
     if (C.tro) { const cp = C.cap; flushPose(cp); cp.hands[0].getWorldPosition(hv); cp.hands[1].getWorldPosition(hv2); hv.add(hv2).multiplyScalar(.5); const up = Math.min(1, C.t / .6);
       C.tro.position.set(hv.x, hv.y + .05, hv.z); C.tro.rotation.y = -cp.h + Math.PI / 2; C.tro.visible = up > 0; }
     // cámara: gira despacio alrededor del grupo, de abajo arriba
-    const [cx, cy] = C.c, a = Math.PI / 2 + Math.sin(C.t * .16) * 1.05, r = 10.5 - Math.min(3, C.t * .25), ce = P3(cx, cy, 0);
+    const [cx, cy] = C.pre ? [C.cap.x, C.cap.y] : C.c, a = Math.PI / 2 + Math.sin(C.t * .16) * (C.pre ? .7 : 1.05), r = C.pre ? 5.2 - Math.min(1.4, C.t * .15) : 10.5 - Math.min(3, C.t * .25), ce = P3(cx, cy, 0);
     cam.position.set(ce.x + Math.cos(a) * r, 1.4 + Math.min(2.2, C.t * .18), ce.z + Math.sin(a) * r); cam.lookAt(ce.x, 1.55, ce.z); if (cam.fov !== 40) { cam.fov = 40; cam.updateProjectionMatrix(); } }
   M.intro = NET || DR || CEL ? null : { t: 0, dur: 7.5 };
   function introStep(dt) { const I = input(), R = M.intro; if (R.t === 0) TS.tap = false; R.t += dt; if (R.t > .3) intro.style.opacity = 1;
