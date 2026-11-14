@@ -139,11 +139,17 @@ function roomWindow(img, x, y, z, w, h, ry) {
 // ---------- barrio ----------
 const SHOPS = [], DOORS = [], KEEPERS = [];
 // el barrio junto al mar: una calle larga con tiendas al norte y el paseo marítimo al sur; alrededor, el mar
+// ciudad: avenida hacia el norte por el hueco de la fachada nº 7 y plaza con gasolinera al fondo; skatepark en la plaza del oeste
+const AV_K = 7, AVX = -68.5, AVW = 13, AVZ1 = -102, PLZ = { x0: -110, x1: -27, z0: -150, z1: -102 }, SKP = { x: -122, z: 13, w: 16, d: 9.8 };
+const AVF = ["fachada_c_bar.webp", "fachada_c_cafeteria.webp", "fachada_c_panaderia.webp", "fachada_c_farmacia.webp", "fachada_c_barberia.webp", "fachada_c_fruteria.webp", "fachada_c_pizzeria.webp", "fachada_c_gimnasio.webp", "fachada_tienda_deportes.webp", "fachada_azulejos.webp", "fachada_colores.webp", "fachada_mural.webp"];
 const SEA_Z = 22, X0 = -176, X1 = 64, BEACH = { x0: -96, x1: -66, z0: 10.5, z1: 20.5 }, TOQ = { x: -45, z: 15 };
 let seaM = null;
-const OBST = [[-150, 0, 1.9], [-124, 8.2, 1.9], [-105, 14, 4.2], [-61.5, 18.2, 1.8], [-140.2, -4.25, 1.4], [-76, -4.25, .9], [-10.2, -4.25, 1.4], [46, -4.25, .9]];
+const OBST = [[-150, 0, 1.9], [-61.5, 18.2, 1.8], [-140.2, -4.25, 1.4], [-76, -4.25, .9], [-10.2, -4.25, 1.4], [46, -4.25, .9]];
 // altura del suelo: aceras, paseo y arena están un poco por encima de la calzada (los pies no se hunden)
-function gy(x, z) { if (x > BEACH.x0 && x < BEACH.x1 && z > BEACH.z0 && z < BEACH.z1) return .2; if (z >= 5 && z <= SEA_Z && x >= X0 - 1 && x <= X1 + 42) return .18; if (z <= -5 && z >= -8 && x >= X0 && x <= X1) return .18; return 0; }
+const SKMESH = [], RAY = new THREE.Raycaster(), DOWN = new THREE.Vector3(0, -1, 0), RO = new THREE.Vector3();
+function gyRampa(x, z) { const b = gy(x, z); if (!SKMESH.length || Math.abs(x - SKP.x) > SKP.w / 2 + 1 || Math.abs(z - SKP.z) > SKP.d / 2 + 1) return b;
+  RO.set(x, 6, z); RAY.set(RO, DOWN); RAY.far = 7; const h = RAY.intersectObjects(SKMESH, false)[0]; return h ? Math.max(b, h.point.y) : b; }
+function gy(x, z) { if (z < -8.2) return z > PLZ.z1 && Math.abs(x - AVX) > 4.5 ? .18 : 0; if (x > BEACH.x0 && x < BEACH.x1 && z > BEACH.z0 && z < BEACH.z1) return .2; if (z >= 5 && z <= SEA_Z && x >= X0 - 1 && x <= X1 + 42) return .18; if (z <= -5 && z >= -8 && x >= X0 && x <= X1) return .18; return 0; }
 function buildBarrio() {
   const land = new THREE.Mesh(new THREE.PlaneGeometry(X1 - X0 + 60, SEA_Z + 40), new THREE.MeshStandardMaterial({ color: 0x3b3a3d, roughness: 1 })); land.rotation.x = -Math.PI / 2; land.position.set((X0 + X1 + 60) / 2 - 4, 0, (SEA_Z - 40) / 2); land.receiveShadow = true; S.add(land);
   // mar: imagen de agua repetida que se mueve despacio (si aún no está la imagen, agua lisa)
@@ -167,7 +173,7 @@ function buildBarrio() {
   const SHOPK = { 3: "ropa", 5: "moviles", 8: "bar", 10: "skates", 12: "equip", 15: "sobres" }, SHOPF = { ropa: "fachada_tienda_ropa.webp", moviles: "fachada_tienda_moviles.webp", skates: "fachada_tienda_skates.webp" };
   Object.assign(AR, { "fachada_tienda_ropa.webp": .67, "fachada_tienda_moviles.webp": .67, "fachada_tienda_skates.webp": .67 });
   const plan = []; let k = 0; for (let x = X0 + 13; x < X1 - 6; x += 13.5) { const sh = SHOPK[k], f = SHOPF[sh] || ORD[k % ORD.length]; plan.push([x, 13, AR[f] ? Math.round(13 * AR[f] * 10) / 10 : 9 + (k * 5) % 7, f, sh]); k++; }
-  plan.forEach(([x, w, h, f, shop]) => { const zf = -8, d = 12; box(w - .3, h, d, [side, side, roof, roof, mat(f, null), side], x, h / 2, zf - d / 2);
+  plan.forEach(([x, w, h, f, shop], k) => { if (k === AV_K) return; const zf = -8, d = 12; box(w - .3, h, d, [side, side, roof, roof, mat(f, null), side], x, h / 2, zf - d / 2);
     if (shop) { SHOPS.push({ k: shop, x, z: zf }); DOORS.push({ k: shop, x, z: zf + .9 }); } });
   // farolas a lo largo del paseo y de la calle, bancos y papeleras
   const metal = new THREE.MeshStandardMaterial({ color: 0x2b2f35, roughness: .5, metalness: .6 }), bulbM = new THREE.MeshBasicMaterial({ color: 0xffd9a0 });
@@ -183,10 +189,10 @@ function buildBarrio() {
   const tq = new THREE.Mesh(new THREE.RingGeometry(.9, 1.1, 40), new THREE.MeshBasicMaterial({ color: 0xffd23a })); tq.rotation.x = -Math.PI / 2; tq.position.set(TOQ.x, .2, TOQ.z); S.add(tq);
   // zona nueva del oeste: plaza de adoquines, quiosco con terraza de barro y el horizonte de Cádiz al fondo del mar
   { const pl = new THREE.Mesh(new THREE.PlaneGeometry(60, 10), mat("suelo_adoquin.webp", [14, 2.4])); pl.rotation.x = -Math.PI / 2; pl.position.set(X0 + 30, .015, 0); pl.receiveShadow = true; S.add(pl);
-    const ter = new THREE.Mesh(new THREE.PlaneGeometry(10, 7), mat("st_azotea.webp", [3, 2])); ter.rotation.x = -Math.PI / 2; ter.position.set(-124, .19, 9.5); ter.receiveShadow = true; S.add(ter);
-    const kw = new THREE.MeshStandardMaterial({ color: 0x3f7a5a, roughness: .7 }), kf = mat("fachada_kiosco.webp", null); box(3.6, 4.4, 2.6, [kw, kw, roof, roof, kf, kf], -124, 2.4, 8.2);
+ // (el kiosco y el chiringuito se han quitado)
+
     const sky = new THREE.Mesh(new THREE.PlaneGeometry(215, 215 * 315 / 2048), new THREE.MeshBasicMaterial({ map: tex("fondo_ciudad.webp"), transparent: true, alphaTest: .4, fog: false, color: 0xffe2c8 }));
-    { const wd = new THREE.MeshStandardMaterial({ color: 0xcaa47a, roughness: .85 }), ch = mat("chiringuito.webp", null); box(9, 4.6, 4, [wd, wd, roof, roof, ch, ch], -105, 2.4, 14); }   // chiringuito junto a la playa
+
     sky.position.set(-40, 215 * 315 / 2048 / 2 - 4.2, 226); sky.rotation.y = Math.PI; S.add(sky); }
   // puertas de las tiendas iluminadas
   for (const s of SHOPS) s.dx = s.x + 3.2;   // la puerta es la de la propia fachada
@@ -205,7 +211,8 @@ function buildInteriors() { const S0 = S; { const S = INTG; S0.add(INTG);
     const c = new THREE.Mesh(new THREE.PlaneGeometry(W_, D_), new THREE.MeshStandardMaterial({ color: 0x1b1b1f })); c.rotation.x = Math.PI / 2; c.position.set(ox, H_, 60); S.add(c);
     const back = new THREE.Mesh(new THREE.PlaneGeometry(W_, H_), mat(bk, null, { emissive: 0xffffff, emissiveMap: tex(bk), emissiveIntensity: .25 })); back.position.set(ox, H_ / 2, 60 - D_ / 2); S.add(back);
     for (const s of [-1, 1]) { const w = new THREE.Mesh(new THREE.PlaneGeometry(D_, H_), mat(wa, null, { emissive: 0xffffff, emissiveMap: tex(wa), emissiveIntensity: .15 })); w.position.set(ox + s * W_ / 2, H_ / 2, 60); w.rotation.y = -s * Math.PI / 2; S.add(w); }
-    const front = new THREE.Mesh(new THREE.PlaneGeometry(W_, H_), new THREE.MeshStandardMaterial({ color: 0x2a2a30 })); front.position.set(ox, H_ / 2, 60 + D_ / 2); front.rotation.y = Math.PI; S.add(front);
+    const front = new THREE.Mesh(new THREE.PlaneGeometry(W_, H_), mat(wa, null, { emissive: 0xffffff, emissiveMap: tex(wa), emissiveIntensity: .15 })); front.position.set(ox, H_ / 2, 60 + D_ / 2); front.rotation.y = Math.PI; S.add(front);
+    const pu = new THREE.Mesh(new THREE.PlaneGeometry(H_ * 1.49, H_), mat("puerta_int.webp", null, { emissive: 0xffffff, emissiveMap: tex("puerta_int.webp"), emissiveIntensity: .2 })); pu.position.set(ox, H_ / 2, 60 + D_ / 2 - .02); pu.rotation.y = Math.PI; S.add(pu);   // la puerta por la que se sale
     const l = new THREE.PointLight(0xfff0d0, 25, 18, 1.4); l.position.set(ox, 3.6, 60); INTG.add(l);   // solo existe dentro de la tienda
     KEEPERS.push({ k, x: ox, z: 60 - 2.2 });
     DOORS.push({ k: "salir", from: k, x: ox, z: 60 + D_ / 2 - .7 });
@@ -385,7 +392,7 @@ async function addProps() {
   const one = async (n, f) => { try { const g = await load(n); f(g); } catch (e) { console.warn("prop", n, e); } };
   const tint = (parts, c) => { parts.forEach(p => { p.m.color = new THREE.Color(c); if (p.m.map) p.m.color.multiplyScalar(1.6); }); return parts; };
   const doors = SHOPS.map(s => s.dx);
-  one("terraza", g => instance(bakeProp(g.scene, .9), [[-127.4, 11.6, .3], [-121.2, 11.4, -.4], [-56.5, 7.2, .1], [-51.5, 7.4, -.6], [-2, 7.3, .5]]));
+  one("terraza", g => instance(bakeProp(g.scene, .9), [[-56.5, 7.2, .1], [-51.5, 7.4, -.6], [-2, 7.3, .5]]));
   one("vespa", g => { const b = g.scene.getObjectByName("Object_4") || g.scene; instance(bakeProp(b, 1.8, "len"), [[-149, -4.1, .12], [-87, -4.2, -.1], [-21, -4.1, Math.PI + .1], [31, -4.2, .05]]); });
   one("bici", g => instance(bakeProp(g.scene, 1.75, "len"), [[-131, -7.35, 0], [-61, -7.35, 0], [9, -7.35, Math.PI], [-31, SEA_Z - .95, 0], [16, SEA_Z - .95, Math.PI]]));
   one("contenedor", g => { const b = g.scene.getObjectByName("group") || g.scene; instance(tint(bakeProp(b, 1.3), 0x2f6b3c), [[-141, -4.25, 0], [-139.3, -4.25, 0], [-76, -4.25, 0], [-11, -4.25, 0], [-9.3, -4.25, 0], [46, -4.25, 0]]); });
@@ -431,13 +438,16 @@ function stepNPCs(dt) {
 function stepHub(dt) {
   let inp = input(); if ($("#tel").style.display === "") inp = { x: 0, y: 0, run: 0 }; const d = camDir(inp.x, inp.y), m = Math.hypot(d.x, d.z), sp = m * (me.skate ? (inp.run ? 10.5 : 7) : (inp.run ? 6.8 : 3.4));
   me.spd += (sp - me.spd) * Math.min(1, dt * 6); if (m > .1) { let a = Math.atan2(d.z, d.x) - me.dir; a = Math.atan2(Math.sin(a), Math.cos(a)); me.dir += a * Math.min(1, dt * 10); }
-  me.x += Math.cos(me.dir) * me.spd * dt; me.z += Math.sin(me.dir) * me.spd * dt;
-  if (place === "calle") { me.x = clamp(me.x, X0, CX + CW / 2 - 1); const inCage = me.x > CX - CW / 2 + .5; me.z = inCage ? clamp(me.z, -CH / 2 + .5, CH / 2 - .5) : me.x > X1 - 1 ? clamp(me.z, -7.6, 7.6) : clamp(me.z, -7.6, SEA_Z - .8);
+  const px = me.x, pz = me.z; me.x += Math.cos(me.dir) * me.spd * dt; me.z += Math.sin(me.dir) * me.spd * dt;
+  if (place === "calle" && (me.z < -7.6 || pz < -7.6)) { const ok = (x, z) => z >= -7.6 ? x > X0 && x < X1 - 1 : z > PLZ.z1 ? x > AVX - AVW / 2 + .6 && x < AVX + AVW / 2 - .6 : x > PLZ.x0 && x < PLZ.x1 && z > PLZ.z0;
+    if (!ok(me.x, me.z)) { if (ok(px, me.z)) me.x = px; else if (ok(me.x, pz)) me.z = pz; else { me.x = px; me.z = pz; } } }
+  else if (place === "calle") { me.x = clamp(me.x, X0, CX + CW / 2 - 1); const inCage = me.x > CX - CW / 2 + .5; me.z = inCage ? clamp(me.z, -CH / 2 + .5, CH / 2 - .5) : me.x > X1 - 1 ? clamp(me.z, -7.6, 7.6) : clamp(me.z, -7.6, SEA_Z - .8);
     if (!inCage && me.x > CX - CW / 2 - 1 && Math.abs(me.z) > 1.6) me.x = Math.min(me.x, CX - CW / 2 - 1);
     if (inCage && me.x > CX - CW / 2 + 3) { goMatch(); return; } }
   else { const ox = INTPOS[place]; me.x = clamp(me.x, ox - 4.5, ox + 4.5); me.z = clamp(me.z, MOSTR[place] ? 59.85 : 57.2, 63.4); }
   if (place === "calle") for (const [ox, oz, r] of OBST) { const dx = me.x - ox, dz = me.z - oz, d = Math.hypot(dx, dz); if (d < r && d > .001) { me.x = ox + dx / d * r; me.z = oz + dz / d * r; } }
-  me.a.wrap.position.set(me.x, gy(me.x, me.z), me.z); me.a.wrap.rotation.y = -me.dir + Math.PI / 2; me.a.lock = 0; loco(me.a, me.skate ? 0 : me.spd, false); me.a.mixer.update(dt);
+  let yy = place === "calle" ? gyRampa(me.x, me.z) : gy(me.x, me.z); if (me.y0 != null && yy - me.y0 > .45) { me.x = px; me.z = pz; yy = me.y0; me.spd *= .3; } me.y0 = yy;
+  me.a.wrap.position.set(me.x, yy, me.z); me.a.wrap.rotation.y = -me.dir + Math.PI / 2; me.a.lock = 0; loco(me.a, me.skate ? 0 : me.spd, false); me.a.mixer.update(dt);
   const dd = nearDoor(), inBeach = me.x > BEACH.x0 && me.x < BEACH.x1 && me.z > BEACH.z0 && me.z < BEACH.z1, nearToq = Math.hypot(me.x - TOQ.x, me.z - TOQ.z) < 1.6;
   const np = NB.ws && place === "calle" ? nbNear() : null;
   const mk = place === "calle" ? mgNear() : null, nRey = place === "calle" && Math.hypot(me.x - REY.x, me.z - REY.z) < 2.2;
@@ -697,7 +707,7 @@ function endMatch() { mode = "hub"; $("#hud").style.display = "none"; ring.posit
 // ---------- arranque ----------
 let ballM, ring;
 (async () => {
-  buildBarrio(); buildInteriors(); buildCage();
+  buildBarrio(); buildCiudad(); buildInteriors(); buildCage();
   // coches aparcados (modelos 3D de Meshy)
   const CARS = [["coche_compacto", 3.6], ["coche_berlina", 4.6], ["furgoneta", 5.2]];
   Promise.all(CARS.map(([n]) => (window.SA ? Promise.resolve(SA[n + ".glb"]) : fetch("street/" + n + ".txt").then(r => r.text())).then(t => loader.parseAsync(b64buf(t), "")))).then(gs => {
@@ -710,7 +720,7 @@ let ballM, ring;
   let hb = null; an.scene.traverse(o => { if (o.name) animRest[o.name] = o.quaternion.clone(); if (!hb && o.name === "Hips") hb = o; }); hipsRestY = hb ? hb.position.y : 1;
   for (const c of an.animations) { c.tracks = c.tracks.filter(t => !t.name.endsWith(".scale") && (!t.name.endsWith(".position") || t.name === "Hips.position")); baseClips[c.name] = c; }
   const g = await loadModel("pj18"); me = { a: actor(g, kit.c1, kit.c2), x: -40, z: 3, dir: 0, spd: 0 };
-  spawnNPCs(); addProps(); addTiendas(); mgSetup(); updCoins();
+  spawnNPCs(); addProps(); addTiendas(); addCiudad(); mgSetup(); updCoins();
   loadModel("entrenador1").then(g => { const a = actor(g, null, null); a.wrap.position.set(REY.x, gy(REY.x, REY.z), REY.z); a.wrap.rotation.y = -Math.PI + Math.PI / 2; play(a, "Idle"); const l = nbLabel("REY DE LA PISTA"); a.wrap.add(l); NPCS.push({ a, x: REY.x, z: REY.z, dir: Math.PI, walk: false, spd: 0, keeper: false, rey: 1 }); }).catch(() => {});
   $("#load").remove(); try { const nb = JSON.parse(sessionStorage.getItem("street_nb") || "null"); if (nb && nbName()) nbJoin(nb.k, nb.sala); } catch (e) {} tip("Bienvenido al barrio. Entra en las tiendas o ve a la jaula del fondo para jugar.");
   { const rs = new URLSearchParams(location.search).get("res"); if (rs && /^\d+-\d+$/.test(rs)) { const [a, b] = rs.split("-").map(Number); me.x = CX - CW / 2 - 4; me.z = 0; me.dir = Math.PI; SNAP = 1; applyResult(a, b); setTimeout(() => say(a > b ? "¡Ganaste " + a + "-" + b + "!" : a === b ? "Empate " + a + "-" + b : "Has perdido " + a + "-" + b, 2800), 300); history.replaceState(null, "", location.pathname); } }
@@ -721,6 +731,32 @@ let ballM, ring;
     if (me) stepNet(dt);
     R.render(S, cam); requestAnimationFrame(loop); })(last);
 })();
+
+/* ---------- la ciudad: avenida, plaza con gasolinera y skatepark ---------- */
+function buildCiudad() {
+  const side = new THREE.MeshStandardMaterial({ color: 0xe6dccb, roughness: .9 }), roof = new THREE.MeshStandardMaterial({ color: 0x8a7a6a, roughness: 1 });
+  const asf = mat("suelo_cemento.webp", [1, 9], { color: 0x6c6c70 }), acera = mat("suelo_acera.webp", [1, 30]);
+  const L = -8 - AVZ1;   // largo de la avenida
+  const rd = new THREE.Mesh(new THREE.PlaneGeometry(9, L), asf); rd.rotation.x = -Math.PI / 2; rd.position.set(AVX, .012, -8 - L / 2); rd.receiveShadow = true; S.add(rd);
+  for (const sx of [-1, 1]) { box(2, .18, L, acera, AVX + sx * 5.5, .09, -8 - L / 2); }
+  // fachadas a los dos lados, mirando a la avenida
+  let i = 0; for (let z = -21 - 6.75; z > AVZ1 + 6; z -= 13.5) for (const sx of [-1, 1]) {
+    const f = AVF[i++ % AVF.length], h = 8.8, m = mat(f, null);
+    box(12, h, 13.2, sx < 0 ? [m, side, roof, roof, side, side] : [side, m, roof, roof, side, side], AVX + sx * (AVW / 2 + 6), h / 2, z); }
+  // plaza del fondo
+  const pw = PLZ.x1 - PLZ.x0, pd = PLZ.z1 - PLZ.z0, pl = new THREE.Mesh(new THREE.PlaneGeometry(pw, pd), mat("suelo_cemento.webp", [8, 4], { color: 0x6c6c70 })); pl.rotation.x = -Math.PI / 2; pl.position.set((PLZ.x0 + PLZ.x1) / 2, .011, (PLZ.z0 + PLZ.z1) / 2); pl.receiveShadow = true; S.add(pl);
+  const muro = mat("muro.webp", [10, 1]); box(pw, 3, .6, muro, (PLZ.x0 + PLZ.x1) / 2, 1.5, PLZ.z0 - .3); for (const x of [PLZ.x0 - .3, PLZ.x1 + .3]) box(.6, 3, pd, muro, x, 1.5, (PLZ.z0 + PLZ.z1) / 2);
+  for (const sx of [-1, 1]) { const w = sx < 0 ? AVX - AVW / 2 - PLZ.x0 : PLZ.x1 - AVX - AVW / 2; box(w, 9, 12, [side, side, roof, roof, mat(AVF[(i++) % AVF.length], [Math.max(1, Math.round(w / 13)), 1]), side], (sx < 0 ? PLZ.x0 + w / 2 : PLZ.x1 - w / 2), 4.5, PLZ.z1 - 6 + 12); }
+  const sky = new THREE.Mesh(new THREE.PlaneGeometry(150, 150 * 9 / 21), new THREE.MeshBasicMaterial({ map: tex("fondo_ciudad.webp"), transparent: true, alphaTest: .4, fog: false, color: 0xffe2c8 })); sky.scale.y = 315 / 2048 * 21 / 9; sky.position.set((PLZ.x0 + PLZ.x1) / 2, 150 * 315 / 2048 / 2 - 1, PLZ.z0 - 40); S.add(sky);
+  // suelo del skatepark (las rampas llegan después, son un modelo)
+  const sk = new THREE.Mesh(new THREE.PlaneGeometry(SKP.w + 1, SKP.d + 1), mat("suelo_cemento.webp", [5, 3])); sk.rotation.x = -Math.PI / 2; sk.position.set(SKP.x, .19, SKP.z); sk.receiveShadow = true; S.add(sk);
+}
+async function addCiudad() {
+  const load = n => (window.SA && SA["prop_" + n + ".glb"] ? Promise.resolve(SA["prop_" + n + ".glb"]) : fetch("street/prop_" + n + ".txt").then(r => r.text())).then(t => loader.parseAsync(b64buf(t), ""));
+  try { const g = await load("skatepark"); for (const p of bakeProp(g.scene, SKP.w, "len")) { const m = new THREE.Mesh(p.g, p.m); m.position.set(SKP.x, .19, SKP.z); m.castShadow = m.receiveShadow = true; S.add(m); m.updateMatrixWorld(); SKMESH.push(m); } } catch (e) { console.warn("skatepark", e); }
+  try { const g = await load("gasolinera"), quita = []; g.scene.traverse(o => { if (o.isMesh && /6twelve|logo|sign|board/i.test(o.material.name + " " + o.name)) quita.push(o); }); quita.forEach(o => o.parent.remove(o));
+    for (const p of bakeProp(g.scene, 46, "len")) { const m = new THREE.Mesh(p.g, p.m); m.position.set(-66, .01, -128); m.rotation.y = 0; m.castShadow = m.receiveShadow = true; S.add(m); } } catch (e) { console.warn("gasolinera", e); }
+}
 /* ---------- tiendas nuevas: ropa (BARRIO WEAR), móviles (MÓVILES DEL BARRIO) y skates (SKATE CALETA) ---------- */
 // mostradores de Sketchfab (CC BY: «Counter» de gorzi); detrás está el dependiente
 let SKATE_P = null, me_gorra = null;
