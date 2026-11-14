@@ -237,7 +237,7 @@ function buildCiudadGrande() {
 }
 // ---------- coches: el tuyo (se compra en la gasolinera) y el tráfico; el coche solo va por la calzada ----------
 const COCHES = { compacto: { n: "coche_compacto", len: 3.6, an: 1.7, precio: 2500, vmax: 17, nom: "Compacto" }, berlina: { n: "coche_berlina", len: 4.6, an: 1.85, precio: 5000, vmax: 21, nom: "Berlina" }, furgoneta: { n: "furgoneta", len: 5.2, an: 2, precio: 7000, vmax: 15, nom: "Furgoneta" } };
-const CARM = {}, TRAF = []; let miCoche = null;
+const CARM = {}, TRAF = [], CKM = { d: 0 }; let miCoche = null;
 async function cargarCoches() { for (const [k, c] of Object.entries(COCHES)) { try { const t = window.SA ? SA[c.n + ".glb"] : await fetch("street/" + c.n + ".txt").then(r => r.text()); CARM[k] = (await loader.parseAsync(b64buf(t), "")).scene; } catch (e) { console.warn("coche", k, e); } } }
 function cocheMalla(tipo) { const src = CARM[tipo]; if (!src) return null; const g = src.clone(), bb = new THREE.Box3().setFromObject(g), k = COCHES[tipo].len / (bb.max.x - bb.min.x); g.scale.setScalar(k);
   const c = bb.getCenter(new THREE.Vector3()); g.position.set(-c.x * k, -bb.min.y * k, -c.z * k); g.traverse(o => { if (o.isMesh) o.castShadow = o.receiveShadow = true; }); const inn = new THREE.Group(); inn.add(g); inn.rotation.y = Math.PI; const w = new THREE.Group(); w.add(inn); S.add(w); return w; }   // los modelos miran a -x: se giran
@@ -276,7 +276,7 @@ function stepCoche(dt, inp) { const c = me.coche, T = COCHES[c.tipo], g = naviga
   if (g) { const rt = g.buttons[7] ? g.buttons[7].value : 0, lt = g.buttons[6] ? g.buttons[6].value : 0; if (rt > .05 || lt > .05) thr = rt - lt; }
   if (thr > .05) c.v += (c.v < 0 ? 16 : 6.5) * thr * dt; else if (thr < -.05) c.v += (c.v > 0 ? 14 : 4) * thr * dt; else c.v -= Math.sign(c.v) * Math.min(Math.abs(c.v), 2.5 * dt);
   c.v = clamp(c.v, -5, T.vmax); const nh = c.h + inp.x * dt * 1.8 * clamp(c.v / 5, -1, 1), nx = c.x + Math.cos(nh) * c.v * dt, nz = c.z + Math.sin(nh) * c.v * dt;
-  if (cocheCabe(c, nx, nz, nh)) { c.x = nx; c.z = nz; c.h = nh; } else { if (Math.abs(c.v) > 6) say("¡Pum!", 600); c.v *= -.25; }
+  if (cocheCabe(c, nx, nz, nh)) { const dd = Math.hypot(nx - c.x, nz - c.z); c.x = nx; c.z = nz; c.h = nh; CKM.d += dd; if (CKM.d > 100) { bevAdd("km", CKM.d / 1000); bevAdd("coche", CKM.d / 1000); CKM.d = 0; } } else { if (Math.abs(c.v) > 6) say("¡Pum!", 600); c.v *= -.25; }
   c.g.position.set(c.x, 0, c.z); c.g.rotation.y = -c.h; me.x = c.x; me.z = c.z; me.dir = c.h; me.spd = 0;
   let ty = Math.atan2(-Math.cos(c.h), -Math.sin(c.h)) - YAW; ty = Math.atan2(Math.sin(ty), Math.cos(ty)); if (Math.abs(c.v) > .5) YAW += ty * Math.min(1, dt * 2.5);
   $("#velo").textContent = Math.round(Math.abs(c.v) * 3.6) + " km/h"; }
@@ -352,7 +352,7 @@ function stepTrabajo(dt) { if (!TRAB.k) return; const T = TRABAJOS[TRAB.k]; TRAB
   const llega = d < (T.coche ? 5.5 : 2.6) && place === "calle" && (!T.coche || (me.coche && Math.abs(me.coche.v) < 2.5)); if (!llega) return;
   if (T.coche && !me.coche) return; if (TRAB.fase === 0) { TRAB.fase = 1; trabMarca(puntoAcera(o)); TRAB.t += T.coche ? 0 : 10; say(T.coche ? "Cliente a bordo" : "¡Recogido! Ahora a entregarlo", 1400); return; }
   TRAB.hecho++; const paga = Math.round(T.base + T.base * Math.max(0, TRAB.t) / T.t); monedasMas(paga); updCoins(); const h = store.get("banco", []); h.unshift([Date.now(), paga, T.nom]); store.set("banco", h.slice(0, 60));
-  if (TRAB.hecho >= T.n) { store.set("trabHechos", store.get("trabHechos", 0) + 1); misEv("trabajo"); return trabFin(true, "¡Trabajo hecho! +" + paga + " monedas"); }
+  if (TRAB.hecho >= T.n) { store.set("trabHechos", store.get("trabHechos", 0) + 1); bevAdd("trab"); misEv("trabajo"); return trabFin(true, "¡Trabajo hecho! +" + paga + " monedas"); }
   say("+" + paga + " monedas · siguiente entrega", 1500); TRAB.fase = 0; TRAB.t = T.t; trabMarca(T.recoger); }
 
 function buildBarrio() {
@@ -751,6 +751,9 @@ function chatSend() { const i = $("#chatin"), t = i.value.trim().slice(0, 120); 
 function nbMenu(on) { $("#nbon").style.display = on ? "" : "none"; if (on) { $("#nbmsg").textContent = ""; $("#nbname").value = nbName(); $("#nbleave").style.display = NB.ws ? "" : "none"; hubMenu(false); } }
 function nbNameOk() { const v = $("#nbname").value.trim().replace(NB_BAD, "").replace(/[^\p{L}\p{N} _.-]/gu, "").slice(0, 14); if (v.length < 2) { $("#nbmsg").textContent = "Escribe un nombre (mínimo 2 letras)"; return false; } store.set("nombre", v); return true; }
 // ---------- monedas, misiones diarias, Rey de la pista ----------
+/* lo que haces en el barrio se apunta para los objetivos de MDG 27 (primeros pasos y semanales) */
+function bevAdd(k, n = 1, max) { try { const B = JSON.parse(localStorage.getItem("mdg27_bev") || "{}"), sem = Math.floor((Date.now() / 864e5 + 3) / 7); if (B.sem !== sem) { B.sem = sem; B.w = {}; } B.w = B.w || {}; B.t = B.t || {};
+  if (max) { B.w[k] = Math.max(B.w[k] || 0, n); B.t[k] = Math.max(B.t[k] || 0, n); } else { B.w[k] = (B.w[k] || 0) + n; B.t[k] = (B.t[k] || 0) + n; } localStorage.setItem("mdg27_bev", JSON.stringify(B)); } catch (e) {} }
 /* monedas: si has iniciado sesión son las mismas que en Ultimate Team y viven en el servidor; sin sesión, se guardan en este navegador */
 const CART = { on: false, coins: 0, cola: [], tm: 0 };
 const coins = () => CART.on ? CART.coins : store.get("monedas", 0);
@@ -793,7 +796,7 @@ function reyPanel() { const lv = store.get("rey", 0), P = $("#panel");
     <div class="row"><button onclick="this.closest('#panel').style.display='none'">Cerrar</button></div>`; P.style.display = "block"; }
 function reyJugar(i) { const b = BANDAS[i]; try { sessionStorage.setItem("st_pend", JSON.stringify({ k: "rey", i })); } catch (e) {} mode = "loading"; say(b[0], 1400); $("#panel").style.display = "none"; const back = location.pathname.split("/").pop() || "street.html";
   setTimeout(() => { location.href = "motor/index.html?modo=street&c1=" + encodeURIComponent(kit.c1) + "&c2=" + encodeURIComponent(kit.c2) + "&rn=" + encodeURIComponent(b[0]) + "&rs=" + b[1] + "&r1=" + encodeURIComponent(b[2]) + "&r2=" + encodeURIComponent(b[3]) + "&rd=" + b[4] + "&volver=" + encodeURIComponent("../" + back); }, 700); }
-function applyResult(a, b) { let pend = null; try { pend = JSON.parse(sessionStorage.getItem("st_pend") || "null"); sessionStorage.removeItem("st_pend"); } catch (e) {} const w = a > b;
+function applyResult(a, b) { let pend = null; try { pend = JSON.parse(sessionStorage.getItem("st_pend") || "null"); sessionStorage.removeItem("st_pend"); } catch (e) {} const w = a > b; bevAdd("jaula");
   misEv("partido"); if (a) misEv("goles", a);
   if (pend && pend.k === "rey") { const B = BANDAS[pend.i], lv = store.get("rey", 0); if (w) { misEv("rey"); misEv("winJaula"); addCoins(pend.i < lv ? Math.round(B[5] / 3) : B[5], "has ganado a " + B[0]); if (pend.i === lv) { store.set("rey", lv + 1); if (lv + 1 >= BANDAS.length) setTimeout(() => say("¡ERES EL REY DE LA PISTA!", 3500), 3200); } } else addCoins(10, "por jugar"); return; }
   if (w) { misEv(pend && pend.k === "playa" ? "winPlaya" : "winJaula"); addCoins(40, "victoria"); } else addCoins(a === b ? 20 : 10, a === b ? "empate" : "por jugar"); }
@@ -852,7 +855,7 @@ function startToques() { mode = "toques"; me.x = TOQ.x; me.z = TOQ.z; me.dir = -
 function toqueHit() { if (TQS.end > 0) return; const lo = .16 + Math.min(.3, TQS.n * .006);
   if (TQS.vy < 0 && TQS.y < .95 && TQS.y > lo) { TQS.n++; TQS.vy = 4.2 + Math.random() * .8; once(me.a, Math.random() < .5 ? "ThighCtl" : "FirstTouch", .32, 2.2); tip(`<b style="font-size:1.6em">${TQS.n}</b> toques`); }
   else if (TQS.y >= .95) toqueFail("¡Demasiado pronto!"); }
-function toqueFail(why) { if (TQS.end > 0) return; TQS.end = 2.4; misEv("toques", TQS.n); if (TQS.n >= 30) addCoins(Math.floor(TQS.n / 10) * 5, "toques"); const best = store.get("toques", 0); if (TQS.n > best) store.set("toques", TQS.n);
+function toqueFail(why) { if (TQS.end > 0) return; TQS.end = 2.4; bevAdd("toq", TQS.n, 1); misEv("toques", TQS.n); if (TQS.n >= 30) addCoins(Math.floor(TQS.n / 10) * 5, "toques"); const best = store.get("toques", 0); if (TQS.n > best) store.set("toques", TQS.n);
   say((why ? why + " · " : "") + (TQS.n > best ? "¡Récord! " : "") + TQS.n + " toques", 2200); }
 function stepToques(dt) {
   if (TQS.end > 0) { TQS.end -= dt; if (TQS.end <= 0) { mode = "hub"; ballM.position.set(CX, BR, 0); tip(""); } }
@@ -956,7 +959,7 @@ let ballM, ring;
   const g = await loadModel("pj18"); me = { a: actor(g, kit.c1, kit.c2), x: -40, z: 3, dir: 0, spd: 0 };
   spawnNPCs(); addProps(); addTiendas(); addCiudad(); mgSetup(); updCoins();
   loadModel("entrenador1").then(g => { const a = actor(g, null, null); a.wrap.position.set(REY.x, gy(REY.x, REY.z), REY.z); a.wrap.rotation.y = -Math.PI + Math.PI / 2; play(a, "Idle"); const l = nbLabel("REY DE LA PISTA"); a.wrap.add(l); NPCS.push({ a, x: REY.x, z: REY.z, dir: Math.PI, walk: false, spd: 0, keeper: false, rey: 1 }); }).catch(() => {});
-  $("#load").remove(); cartInit().then(casaRentas); try { const nb = JSON.parse(sessionStorage.getItem("street_nb") || "null"); if (nb && nbName()) { NB.srvNom = nb.nom || ""; nbJoin(nb.k, nb.sala); } else srvPanel(true); } catch (e) { srvPanel(true); } tip("Bienvenido al barrio. Entra en las tiendas o ve a la jaula del fondo para jugar.");
+  $("#load").remove(); bevAdd("vis"); cartInit().then(casaRentas); try { const nb = JSON.parse(sessionStorage.getItem("street_nb") || "null"); if (nb && nbName()) { NB.srvNom = nb.nom || ""; nbJoin(nb.k, nb.sala); } else srvPanel(true); } catch (e) { srvPanel(true); } tip("Bienvenido al barrio. Entra en las tiendas o ve a la jaula del fondo para jugar.");
   { const rs = new URLSearchParams(location.search).get("res"); if (rs && /^\d+-\d+$/.test(rs)) { const [a, b] = rs.split("-").map(Number); me.x = CX - CW / 2 - 4; me.z = 0; me.dir = Math.PI; SNAP = 1; applyResult(a, b); setTimeout(() => say(a > b ? "¡Ganaste " + a + "-" + b + "!" : a === b ? "Empate " + a + "-" + b : "Has perdido " + a + "-" + b, 2800), 300); history.replaceState(null, "", location.pathname); } }
   let last = performance.now(), fpsA = 60, lowQ = false;
   (function loop(now) { const dt = Math.min(.05, (now - last) / 1000); last = now;

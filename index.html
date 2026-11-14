@@ -8509,7 +8509,7 @@ function freshState() {
   return { v: 1, started: false, name: "Mánager", av: 0, coins: 10000, seq: 0, cards: [], packs: [],
     squad: { f: "4-3-3", xi: Array(11).fill(null), bn: Array(7).fill(null) },
     mk: { list: [], bids: {}, sales: [], hist: [], q: { name: "", g: "ALL", t: "ALL" } },
-    lg: null, ob: { day: "", d: {}, dgot: {}, got: {}, cnt: {}, sea: {}, sgot: {} },
+    lg: null, ob: { day: "", d: {}, dgot: {}, got: {}, cnt: {}, sea: {}, sgot: {}, wk: 0, w: {}, wgot: {}, pgot: {} },
     st: { packs: 0, specials: 0, buy: 0, sell: 0, played: 0, won: 0, drawn: 0, lost: 0, gf: 0, ga: 0, titles: 0 }, log: [] };
 }
 let S = Object.assign(freshState(), store.get(SAVE_KEY, {}));
@@ -8569,6 +8569,7 @@ function updateHub() {
   const pc = $("[data-packcount]"); if (pc) { pc.hidden = !S.packs.length; pc.textContent = S.packs.length; }
   const mk = $("[data-mkline]"); if (mk) { const nb = Object.keys(S.mk.bids).length, ns = S.mk.sales.filter(s => !s.done).length; mk.textContent = nb || ns ? `${nb} pujas · ${ns} en venta.` : "Compra, puja y vende cartas."; }
   if (typeof leagueHubLine === "function") leagueHubLine();
+  if (typeof tutoBienvenida === "function" && S.ob) tutoBienvenida();
   if (window.CD_READY) { const T = ensureTrain(), left = T.list.filter(k => !T.done[k]).length, cc = $("[data-cdcount]"), cl2 = $("[data-cdline]"); if (cc) { cc.hidden = !left; cc.textContent = left; } if (cl2) cl2.textContent = left ? `${left} ejercicios pendientes hoy · racha ${T.streak}` : `Entrenamiento hecho · racha ${T.streak} días`; }
   if (typeof objClaimable === "function") { const n = objClaimable(); const oc = $("[data-objcount]"); if (oc) { oc.hidden = !n; oc.textContent = n; } }
 }
@@ -9326,23 +9327,43 @@ const SEASON = [
   { id: "s_goal20", t: "Marca 20 goles", d: "En la temporada actual de tu liga.", e: "goal", n: 20, r: { c: 7500 } },
   { id: "s_ready", t: "Siempre a tiempo", d: "Marca LISTO en 10 jornadas.", e: "ready", n: 10, r: { c: 5000 } },
   { id: "s_top3", t: "Podio", d: "Termina entre los 3 primeros.", e: "top3", n: 1, r: { p: "especial" } }];
+// barrio (Street Football): lo que haces allí se apunta en este navegador y aquí se lee para los objetivos
+const semanaKey = () => Math.floor((Date.now() / 864e5 + 3) / 7);
+function bev(k, semanal) { try { const B = JSON.parse(localStorage.getItem("mdg27_bev") || "{}"); return semanal ? (B.sem === semanaKey() ? +(B.w || {})[k] || 0 : 0) : +(B.t || {})[k] || 0; } catch (e) { return 0; } }
+// primeros pasos: una guía para el jugador nuevo, con premio en cada paso y un sobre de oro al acabar
+const PASOS = [
+  { id: "p_match", t: "Juega tu primer partido", d: "Desde Ultimate Team o un amistoso.", e: "match", n: 1, r: { c: 1000 } },
+  { id: "p_pack", t: "Abre tu primer sobre", d: "En «Tienda» o «Tus sobres».", e: "pack", n: 1, r: { c: 500 } },
+  { id: "p_buy", t: "Ficha un jugador en el mercado", d: "Busca en «Mercado» y puja o compra.", e: "buy", n: 1, r: { c: 500 } },
+  { id: "p_barrio", t: "Entra en el barrio", d: "Menú principal → Street Football.", calc: () => bev("vis"), n: 1, r: { c: 500 } },
+  { id: "p_trab", t: "Haz un trabajo en el barrio", d: "Con el móvil: Juegos → Trabajos.", calc: () => bev("trab"), n: 1, r: { c: 750 } },
+  { id: "p_coche", t: "Conduce un coche", d: "Cómpralo en la gasolinera del barrio y pulsa F.", calc: () => Math.min(1, bev("coche")), n: 1, r: { c: 750 } },
+  { id: "p_todo", t: "¡Guía completada!", d: "Completa todos los pasos anteriores.", calc: () => PASOS.slice(0, -1).every(o => S.ob.pgot && S.ob.pgot[o.id]) ? 1 : 0, n: 1, r: { p: "oro" } }];
+// semanales: tres retos que mezclan Ultimate Team y el barrio; cambian cada lunes
+const SEMANA_UT = [{ id: "w_win3", t: "Gana 3 partidos de liga", e: "win", n: 3, r: { c: 3000 } }, { id: "w_goal10", t: "Marca 10 goles", e: "goal", n: 10, r: { c: 2500 } }, { id: "w_pack5", t: "Abre 5 sobres", e: "pack", n: 5, r: { c: 2000 } }, { id: "w_buy3", t: "Ficha 3 jugadores", e: "buy", n: 3, r: { c: 2000 } }];
+const SEMANA_B = [{ id: "w_trab3", t: "Haz 3 trabajos en el barrio", calc: () => bev("trab", 1), n: 3, r: { c: 2500 } }, { id: "w_jaula2", t: "Juega 2 partidos en la jaula del barrio", calc: () => bev("jaula", 1), n: 2, r: { c: 2500 } },
+  { id: "w_km", t: "Conduce 3 km por la ciudad", calc: () => Math.floor(bev("km", 1) * 10) / 10, n: 3, r: { c: 2000 } }, { id: "w_toq", t: "Haz 30 toques seguidos en el barrio", calc: () => bev("toq", 1), n: 30, r: { c: 2000 } }];
+const semanaHoy = () => { const r = rngFrom("w" + semanaKey()), a = SEMANA_UT.slice().sort(() => r() - .5), b = SEMANA_B.slice().sort(() => r() - .5); return [a[0], b[0], r() < .5 ? a[1] : b[1]]; };
+function ensureWeek() { const k = semanaKey(); if (S.ob.wk !== k) { S.ob.wk = k; S.ob.w = {}; S.ob.wgot = {}; } if (!S.ob.pgot) S.ob.pgot = {}; }
+function tutoBienvenida() { if (S.ob.tutoV) return; S.ob.tutoV = 1; save(); setTimeout(() => dlg("¡Bienvenido a MDG 27!", "Te dejamos una guía de <b>primeros pasos</b> con premios: juega un partido, abre un sobre, ficha en el mercado y descubre el barrio (Street Football), donde puedes trabajar, comprar casa y conducir.<br><br>La tienes siempre en <b>Objetivos → Primeros pasos</b>.",
+  [["Ver la guía", () => { closeDlg(); OT.tab = "p"; show("obj"); }, true], ["Luego", closeDlg]]), 900); }
 const OT = { tab: "d" };
-function ensureDay() { const t = todayKey(); if (S.ob.day !== t) { S.ob.day = t; S.ob.d = {}; S.ob.dgot = {}; } }
-function track(e, n) { ensureDay(); const o = S.ob; o.cnt[e] = (o.cnt[e] || 0) + n; o.d[e] = (o.d[e] || 0) + n; o.sea[e] = (o.sea[e] || 0) + n; }
+function ensureDay() { const t = todayKey(); if (S.ob.day !== t) { S.ob.day = t; S.ob.d = {}; S.ob.dgot = {}; } ensureWeek(); }
+function track(e, n) { ensureDay(); const o = S.ob; o.cnt[e] = (o.cnt[e] || 0) + n; o.d[e] = (o.d[e] || 0) + n; o.sea[e] = (o.sea[e] || 0) + n; o.w[e] = (o.w[e] || 0) + n; }
 const dailyToday = () => { const r = rngFrom("d" + todayKey()); return DAILY.slice().sort(() => r() - .5).slice(0, 4); };
-const objSets = () => [[dailyToday(), S.ob.d, S.ob.dgot], [ACH, S.ob.cnt, S.ob.got], [SEASON, S.ob.sea, S.ob.sgot]];
+const objSets = () => [[dailyToday(), S.ob.d, S.ob.dgot], [ACH, S.ob.cnt, S.ob.got], [SEASON, S.ob.sea, S.ob.sgot], [semanaHoy(), S.ob.w, S.ob.wgot], [PASOS, S.ob.cnt, S.ob.pgot]];
 const progOf = (o, cnt) => o.calc ? o.calc() : (cnt[o.e] || 0);
 function objClaimable() { ensureDay(); let n = 0; for (const [L, cnt, got] of objSets()) for (const o of L) if (!got[o.id] && progOf(o, cnt) >= o.n) n++; return n; }
 const rewardTxt = r => r.c ? `${coinI}${fmt(r.c)}` : PACKS[r.p].n;
 function renderObj() {
-  ensureDay(); const [[D, dc, dg], [A, ac, ag], [Se, sc, sg]] = objSets();
-  const set = OT.tab === "d" ? [D, dc, dg] : OT.tab === "a" ? [A, ac, ag] : [Se, sc, sg];
+  ensureDay(); const [[D, dc, dg], [A, ac, ag], [Se, sc, sg], [Wk, wc, wg], [Pa, pc, pg]] = objSets();
+  const set = OT.tab === "d" ? [D, dc, dg] : OT.tab === "a" ? [A, ac, ag] : OT.tab === "w" ? [Wk, wc, wg] : OT.tab === "p" ? [Pa, pc, pg] : [Se, sc, sg];
   const rows = set[0].map(o => { const p = Math.min(o.n, progOf(o, set[1])), got = set[2][o.id], ok = p >= o.n;
     return `<div class="orow${got ? " done" : ""}"><div><h6>${o.t}</h6><p>${o.d || ""}</p><div class="rw">Recompensa: ${rewardTxt(o.r)}</div></div>
       <div><div class="prog"><i style="width:${p / o.n * 100}%"></i></div><div class="mute" style="font-size:1.2rem;margin-top:.4rem;text-align:right">${p} / ${o.n}</div></div>
       <button class="mbtn ${ok && !got ? "gold" : ""}${!ok || got ? " dis" : ""}" data-nav data-a="claim" data-id="${o.id}">${got ? "Cobrado" : ok ? "Cobrar" : "En curso"}</button></div>`; }).join("");
-  $("#objBody").innerHTML = `<div class="mkbar"><div class="tabs">${[["d", "Diarias"], ["a", "Logros"], ["s", "Temporada"]].map(([k, l]) => `<button class="tab${OT.tab === k ? " on" : ""}" data-nav data-a="objTab" data-tab="${k}">${l}</button>`).join("")}</div>
-    <div class="spacer"></div><span class="mute" style="font-size:1.2rem">${OT.tab === "d" ? "Se renuevan cada día a las 00:00." : OT.tab === "s" ? (S.lg ? `Temporada ${S.lg.season} de ${esc(S.lg.name)}.` : "Crea una liga para avanzar.") : "Para siempre."}</span></div>
+  $("#objBody").innerHTML = `<div class="mkbar"><div class="tabs">${[...(PASOS.every(o => S.ob.pgot[o.id]) ? [] : [["p", "Primeros pasos"]]), ["d", "Diarias"], ["w", "Semanales"], ["a", "Logros"], ["s", "Temporada"]].map(([k, l]) => `<button class="tab${OT.tab === k ? " on" : ""}" data-nav data-a="objTab" data-tab="${k}">${l}</button>`).join("")}</div>
+    <div class="spacer"></div><span class="mute" style="font-size:1.2rem">${OT.tab === "d" ? "Se renuevan cada día a las 00:00." : OT.tab === "w" ? "Mezclan Ultimate Team y el barrio. Cambian cada lunes." : OT.tab === "p" ? "Tu guía para empezar. Cada paso tiene premio." : OT.tab === "s" ? (S.lg ? `Temporada ${S.lg.season} de ${esc(S.lg.name)}.` : "Crea una liga para avanzar.") : "Para siempre."}</span></div>
     <div class="panel scroll" style="flex:1;padding:1.2rem;display:flex;flex-direction:column;gap:.8rem">${rows}</div>`;
 }
 ONSHOW.obj = renderObj;
