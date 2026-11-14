@@ -86,13 +86,14 @@ html,body{background:var(--bg)}
 .tsw{display:flex;align-items:center;gap:6px}.tsw i{width:18px;height:18px;border-radius:50%;background:var(--c);border:2px solid #fff8;display:inline-block}.tsw i.dos{background:linear-gradient(180deg,var(--c) 50%,var(--d) 50%)}#panel button.on,#bSk.on{border-color:var(--gold2);color:var(--gold2)}
 #panel{max-height:82vh;overflow:auto}#panel button.tsw{background:#ffffff14!important;border:1px solid #ffffff33!important;border-radius:99px!important;padding:6px 11px!important;font:700 12px system-ui!important;box-shadow:none!important;min-height:0!important;text-transform:none!important;letter-spacing:0!important}#panel .row{flex-wrap:wrap}
 #bTel em{margin-left:4px}
+#velo{position:fixed;left:50%;top:64px;transform:translateX(-50%);z-index:12;font:800 26px system-ui;color:#fff;background:#000a;border:2px solid var(--gold2,#e8c46a);border-radius:14px;padding:6px 16px;pointer-events:none}#bCar.on{border-color:var(--gold2)}
 #srvs .card{max-height:88vh;overflow:auto}.srow{display:flex;flex-direction:column;align-items:stretch;gap:6px;background:#ffffff10;border:1px solid #ffffff22;border-radius:12px;padding:8px 10px}.srow b{flex:1;text-align:left;font-size:17px}.srow small{display:block;font-weight:400;opacity:.7;font-size:12px}
 .sbtns{display:flex;gap:6px}.sbtns button{flex:1}.srow button{padding:8px 12px!important;min-height:0!important;font-size:13px!important}.srvmsg{min-height:18px;color:#ffd23a;font-size:14px}#bTel em:empty{display:none}
 </style></head><body>
 <div id="load"><img id="loadLogo" alt="Street"><div>Cargando el <b style="color:#f3d27a">barrio</b>…</div><div class="lbar"><i></i></div></div>
-<div id="hud"></div><div id="msg"></div><div id="tip"></div><div id="power"><i></i></div><div id="panel"></div><div id="tel" class="modal" style="display:none" onclick="if(event.target===this)telCerrar()"><div id="telcaja"><div id="telpant"></div></div></div><div id="tcap" style="display:none"></div>
+<div id="hud"></div><div id="msg"></div><div id="tip"></div><div id="power"><i></i></div><div id="panel"></div><div id="velo" style="display:none"></div><div id="tel" class="modal" style="display:none" onclick="if(event.target===this)telCerrar()"><div id="telcaja"><div id="telpant"></div></div></div><div id="tcap" style="display:none"></div>
 <div id="nbst"></div><div id="chat"></div><input id="chatin" maxlength="120" placeholder="Escribe y pulsa Enter" style="display:none" enterkeyhint="send">
-<div id="tb"><button id="bChat" onclick="chatOpen()" style="display:none"><img data-ui="ico_chat" alt="">Chat</button><button id="bRet" onclick="retosPanel()"><img data-ui="ico_moneda" alt=""><span id="bRetT">0</span></button><button id="bOn" onclick="nbMenu(true)"><img data-ui="ico_online" alt="">Online</button><button id="bSk" onclick="skateToggle()" style="display:none" title="Skate (T)">🛹</button><button id="bTel" onclick="telAbrir()" style="display:none" title="Móvil (M)">📱 Móvil<em></em></button><button id="bMenu" onclick="hubMenu(true)"><img data-ui="ico_ajustes" alt="">Menú</button></div>
+<div id="tb"><button id="bChat" onclick="chatOpen()" style="display:none"><img data-ui="ico_chat" alt="">Chat</button><button id="bRet" onclick="retosPanel()"><img data-ui="ico_moneda" alt=""><span id="bRetT">0</span></button><button id="bOn" onclick="nbMenu(true)"><img data-ui="ico_online" alt="">Online</button><button id="bCar" onclick="cocheFsubir()" style="display:none" title="Coche (F para subir y bajar · G para traerlo)">🚗 Coche</button><button id="bSk" onclick="skateToggle()" style="display:none" title="Skate (T)">🛹</button><button id="bTel" onclick="telAbrir()" style="display:none" title="Móvil (M)">📱 Móvil<em></em></button><button id="bMenu" onclick="hubMenu(true)"><img data-ui="ico_ajustes" alt="">Menú</button></div>
 <div id="nbon" class="modal" style="display:none" onclick="if(event.target===this)nbMenu(false)"><div class="card"><h3><img data-ui="ico_online" alt="" style="height:64px;width:auto;margin:0 auto 6px">Barrio online</h3><div class="col">
 <div class="sub">Tu nombre en el barrio</div><input id="nbname" class="nbi" maxlength="14" placeholder="NOMBRE">
 <button class="pri" onclick="nbNameOk()&&nbJoin('global').then(ok=>ok&&nbMenu(false))">Barrio global · entra todo el mundo</button>
@@ -155,7 +156,7 @@ function gasChoca(x, z) { if (Math.abs(x - GAS.tienda[0]) < GAS.tam[0] / 2 + .4 
   for (const ix of GAS.islas) if (Math.abs(x - ix) < 1.6 && Math.abs(z - GAS.z) < 2.6) return true; return false; }
 function gyRampa(x, z) { const b = gy(x, z); if (!SKMESH.length || Math.abs(x - SKP.x) > SKP.w / 2 + 1 || Math.abs(z - SKP.z) > SKP.d / 2 + 1) return b;
   RO.set(x, 6, z); RAY.set(RO, DOWN); RAY.far = 7; const h = RAY.intersectObjects(SKMESH, false)[0]; return h ? Math.max(b, h.point.y) : b; }
-function gy(x, z) { if (z < -8.2) return z > PLZ.z1 && Math.abs(x - AVX) > 4.5 ? .18 : 0; if (x > BEACH.x0 && x < BEACH.x1 && z > BEACH.z0 && z < BEACH.z1) return .2; if (z >= 5 && z <= SEA_Z && x >= X0 - 1 && x <= X1 + 42) return .18; if (z <= -5 && z >= -8 && x >= X0 && x <= X1) return .18; return 0; }
+function gy(x, z) { if (enAcera(x, z)) return .18; if (z < -8.2 || x < X0) return 0; if (x > BEACH.x0 && x < BEACH.x1 && z > BEACH.z0 && z < BEACH.z1) return .2; if (z >= 5 && z <= SEA_Z && x >= X0 - 1 && x <= X1 + 42) return .18; if (z <= -5 && z >= -8 && x >= X0 && x <= X1) return .18; return 0; }
 // alto real (m) de cada fachada según las plantas que se ven en la foto; el ancho sale de la proporción de la imagen
 const FALTO = { "fachada_polideportivo.webp": 7, "st_grafiti1.webp": 6.5, "st_grafiti2.webp": 6.5, "fachada_bloque.webp": 21, "fachada_cadiz_blanca.webp": 13, "fachada_portal.webp": 11.5, "fachada_azulejos.webp": 7.5,
   "fachada_ladrillo.webp": 16, "fachada_bar.webp": 10, "fachada_colores.webp": 14, "fachada_tienda_deportes.webp": 5.5, "fachada_desconchada.webp": 12, "fachada_persiana.webp": 10, "fachada_naves.webp": 10, "fachada_mural.webp": 13,
@@ -170,20 +171,136 @@ const SHOPIMG = { ropa: "fachada_tienda_ropa.webp", moviles: "fachada_tienda_mov
 function filaFachadas(lista, a, b, pon) { const img = f => SHOPIMG[f] || f, dim = f => { const h = FALTO[img(f)] || 9; return [h * (FPROP[img(f)] || 1024 / 687), h]; };
   const tot = lista.reduce((t, f) => t + dim(f)[0], 0), k = Math.abs(b - a) / tot, sg = Math.sign(b - a); let p = a;
   for (const f of lista) { const [w, h] = dim(f); pon(f, p + sg * w * k / 2, w * k, h * k); p += sg * w * k; } }
+/* ---------- ciudad grande: circuito de calles (principal, oeste, bulevar norte, este y la avenida), aceras, manzanas y coches ---------- */
+const RW = 4.5, ACE = 2, WX = -190, NZ = -170, EX = 57;
+const ROADS = [
+  { x0: WX - RW, x1: 64, z0: -5, z1: 5 },                 // calle principal (hasta la jaula)
+  { x0: WX - RW, x1: WX + RW, z0: NZ - RW, z1: 5 },       // calle oeste
+  { x0: WX - RW, x1: EX + RW, z0: NZ - RW, z1: NZ + RW },  // bulevar norte
+  { x0: EX - RW, x1: EX + RW, z0: NZ - RW, z1: 5 },       // calle este
+  { x0: AVX - RW, x1: AVX + RW, z0: NZ + RW, z1: -5 },    // avenida (cruza la plaza)
+  { x0: PLZ.x0, x1: PLZ.x1, z0: PLZ.z0, z1: PLZ.z1 }];    // plaza de la gasolinera
+const enR = (r, x, z, m = 0) => x > r.x0 + m && x < r.x1 - m && z > r.z0 + m && z < r.z1 - m;
+// resta rectángulos (las aceras se cortan donde las cruza una calzada)
+function restaR(r, cs) { let L = [r]; for (const c of cs) { const N = []; for (const a of L) { if (c.x0 >= a.x1 || c.x1 <= a.x0 || c.z0 >= a.z1 || c.z1 <= a.z0) { N.push(a); continue; }
+  if (c.x0 > a.x0) N.push({ x0: a.x0, x1: c.x0, z0: a.z0, z1: a.z1 }); if (c.x1 < a.x1) N.push({ x0: c.x1, x1: a.x1, z0: a.z0, z1: a.z1 });
+  const x0 = Math.max(a.x0, c.x0), x1 = Math.min(a.x1, c.x1); if (c.z0 > a.z0) N.push({ x0, x1, z0: a.z0, z1: c.z0 }); if (c.z1 < a.z1) N.push({ x0, x1, z0: c.z1, z1: a.z1 }); } L = N; } return L.filter(a => a.x1 - a.x0 > .2 && a.z1 - a.z0 > .2); }
+const ACE_R = [
+  { x0: WX + RW, x1: 64, z0: -8, z1: -5 },                       // acera norte de la calle principal
+  { x0: WX - RW - ACE, x1: X0, z0: 5, z1: 7 },                    // acera sur del tramo nuevo de la calle principal
+  { x0: WX - RW - ACE, x1: WX - RW, z0: NZ - RW - ACE, z1: 7 },    // calle oeste, lado de fuera
+  { x0: WX + RW, x1: WX + RW + ACE, z0: NZ + RW, z1: -8 },        // calle oeste, lado de dentro
+  { x0: WX - RW - ACE, x1: EX + RW + ACE, z0: NZ - RW - ACE, z1: NZ - RW },   // bulevar, lado de fuera
+  { x0: WX + RW, x1: EX - RW, z0: NZ + RW, z1: NZ + RW + ACE },   // bulevar, lado de dentro
+  { x0: EX - RW - ACE, x1: EX - RW, z0: NZ + RW, z1: -8 },        // calle este, lado de dentro
+  { x0: EX + RW, x1: EX + RW + ACE, z0: NZ - RW, z1: -8 },        // calle este, lado de fuera
+  { x0: AVX - RW - ACE, x1: AVX - RW, z0: PLZ.z1, z1: -8 }, { x0: AVX + RW, x1: AVX + RW + ACE, z0: PLZ.z1, z1: -8 },   // avenida
+  { x0: AVX - RW - ACE, x1: AVX - RW, z0: NZ + RW + ACE, z1: PLZ.z0 }, { x0: AVX + RW, x1: AVX + RW + ACE, z0: NZ + RW + ACE, z1: PLZ.z0 }]
+  .flatMap(r => restaR(r, ROADS));
+const enAcera = (x, z) => ACE_R.some(r => enR(r, x, z));
+const enCalzada = (x, z) => ROADS.some(r => enR(r, x, z));
+// por dónde se puede andar en la ciudad nueva: calzadas (para cruzar), aceras y la plaza
+const andable = (x, z) => (enCalzada(x, z) || enAcera(x, z)) && !gasChoca(x, z);
+const POOL = ["fachada_portal.webp", "fachada_c_cafeteria.webp", "fachada_azulejos.webp", "fachada_c_barberia.webp", "fachada_ladrillo.webp", "fachada_c_quiosco.webp", "fachada_desconchada.webp", "fachada_c_panaderia.webp",
+  "fachada_colores.webp", "fachada_c_taller.webp", "fachada_cadiz_blanca.webp", "fachada_c_farmacia.webp", "fachada_naves.webp", "fachada_c_fruteria.webp", "fachada_mural.webp", "fachada_c_gimnasio.webp", "fachada_bloque.webp",
+  "fachada_c_pizzeria.webp", "fachada_persiana.webp", "fachada_c_bar.webp", "fachada_blanca.webp", "fachada_polideportivo.webp"];
+Object.assign(FALTO, { "fachada_blanca.webp": 13 }); Object.assign(FPROP, { "fachada_blanca.webp": 1024 / 559 });
+let poolI = 0; function trozo(len) { const L = []; let t = 0; const w = f => (FALTO[f] || 9) * (FPROP[f] || 1024 / 687); while (t < len - 4) { const f = POOL[poolI++ % POOL.length]; L.push(f); t += w(f); } return L.length ? L : [POOL[0]]; }
+function buildCiudadGrande() {
+  const side = mat("pared_ladrillo.webp", [3, 3]), roof = new THREE.MeshStandardMaterial({ color: 0x4a4440, roughness: .9 }), relleno = new THREE.MeshStandardMaterial({ color: 0xb9ab98, roughness: 1 });
+  const asf = (w, d) => mat("suelo_cemento.webp", [Math.max(1, w / 10), Math.max(1, d / 10)], { color: 0x6c6c70 });
+  const plano = (x0, x1, z0, z1, m, y) => { const p = new THREE.Mesh(new THREE.PlaneGeometry(x1 - x0, z1 - z0), m); p.rotation.x = -Math.PI / 2; p.position.set((x0 + x1) / 2, y, (z0 + z1) / 2); p.receiveShadow = true; S.add(p); };
+  // calzadas nuevas (la principal entre X0 y X1, la avenida y la plaza ya existían)
+  plano(WX - RW, X0, -5, 5, asf(X0 - WX, 10), .012); plano(WX - RW, WX + RW, NZ - RW, -5, asf(9, 165), .012); plano(WX + RW, EX + RW, NZ - RW, NZ + RW, asf(250, 9), .012);
+  plano(EX - RW, EX + RW, NZ + RW, -5, asf(9, 160), .013); plano(AVX - RW, AVX + RW, NZ + RW, PLZ.z0, asf(9, 16), .012); plano(AVX - RW, AVX + RW, PLZ.z1, -5, asf(9, 97), .014);
+  // todas las aceras, cortadas donde pasa una calzada
+  for (const r of ACE_R) { const w = r.x1 - r.x0, d = r.z1 - r.z0; box(w, .18, d, mat("suelo_acera.webp", [Math.max(1, w / 3), Math.max(1, d / 3)]), (r.x0 + r.x1) / 2, .09, (r.z0 + r.z1) / 2).castShadow = false; }
+  // filas de edificios mirando a cada calle
+  const fx = (front, sx, za, zb) => filaFachadas(trozo(Math.abs(zb - za)), za, zb, (f, c, w, h) => { const m = mat(f, null); box(12, h, w - .2, sx > 0 ? [m, side, roof, roof, side, side] : [side, m, roof, roof, side, side], front - sx * 6, h / 2, c); });
+  const fz = (front, sz, xa, xb) => filaFachadas(trozo(Math.abs(xb - xa)), xa, xb, (f, c, w, h) => { const m = mat(f, null); box(w - .2, h, 12, sz > 0 ? [side, side, roof, roof, m, side] : [side, side, roof, roof, side, m], c, h / 2, front - sz * 6); });
+  const doble = (z0, z1, xa, xb) => filaFachadas(trozo(Math.abs(xb - xa)), xa, xb, (f, c, w, h) => { const m = mat(f, null); box(w - .2, h, z1 - z0, [side, side, roof, roof, m, m], c, h / 2, (z0 + z1) / 2); });
+  fx(WX - RW - ACE, 1, 7, NZ - RW - ACE);                  // calle oeste, fuera
+  fx(WX + RW + ACE, -1, -20, NZ + RW + ACE);               // calle oeste, dentro
+  fz(NZ - RW - ACE, 1, WX - RW - ACE - 12, EX + RW + ACE + 12);   // bulevar, fuera
+  fz(NZ + RW + ACE, -1, WX + RW + ACE + 12, PLZ.x0);       // bulevar, dentro (oeste)
+  doble(NZ + RW + ACE, PLZ.z0, PLZ.x0, AVX - RW - ACE);    // entre la plaza y el bulevar
+  doble(NZ + RW + ACE, PLZ.z0, AVX + RW + ACE, PLZ.x1);
+  fz(NZ + RW + ACE, -1, PLZ.x1, EX - RW - ACE - 12);       // bulevar, dentro (este)
+  fx(EX - RW - ACE, 1, -20, NZ + RW + ACE);                // calle este, dentro
+  fx(EX + RW + ACE, -1, -11.5, NZ - RW - ACE);             // calle este, fuera
+  fz(7, -1, WX - RW - ACE - 12, X0);                       // esquina suroeste, frente a la calle principal
+  // el interior de las manzanas se rellena para que no se vea el vacío entre edificios
+  const rel = (x0, x1, z0, z1) => box(x1 - x0, 5, z1 - z0, relleno, (x0 + x1) / 2, 2.5, (z0 + z1) / 2);
+  rel(WX + RW + ACE + 12, PLZ.x0, NZ + RW + ACE + 12, -20); rel(PLZ.x0, AVX - RW - ACE - 12, PLZ.z1, -20);
+  rel(PLZ.x1, EX - RW - ACE - 12, NZ + RW + ACE + 12, -20); rel(AVX + RW + ACE + 12, PLZ.x1, PLZ.z1, -20);
+}
+// ---------- coches: el tuyo (se compra en la gasolinera) y el tráfico; el coche solo va por la calzada ----------
+const COCHES = { compacto: { n: "coche_compacto", len: 3.6, an: 1.7, precio: 2500, vmax: 17, nom: "Compacto" }, berlina: { n: "coche_berlina", len: 4.6, an: 1.85, precio: 5000, vmax: 21, nom: "Berlina" }, furgoneta: { n: "furgoneta", len: 5.2, an: 2, precio: 7000, vmax: 15, nom: "Furgoneta" } };
+const CARM = {}, TRAF = []; let miCoche = null;
+async function cargarCoches() { for (const [k, c] of Object.entries(COCHES)) { try { const t = window.SA ? SA[c.n + ".glb"] : await fetch("street/" + c.n + ".txt").then(r => r.text()); CARM[k] = (await loader.parseAsync(b64buf(t), "")).scene; } catch (e) { console.warn("coche", k, e); } } }
+function cocheMalla(tipo) { const src = CARM[tipo]; if (!src) return null; const g = src.clone(), bb = new THREE.Box3().setFromObject(g), k = COCHES[tipo].len / (bb.max.x - bb.min.x); g.scale.setScalar(k);
+  const c = bb.getCenter(new THREE.Vector3()); g.position.set(-c.x * k, -bb.min.y * k, -c.z * k); g.traverse(o => { if (o.isMesh) o.castShadow = o.receiveShadow = true; }); const inn = new THREE.Group(); inn.add(g); inn.rotation.y = Math.PI; const w = new THREE.Group(); w.add(inn); S.add(w); return w; }   // los modelos miran a -x: se giran
+function cocheCabe(c, x, z, h) { const T = COCHES[c.tipo], ch = Math.cos(h), sh = Math.sin(h);
+  for (const sx of [-T.len / 2, T.len / 2]) for (const sz of [-T.an / 2, T.an / 2]) { const px = x + ch * sx - sh * sz, pz = z + sh * sx + ch * sz; if (!enCalzada(px, pz) || gasChoca(px, pz) || OBST.some(([ox, oz, r]) => Math.hypot(px - ox, pz - oz) < r * .8)) return false; }
+  for (const o of TRAF.concat(miCoche ? [miCoche] : [])) if (o !== c && Math.hypot(o.x - x, o.z - z) < (T.len + COCHES[o.tipo].len) / 2 - .3) return false; return true; }
+// rutas del tráfico: vuelta a la ciudad por la calle principal, la oeste, el bulevar y la este, en los dos sentidos, por el carril de la derecha
+const RUTA = [[EX, 0], [WX, 0], [WX, NZ], [EX, NZ]];
+function rutaPunto(sent, i) { const n = RUTA.length, P = j => RUTA[((j % n) + n) % n], a = P(i - sent), b = P(i), c = P(i + sent);
+  const dir = (p, q) => { const dx = q[0] - p[0], dz = q[1] - p[1], l = Math.hypot(dx, dz); return [dx / l, dz / l]; }, d1 = dir(a, b), d2 = dir(b, c), o = 2.3;
+  return [b[0] + (-d1[1] - d2[1]) * o, b[1] + (d1[0] + d2[0]) * o]; }
+function crearTrafico() { const tipos = ["compacto", "berlina", "furgoneta", "compacto", "berlina", "compacto"];
+  tipos.forEach((t, k) => { const sent = k % 2 ? 1 : -1, i = k % RUTA.length, p = rutaPunto(sent, i - sent), q = rutaPunto(sent, i), f = (k / 6) * .7 + .15;
+    const g = cocheMalla(t); if (!g) return; TRAF.push({ g, tipo: t, sent, i, x: p[0] + (q[0] - p[0]) * f, z: p[1] + (q[1] - p[1]) * f, h: Math.atan2(q[1] - p[1], q[0] - p[0]), v: 0 }); }); }
+function stepTrafico(dt) { for (const c of TRAF) { const q = rutaPunto(c.sent, c.i), dx = q[0] - c.x, dz = q[1] - c.z, d = Math.hypot(dx, dz); if (d < 3) { c.i += c.sent; continue; }
+    let a = Math.atan2(dz, dx) - c.h; a = Math.atan2(Math.sin(a), Math.cos(a)); c.h += clamp(a, -1.6 * dt, 1.6 * dt);
+    let obj = d < 14 || Math.abs(a) > .4 ? 4 : 9; const fx = Math.cos(c.h), fz = Math.sin(c.h);
+    const cosas = TRAF.filter(o => o !== c).map(o => [o.x, o.z]).concat(miCoche ? [[miCoche.x, miCoche.z]] : []).concat(place === "calle" && !me.coche ? [[me.x, me.z]] : []);
+    for (const [ox, oz] of cosas) { const rx = ox - c.x, rz = oz - c.z, fw = rx * fx + rz * fz, lat = Math.abs(-rx * fz + rz * fx); if (fw > 0 && fw < 9 && lat < 2.2) obj = Math.min(obj, fw < 5 ? 0 : 2); }
+    c.v += clamp(obj - c.v, -9 * dt, 3 * dt); c.x += fx * c.v * dt; c.z += fz * c.v * dt; c.g.position.set(c.x, 0, c.z); c.g.rotation.y = -c.h;
+    if (place === "calle" && !me.coche && Math.hypot(me.x - c.x, me.z - c.z) < 1.6 && c.v > 1.5) { const s = (-(me.x - c.x) * fz + (me.z - c.z) * fx) > 0 ? 1 : -1; me.x += -fz * s * 1.5; me.z += fx * s * 1.5; c.v = 0; say("¡Cuidado con los coches!", 1200); } } }
+// tu coche: aparece en la calzada más cercana; F para subir y bajar
+function cocheTraer() { const I = inv(); if (!I.coche) return say("No tienes coche. Cómpralo en la gasolinera del fondo de la avenida", 2200); if (me.coche) return;
+  let best = null, bd = 1e9; for (const r of ROADS.slice(0, 5)) { const x = clamp(me.x, r.x0 + 2.5, r.x1 - 2.5), z = clamp(me.z, r.z0 + 2.5, r.z1 - 2.5), d = Math.hypot(x - me.x, z - me.z); if (d < bd) { bd = d; best = [x, z, r.x1 - r.x0 > r.z1 - r.z0 ? 0 : -Math.PI / 2]; } }
+  if (!best || bd > 40) return say("Acércate a una calle para traer tu coche", 1600);
+  if (miCoche) { S.remove(miCoche.g); miCoche = null; } const g = cocheMalla(I.coche); if (!g) return; miCoche = { g, tipo: I.coche, x: best[0], z: best[1], h: best[2], v: 0 };
+  if (!cocheCabe(miCoche, miCoche.x, miCoche.z, miCoche.h)) miCoche.h += Math.PI / 2; g.position.set(miCoche.x, 0, miCoche.z); g.rotation.y = -miCoche.h; say("Tu " + COCHES[I.coche].nom.toLowerCase() + " está aquí. Pulsa F para subir", 2000); }
+function cocheFsubir() { if (me.coche) return cocheBajar(); if (!miCoche || place !== "calle" || mode !== "hub") return cocheTraer(); if (Math.hypot(miCoche.x - me.x, miCoche.z - me.z) > 4) return say("Acércate a tu coche (o pulsa G para traerlo)", 1500);
+  if (me.skate) skateToggle(false); me.coche = miCoche; me.a.wrap.visible = false; $("#bCar").classList.add("on"); say("¡A conducir!", 900); tip("W acelera · S frena y marcha atrás · A/D giras · F para bajar"); }
+function cocheBajar() { const c = me.coche; if (!c || Math.abs(c.v) > 2) return say("Frena antes de bajar", 1000); const fx = Math.cos(c.h), fz = Math.sin(c.h);
+  const acera = (x, z) => enAcera(x, z) || (z <= -5.2 && z >= -7.6 && x > X0 && x < X1 - 1) || (z >= 5.2 && z <= SEA_Z - .8 && x > X0 && x < X1 - 1);
+  let hecho = false; for (const dd of [2.4, 3.4, 4.6, 6]) { for (const s of [1, -1]) { const x = c.x - fz * s * dd, z = c.z + fx * s * dd; if (acera(x, z)) { me.x = x; me.z = z; hecho = true; break; } } if (hecho) break; }
+  if (!hecho) for (const s of [1, -1]) { const x = c.x - fz * s * 1.8, z = c.z + fx * s * 1.8; if (andable(x, z)) { me.x = x; me.z = z; break; } }
+  me.coche = null; me.a.wrap.visible = true; me.y0 = null; $("#bCar").classList.remove("on"); }
+function stepCoche(dt, inp) { const c = me.coche, T = COCHES[c.tipo], g = navigator.getGamepads ? [...navigator.getGamepads()].find(Boolean) : null; let thr = -inp.y;
+  if (g) { const rt = g.buttons[7] ? g.buttons[7].value : 0, lt = g.buttons[6] ? g.buttons[6].value : 0; if (rt > .05 || lt > .05) thr = rt - lt; }
+  if (thr > .05) c.v += (c.v < 0 ? 16 : 6.5) * thr * dt; else if (thr < -.05) c.v += (c.v > 0 ? 14 : 4) * thr * dt; else c.v -= Math.sign(c.v) * Math.min(Math.abs(c.v), 2.5 * dt);
+  c.v = clamp(c.v, -5, T.vmax); const nh = c.h + inp.x * dt * 1.8 * clamp(c.v / 5, -1, 1), nx = c.x + Math.cos(nh) * c.v * dt, nz = c.z + Math.sin(nh) * c.v * dt;
+  if (cocheCabe(c, nx, nz, nh)) { c.x = nx; c.z = nz; c.h = nh; } else { if (Math.abs(c.v) > 6) say("¡Pum!", 600); c.v *= -.25; }
+  c.g.position.set(c.x, 0, c.z); c.g.rotation.y = -c.h; me.x = c.x; me.z = c.z; me.dir = c.h; me.spd = 0;
+  let ty = Math.atan2(-Math.cos(c.h), -Math.sin(c.h)) - YAW; ty = Math.atan2(Math.sin(ty), Math.cos(ty)); if (Math.abs(c.v) > .5) YAW += ty * Math.min(1, dt * 2.5);
+  $("#velo").textContent = Math.round(Math.abs(c.v) * 3.6) + " km/h"; }
+function cochePanel() { const I = inv(), P = $("#panel");
+  P.innerHTML = `<h3>COCHES</h3><div>Compra un coche y aparecerá contigo cuando pulses <b>G</b> (o desde el móvil). Sube y baja con <b>F</b>. El coche solo va por la calzada. Tienes <b>${coins()}</b> monedas.</div><div class="col" style="margin-top:10px">` +
+    Object.entries(COCHES).map(([k, c]) => `<button class="${I.coche === k ? "on" : ""}" onclick="cocheComprar('${k}')">${c.nom} · ${(I.coches || []).includes(k) ? (I.coche === k ? "Es el tuyo" : "Usar este") : c.precio + " 🪙"} · ${Math.round(c.vmax * 3.6)} km/h</button>`).join("") +
+    `<button onclick="this.closest('#panel').style.display='none'">Cerrar</button></div>`; P.style.display = "block"; }
+function cocheComprar(k) { const I = inv(), L = I.coches || []; if (!L.includes(k)) { if (!pagar(COCHES[k].precio, "Coche " + COCHES[k].nom)) return; L.push(k); say("¡Coche comprado! Pulsa G para traerlo", 2000); }
+  invSet({ coches: L, coche: k }); if (miCoche && miCoche !== me.coche) { S.remove(miCoche.g); miCoche = null; } skateUI(); cochePanel(); }
+const GAS_PUERTA = () => [GAS.tienda[0], GAS.tienda[1] + GAS.tam[1] / 2 + 1.3];
+
 function buildBarrio() {
   const land = new THREE.Mesh(new THREE.PlaneGeometry(X1 - X0 + 60, SEA_Z + 40), new THREE.MeshStandardMaterial({ color: 0x3b3a3d, roughness: 1 })); land.rotation.x = -Math.PI / 2; land.position.set((X0 + X1 + 60) / 2 - 4, 0, (SEA_Z - 40) / 2); land.receiveShadow = true; S.add(land);
   // mar: imagen de agua repetida que se mueve despacio (si aún no está la imagen, agua lisa)
   const st = SA_has("mar.webp") ? tex("mar.webp", [60, 40]) : null; seaM = new THREE.MeshStandardMaterial(st ? { map: st, roughness: .35, metalness: .1 } : { color: 0x1c6a86, roughness: .3, metalness: .15 });
   const sea = new THREE.Mesh(new THREE.PlaneGeometry(900, 700), seaM); sea.rotation.x = -Math.PI / 2; sea.position.set(0, -.9, 0); S.add(sea);
   const road = new THREE.Mesh(new THREE.PlaneGeometry(X1 - X0, 10), mat("suelo_cemento.webp", [18, 1], { color: 0x6c6c70 })); road.rotation.x = -Math.PI / 2; road.position.set((X0 + X1) / 2, .01, 0); road.receiveShadow = true; S.add(road);
-  { const sw = new THREE.Mesh(new THREE.BoxGeometry(X1 - X0, .18, 3), mat("suelo_acera.webp", [60, 1])); sw.position.set((X0 + X1) / 2, .09, -6.5); sw.receiveShadow = true; S.add(sw); }
+  // (la acera norte de la calle principal sale de ACE_R)
   // paseo marítimo: baldosas hasta el muro, muro de piedra con barandilla y el mar detrás
   const pas = new THREE.Mesh(new THREE.BoxGeometry(X1 - X0 + 42, .18, SEA_Z - 5), mat(SA_has("paseo.webp") ? "paseo.webp" : "suelo_acera.webp", [70, 6])); pas.position.set((X0 + X1 + 42) / 2, .09, (SEA_Z + 5) / 2); pas.receiveShadow = true; S.add(pas);
   const wallM = SA_has("muro.webp") ? mat("muro.webp", [40, 1]) : new THREE.MeshStandardMaterial({ color: 0x9b917f, roughness: .95 }), rail = new THREE.MeshStandardMaterial({ color: 0xf2f2ee, roughness: .4, metalness: .3 });
   const seawall = (x0, x1, z, rot) => { const len = Math.abs(x1 - x0); const w = box(len, 1.6, .6, wallM, (x0 + x1) / 2, -.3, z, rot); w.castShadow = false;
     const r = new THREE.Mesh(new THREE.CylinderGeometry(.04, .04, len, 6), rail); r.rotation.z = Math.PI / 2; r.rotation.y = rot; r.position.set((x0 + x1) / 2, 1.1, z); S.add(r);
     for (let k = 0; k <= len; k += 2.5) { const pst = new THREE.Mesh(new THREE.CylinderGeometry(.035, .035, .6, 6), rail); const u = k - len / 2; pst.position.set((x0 + x1) / 2 + Math.cos(rot) * u, .8, z - Math.sin(rot) * u); S.add(pst); } };
-  seawall(X0 - 4, X1 + 46, SEA_Z, 0); seawall(-12, SEA_Z, X0 - 4, Math.PI / 2);
+  seawall(X0 - 4, X1 + 46, SEA_Z, 0);
   const FAC = ["fachada_portal.webp", "fachada_persiana.webp", "fachada_ladrillo.webp", "fachada_desconchada.webp", "fachada_colores.webp", "fachada_naves.webp", "fachada_mural.webp", "fachada_bar.webp"].concat(["fachada_blanca.webp", "chiringuito.webp"].filter(SA_has));
   const side = mat("pared_ladrillo.webp", [3, 3]), roof = new THREE.MeshStandardMaterial({ color: 0x4a4440, roughness: .9 });
   // edificios al norte de la calle (tres son tiendas)
@@ -195,12 +312,12 @@ function buildBarrio() {
   const FILA_E = ["bar", "fachada_colores.webp", "skates", "fachada_bloque.webp", "equip", "fachada_desconchada.webp", "fachada_naves.webp", "sobres", "fachada_mural.webp", "st_grafiti2.webp", "fachada_cadiz_blanca.webp"];
   const SHOPF = { ropa: "fachada_tienda_ropa.webp", moviles: "fachada_tienda_moviles.webp", skates: "fachada_tienda_skates.webp", bar: "fachada_bar.webp", equip: "fachada_tienda_deportes.webp", sobres: "fachada_persiana.webp" };
   const fz = -8, d = 12;
-  filaFachadas(FILA_O, X0 + .5, AVX - AVW / 2, (f, c, w, h) => { const sh = SHOPF[f] ? f : null, img = SHOPF[f] || f; box(w - .2, h, d, [side, side, roof, roof, mat(img, null), side], c, h / 2, fz - d / 2); if (sh) SHOPS.push({ k: sh, x: c, z: fz, dx: c + (PUERTA[img] - .5) * w }); });
-  filaFachadas(FILA_E, AVX + AVW / 2, X1 - .5, (f, c, w, h) => { const sh = SHOPF[f] ? f : null, img = SHOPF[f] || f; box(w - .2, h, d, [side, side, roof, roof, mat(img, null), side], c, h / 2, fz - d / 2); if (sh) SHOPS.push({ k: sh, x: c, z: fz, dx: c + (PUERTA[img] - .5) * w }); });
+  filaFachadas(FILA_O, WX + RW + ACE, AVX - AVW / 2, (f, c, w, h) => { const sh = SHOPF[f] ? f : null, img = SHOPF[f] || f; box(w - .2, h, d, [side, side, roof, roof, mat(img, null), side], c, h / 2, fz - d / 2); if (sh) SHOPS.push({ k: sh, x: c, z: fz, dx: c + (PUERTA[img] - .5) * w }); });
+  filaFachadas(FILA_E, AVX + AVW / 2, EX - RW - ACE, (f, c, w, h) => { const sh = SHOPF[f] ? f : null, img = SHOPF[f] || f; box(w - .2, h, d, [side, side, roof, roof, mat(img, null), side], c, h / 2, fz - d / 2); if (sh) SHOPS.push({ k: sh, x: c, z: fz, dx: c + (PUERTA[img] - .5) * w }); });
   for (const sh of SHOPS) DOORS.push({ k: sh.k, x: sh.dx, z: fz + .9 });
   // farolas a lo largo del paseo y de la calle, bancos y papeleras
   const metal = new THREE.MeshStandardMaterial({ color: 0x2b2f35, roughness: .5, metalness: .6 }), bulbM = new THREE.MeshBasicMaterial({ color: 0xffd9a0 });
-  for (let x = X0 + 4; x <= X1 + 40; x += 16) for (const z of [-5.3, SEA_Z - 1.2]) { if (z < 0 && x > X1) continue; const p = new THREE.Mesh(new THREE.CylinderGeometry(.08, .1, 6, 8), metal); p.position.set(x, 3, z); p.castShadow = true; S.add(p);
+  for (let x = X0 + 4; x <= X1 + 40; x += 16) for (const z of [-5.3, SEA_Z - 1.2]) { if (z < 0 && (x > X1 || enCalzada(x, z) || enCalzada(x + .5, z) || enCalzada(x - .5, z))) continue; const p = new THREE.Mesh(new THREE.CylinderGeometry(.08, .1, 6, 8), metal); p.position.set(x, 3, z); p.castShadow = true; S.add(p);
     const bulb = new THREE.Mesh(new THREE.SphereGeometry(.22, 10, 8), bulbM); bulb.position.set(x, 5.95, z); S.add(bulb); }
   // cancha de la playa (arena) en el paseo
   const sand = SA_has("st_arena.webp") ? mat("st_arena.webp", [5, 2]) : new THREE.MeshStandardMaterial({ color: 0xd8c08c, roughness: 1 });
@@ -243,7 +360,7 @@ function buildInteriors() { const S0 = S; { const S = INTG; S0.add(INTG);
 } }
 // ---------- límites del barrio: donde no se puede pasar hay muro o barandilla ----------
 function buildLimites() { const muro = mat("muro.webp", [6, 1]), rail = new THREE.MeshStandardMaterial({ color: 0xf2f2ee, roughness: .4, metalness: .3 });
-  box(.6, 3, SEA_Z + 8.4, muro, X0 - .3, 1.5, (SEA_Z - 8.4) / 2);   // fin del barrio por el oeste
+  box(.6, 3, SEA_Z - 6.6, muro, X0 - .3, 1.5, (SEA_Z + 7.4) / 2);   // fin del barrio por el oeste
   // fin del paseo junto a la jaula: murete con barandilla
   const z0 = 7.8, z1 = SEA_Z - .3, len = z1 - z0; box(.5, .8, len, muro, 64.6, .4, (z0 + z1) / 2);
   const r = new THREE.Mesh(new THREE.CylinderGeometry(.04, .04, len, 6), rail); r.rotation.x = Math.PI / 2; r.position.set(64.6, 1.15, (z0 + z1) / 2); S.add(r);
@@ -330,7 +447,7 @@ function input() { let x = (keys.KeyD || keys.ArrowRight ? 1 : 0) - (keys.KeyA |
   if (g) { const dz = v => Math.abs(v) < .15 ? 0 : v; if (dz(g.axes[0]) || dz(g.axes[1])) { x = dz(g.axes[0]); y = dz(g.axes[1]); } padBtns(g); }
   const m = Math.hypot(x, y); if (m > 1) { x /= m; y /= m; } return { x, y, run: keys.ShiftLeft || keys.ShiftRight || touchRun || (g && g.buttons[7] && g.buttons[7].value > .3) }; }
 let padPrev = [];
-function padBtns(g) { const b = i => g.buttons[i] && g.buttons[i].pressed; if (b(9) && !padPrev[9]) hubMenu($("#hmenu").style.display === "none"); padPrev[9] = b(9); [[0, mode === "hub" ? "KeyE" : "KeyJ"], [1, "KeyK"], [2, "KeyL"], [4, "KeyQ"], [3, "KeyT"], [8, "KeyM"]].forEach(([i, c]) => { if (b(i) && !padPrev[i]) onBtn(c); if (!b(i) && padPrev[i] && c === "KeyK") release(); padPrev[i] = b(i); }); }
+function padBtns(g) { const b = i => g.buttons[i] && g.buttons[i].pressed; if (b(9) && !padPrev[9]) hubMenu($("#hmenu").style.display === "none"); padPrev[9] = b(9); [[0, mode === "hub" ? "KeyE" : "KeyJ"], [1, "KeyK"], [2, mode === "hub" ? "KeyF" : "KeyL"], [4, "KeyQ"], [3, "KeyT"], [8, "KeyM"]].forEach(([i, c]) => { if (b(i) && !padPrev[i]) onBtn(c); if (!b(i) && padPrev[i] && c === "KeyK") release(); padPrev[i] = b(i); }); }
 // cámara relativa: arriba en el mando = hacia el fondo de la pantalla
 function camDir(ix, iy) { const f = new THREE.Vector3(); cam.getWorldDirection(f); f.y = 0; f.normalize(); const r = new THREE.Vector3(-f.z, 0, f.x); return { x: r.x * ix - f.x * iy, z: r.z * ix - f.z * iy }; }
 // ---------- girar la cámara ----------
@@ -346,7 +463,7 @@ const tip = t => { const e = $("#tip"); e.innerHTML = t || ""; e.style.opacity =
 function onBtn(c) {
   if (mode === "mini") { if (c === "KeyK" && MG.state === "aim" && charge < 0) charge = 0; return; }
   if (mode === "toques") { if (["KeyJ", "KeyE", "Space", "KeyK"].includes(c)) toqueHit(); return; }
-  if (mode === "hub") { if ($("#tel").style.display === "") return; if (c === "KeyT") skateToggle(); if (c === "KeyM") telAbrir(); if (c === "KeyE") interact(); if (c === "KeyR" && NB.ws) { const p = nbNear(); if (p) nbReto(p); } return; }
+  if (mode === "hub") { if ($("#tel").style.display === "") return; if (c === "KeyF") return cocheFsubir(); if (c === "KeyG") return cocheTraer(); if (me.coche && c !== "KeyM") return; if (c === "KeyT") skateToggle(); if (c === "KeyM") telAbrir(); if (c === "KeyE") interact(); if (c === "KeyR" && NB.ws) { const p = nbNear(); if (p) nbReto(p); } return; }
   if (mode !== "match") return;
   if (c === "KeyJ") { if (G.owner === G.human) pass(G.human); else switchHuman(); }
   if (c === "KeyQ") switchHuman();
@@ -357,6 +474,7 @@ function release() { if (charge < 0) return; const p = Math.min(1, charge); char
 // ---------- barrio: andar, tiendas ----------
 function nearDoor() { let best = null, bd = 2.2; for (const d of DOORS) { const dd = Math.hypot(me.x - (d.k === "salir" ? d.x : (SHOPS.find(s => s.k === d.k) || {}).dx || d.x), me.z - d.z); if (dd < bd) { bd = dd; best = d; } } return best; }
 function interact() {
+  if (place === "calle" && !me.coche) { const gp = GAS_PUERTA(); if (Math.hypot(me.x - gp[0], me.z - gp[1]) < 2.5) return cochePanel(); }
   const d = nearDoor();
   if (!d && place === "calle") { const mk = mgNear(); if (mk) return mgStart(mk); if (Math.hypot(me.x - REY.x, me.z - REY.z) < 2.2) return reyPanel(); }
   if (!d && place === "calle" && Math.hypot(me.x - TOQ.x, me.z - TOQ.z) < 1.6) return startToques();
@@ -423,13 +541,13 @@ async function addProps() {
   const tint = (parts, c) => { parts.forEach(p => { p.m.color = new THREE.Color(c); if (p.m.map) p.m.color.multiplyScalar(1.6); }); return parts; };
   const doors = SHOPS.map(s => s.dx);
   one("terraza", g => instance(bakeProp(g.scene, .9), [[-56.5, 7.2, .1], [-51.5, 7.4, -.6], [-2, 7.3, .5]]));
-  one("vespa", g => { const b = g.scene.getObjectByName("Object_4") || g.scene; instance(bakeProp(b, 1.8, "len"), [[-149, -4.1, .12], [-87, -4.2, -.1], [-14.5, -4.1, Math.PI + .1], [40, -4.2, .05]]); });
+  one("vespa", g => { const b = g.scene.getObjectByName("Object_4") || g.scene; instance(bakeProp(b, 1.8, "len"), [[-149, -6.3, .12], [-87, -6.3, -.1], [-14.5, -6.3, Math.PI + .1], [40, -6.3, .05]]); });
   one("bici", g => instance(bakeProp(g.scene, 1.75, "len"), [[-146, -7.35, 0], [-90, -7.35, 0], [6, -7.35, Math.PI], [-31, SEA_Z - .95, 0], [16, SEA_Z - .95, Math.PI]]));
   one("contenedor", g => { const b = g.scene.getObjectByName("group") || g.scene; instance(tint(bakeProp(b, 1.3), 0x2f6b3c), [[-141, -4.25, 0], [-139.3, -4.25, 0], [-76, -4.25, 0], [-11, -4.25, 0], [-9.3, -4.25, 0], [46, -4.25, 0]]); });
   one("cajas", g => instance(bakeProp(g.scene, .3), [[-108.6, 8.6, Math.PI / 2], [-104.2, 12.2, .3]]));
   one("fuente", g => instance(bakeProp(g.scene, 3.2), [[-150, 0, 0]]));
   one("planta", g => instance(bakeProp(g.scene, 1.45), doors.flatMap(x => [[x - 1.6, -7.45, 0], [x + 1.6, -7.45, 1]])));
-  one("macetas", g => { const L = [[], [], []]; let i = 0; for (let x = X0 + 6; x < X1 - 4; x += 5.5 + (i % 3)) { if (doors.some(d => Math.abs(d - x) < 3)) continue; L[i % 3].push([x, -7.55, i * 1.7]); i++; }
+  one("macetas", g => { const L = [[], [], []]; let i = 0; for (let x = X0 + 6; x < X1 - 4; x += 5.5 + (i % 3)) { if (doors.some(d => Math.abs(d - x) < 3) || enCalzada(x, -7.55) || enCalzada(x - .6, -7.55) || enCalzada(x + .6, -7.55)) continue; L[i % 3].push([x, -7.55, i * 1.7]); i++; }
     ["Pot", "Pot_9", "Pot_12"].forEach((n, k) => { const node = g.scene.getObjectByName(n); if (node && L[k].length) instance(bakeProp(node, [.75, .95, .85][k]), L[k]); }); });
   one("socorrista", g => instance(bakeProp(g.scene, 3.4), [[-57.5, 17.2, Math.PI]]));
   one("barca", g => instance(bakeProp(g.scene, 3.6, "len"), [[-105.5, 18.4, .5]]));
@@ -445,6 +563,9 @@ async function spawnNPCs() {
     // paseantes por el paseo marítimo y la acera
     for (let i = 0; i < 9; i++) { const prom = i < 6, z = prom ? 6 + rnd() * (SEA_Z - 9) : -6.4 + rnd() * .8, x = X0 + 12 + rnd() * (X1 - X0 - 30);
       NPCS.push(await mk(n++, { x, z, zone: prom ? [5.5, SEA_Z - 4.2] : [-7.2, -5.4], walk: true, tx: x, tz: z, wait: rnd() * 3 })); }
+    // gente por las aceras de la ciudad nueva (nunca pisan la calzada)
+    const largas = ACE_R.filter(r => Math.max(r.x1 - r.x0, r.z1 - r.z0) > 25 && (r.z1 < -8.5 || r.x1 < X0));
+    for (let i = 0; i < 10; i++) { const r = largas[i % largas.length], x = r.x0 + .4 + rnd() * (r.x1 - r.x0 - .8), z = r.z0 + .4 + rnd() * (r.z1 - r.z0 - .8); NPCS.push(await mk(n++, { x, z, rect: r, zone: [r.z0, r.z1], walk: true, tx: x, tz: z, wait: rnd() * 3 })); }
     // mirando el mar apoyados en la barandilla
     for (let i = 0; i < 3; i++) { const x = X0 + 30 + i * 47; NPCS.push(await mk(n++, { x, z: SEA_Z - 1.1, dir: Math.PI / 2, walk: false })); }
     // dependientes detrás del mostrador de cada tienda
@@ -457,20 +578,20 @@ function stepNPCs(dt) {
     if (c.walk) {
       if (c.wait > 0) { c.wait -= dt; c.spd = Math.max(0, c.spd - dt * 4); }
       else { const dx = c.tx - c.x, dz = c.tz - c.z, d = Math.hypot(dx, dz);
-        if (d < .6) { c.wait = 1 + rnd() * 5; c.tx = clamp(c.x + (rnd() - .5) * 40, X0 + 6, X1 - 4); c.tz = c.zone[0] + rnd() * (c.zone[1] - c.zone[0]); }
+        if (d < .6) { c.wait = 1 + rnd() * 5; if (c.rect) { const r = c.rect; c.tx = r.x0 + .4 + rnd() * (r.x1 - r.x0 - .8); c.tz = r.z0 + .4 + rnd() * (r.z1 - r.z0 - .8); } else { c.tx = clamp(c.x + (rnd() - .5) * 40, X0 + 6, X1 - 4); c.tz = c.zone[0] + rnd() * (c.zone[1] - c.zone[0]); } }
         else { let a = Math.atan2(dz, dx) - c.dir; a = Math.atan2(Math.sin(a), Math.cos(a)); c.dir += a * Math.min(1, dt * 3); c.spd += (1.25 - c.spd) * Math.min(1, dt * 3); } }
       const pd = Math.hypot(c.x - me.x, c.z - me.z); if (pd < 1.2 && place === "calle") { c.x += (c.x - me.x) / (pd || 1) * dt * 2; c.z += (c.z - me.z) / (pd || 1) * dt * 2; }   // se apartan
-      c.x += Math.cos(c.dir) * c.spd * dt; c.z += Math.sin(c.dir) * c.spd * dt; c.z = clamp(c.z, c.zone[0], c.zone[1]);
+      c.x += Math.cos(c.dir) * c.spd * dt; c.z += Math.sin(c.dir) * c.spd * dt; if (c.rect) { c.x = clamp(c.x, c.rect.x0 + .3, c.rect.x1 - .3); c.z = clamp(c.z, c.rect.z0 + .3, c.rect.z1 - .3); } else c.z = clamp(c.z, c.zone[0], c.zone[1]);
       if (Math.abs(c.x - SKP.x) < SKP.w / 2 + .5 && Math.abs(c.z - SKP.z) < SKP.d / 2 + .5) c.z = c.z < SKP.z ? SKP.z - SKP.d / 2 - .5 : SKP.z + SKP.d / 2 + .5;   // rodean el skatepark
     } else if (c.keeper || place === "calle") { const tgt = c.keeper || c.rey ? Math.atan2(me.z - c.z, me.x - c.x) : Math.PI / 2; let a = tgt - c.dir; a = Math.atan2(Math.sin(a), Math.cos(a)); c.dir += a * Math.min(1, dt * 2); }
     c.a.wrap.position.set(c.x, gy(c.x, c.z), c.z); c.a.wrap.rotation.y = -c.dir + Math.PI / 2; loco(c.a, c.spd, false); c.a.mixer.update(dt);
   }
 }
 function stepHub(dt) {
-  let inp = input(); if ($("#tel").style.display === "") inp = { x: 0, y: 0, run: 0 }; const d = camDir(inp.x, inp.y), m = Math.hypot(d.x, d.z), sp = m * (me.skate ? (inp.run ? 10.5 : 7) : (inp.run ? 6.8 : 3.4));
+  let inp = input(); if ($("#tel").style.display === "") inp = { x: 0, y: 0, run: 0 }; const px = me.x, pz = me.z; if (me.coche) stepCoche(dt, inp); else { const d = camDir(inp.x, inp.y), m = Math.hypot(d.x, d.z), sp = m * (me.skate ? (inp.run ? 10.5 : 7) : (inp.run ? 6.8 : 3.4));
   me.spd += (sp - me.spd) * Math.min(1, dt * 6); if (m > .1) { let a = Math.atan2(d.z, d.x) - me.dir; a = Math.atan2(Math.sin(a), Math.cos(a)); me.dir += a * Math.min(1, dt * 10); }
-  const px = me.x, pz = me.z; me.x += Math.cos(me.dir) * me.spd * dt; me.z += Math.sin(me.dir) * me.spd * dt;
-  if (place === "calle" && (me.z < -7.6 || pz < -7.6)) { const ok = (x, z) => z >= -7.6 ? x > X0 && x < X1 - 1 : z > PLZ.z1 ? x > AVX - AVW / 2 + .6 && x < AVX + AVW / 2 - .6 : x > PLZ.x0 && x < PLZ.x1 && z > PLZ.z0 && !gasChoca(x, z);
+  me.x += Math.cos(me.dir) * me.spd * dt; me.z += Math.sin(me.dir) * me.spd * dt;
+  if (place === "calle" && (me.z < -7.6 || pz < -7.6 || me.x < X0 || px < X0 || (me.x > EX - RW - ACE && me.x < X1 - 1 && me.z < -5))) { const ok = (x, z) => (x > X0 && x < X1 - 1 && z >= -7.6 && z <= SEA_Z - .8 && !(z > 5 && x < X0 + .4)) || andable(x, z);
     if (!ok(me.x, me.z)) { if (ok(px, me.z)) me.x = px; else if (ok(me.x, pz)) me.z = pz; else { me.x = px; me.z = pz; } } }
   else if (place === "calle") { me.x = clamp(me.x, X0, CX + CW / 2 - 1); const inCage = me.x > CX - CW / 2 + .5; me.z = inCage ? clamp(me.z, -CH / 2 + .5, CH / 2 - .5) : me.x > X1 - 1 ? clamp(me.z, -7.6, 7.6) : clamp(me.z, -7.6, SEA_Z - .8);
     if (!inCage && me.x > CX - CW / 2 - 1 && Math.abs(me.z) > 1.6) me.x = Math.min(me.x, CX - CW / 2 - 1);
@@ -478,13 +599,15 @@ function stepHub(dt) {
   else { const ox = INTPOS[place]; me.x = clamp(me.x, ox - 4.5, ox + 4.5); me.z = clamp(me.z, MOSTR[place] ? 59.85 : 57.2, 63.4); }
   if (place === "calle") for (const [ox, oz, r] of OBST) { const dx = me.x - ox, dz = me.z - oz, d = Math.hypot(dx, dz); if (d < r && d > .001) { me.x = ox + dx / d * r; me.z = oz + dz / d * r; } }
   let yy = place === "calle" ? gyRampa(me.x, me.z) : gy(me.x, me.z); if (me.y0 != null && yy - me.y0 > .45) { me.x = px; me.z = pz; yy = me.y0; me.spd *= .3; } me.y0 = yy;
-  me.a.wrap.position.set(me.x, yy, me.z); me.a.wrap.rotation.y = -me.dir + Math.PI / 2; me.a.lock = 0; loco(me.a, me.skate ? 0 : me.spd, false); me.a.mixer.update(dt);
+  me.a.wrap.position.set(me.x, yy, me.z); me.a.wrap.rotation.y = -me.dir + Math.PI / 2; me.a.lock = 0; loco(me.a, me.skate ? 0 : me.spd, false); me.a.mixer.update(dt); }
   const dd = nearDoor(), inBeach = me.x > BEACH.x0 && me.x < BEACH.x1 && me.z > BEACH.z0 && me.z < BEACH.z1, nearToq = Math.hypot(me.x - TOQ.x, me.z - TOQ.z) < 1.6;
   const np = NB.ws && place === "calle" ? nbNear() : null;
   const mk = place === "calle" ? mgNear() : null, nRey = place === "calle" && Math.hypot(me.x - REY.x, me.z - REY.z) < 2.2;
-  if (np) tip(`<b>${esc(np.name)}</b> · pulsa <b>R</b> para retarle a un partido`); else if (mk) tip(`${MG_INFO[mk][0]}: pulsa <b>E</b> para empezar`); else if (nRey) tip("<b>Rey de la pista</b> · pulsa <b>E</b> para ver las bandas del barrio"); else if (place === "calle") tip(dd ? `Pulsa <b>E</b> para entrar en la ${INT[dd.k][3].toLowerCase()}` : nearToq ? `Toques: pulsa <b>E</b> para empezar (récord: ${store.get("toques", 0)})` : inBeach ? "Cancha de la playa: pulsa <b>E</b> para jugar un 4 contra 4 en la arena" : me.x > 55 ? "La jaula: entra para jugar un 4 contra 4" : "");
+  const gp = GAS_PUERTA(), gasC = place === "calle" && Math.hypot(me.x - gp[0], me.z - gp[1]) < 2.5, cocC = miCoche && !me.coche && place === "calle" && Math.hypot(me.x - miCoche.x, me.z - miCoche.z) < 4;
+  $("#velo").style.display = me.coche ? "" : "none";
+  if (me.coche) tip("<b>W</b> acelera · <b>S</b> frena · <b>A/D</b> giras · <b>F</b> para bajar"); else if (gasC) tip("Gasolinera · pulsa <b>E</b> para comprar un coche"); else if (cocC) tip("Pulsa <b>F</b> para subir a tu coche"); else if (np) tip(`<b>${esc(np.name)}</b> · pulsa <b>R</b> para retarle a un partido`); else if (mk) tip(`${MG_INFO[mk][0]}: pulsa <b>E</b> para empezar`); else if (nRey) tip("<b>Rey de la pista</b> · pulsa <b>E</b> para ver las bandas del barrio"); else if (place === "calle") tip(dd ? `Pulsa <b>E</b> para entrar en la ${INT[dd.k][3].toLowerCase()}` : nearToq ? `Toques: pulsa <b>E</b> para empezar (récord: ${store.get("toques", 0)})` : inBeach ? "Cancha de la playa: pulsa <b>E</b> para jugar un 4 contra 4 en la arena" : me.x > 55 ? "La jaula: entra para jugar un 4 contra 4" : "");
   else tip(dd ? "Pulsa <b>E</b> para salir" : Math.hypot(me.x - INTPOS[place], me.z - 59.2) < 2.6 ? "Pulsa <b>E</b> en el mostrador" : INT[place][3]);
-  stepYaw(dt); const fw = place === "calle" ? 7.5 : 3.8, fh = place === "calle" ? 3.6 : 2.2, want = new THREE.Vector3(me.x + Math.sin(YAW) * fw, fh, me.z + Math.cos(YAW) * fw);
+  stepYaw(dt); const fw = me.coche ? 9.5 : place === "calle" ? 7.5 : 3.8, fh = me.coche ? 4.2 : place === "calle" ? 3.6 : 2.2, want = new THREE.Vector3(me.x + Math.sin(YAW) * fw, fh, me.z + Math.cos(YAW) * fw);
   if (place !== "calle") { const ox = INTPOS[place]; want.x = clamp(want.x, ox - 4.6, ox + 4.6); want.z = clamp(want.z, 56.3, 63.8); }
   cam.position.lerp(want, SNAP ? 1 : Math.min(1, dt * 3)); SNAP = 0; cam.lookAt(me.x - Math.sin(YAW) * 1.5, 1.3, me.z - Math.cos(YAW) * 1.5);
   sun.target.position.set(me.x, 0, me.z); sun.position.set(me.x - 40, 35, me.z + 25);
@@ -738,13 +861,9 @@ function endMatch() { mode = "hub"; $("#hud").style.display = "none"; ring.posit
 // ---------- arranque ----------
 let ballM, ring;
 (async () => {
-  buildBarrio(); buildCiudad(); buildLimites(); buildInteriors(); buildCage();
-  // coches aparcados (modelos 3D de Meshy)
-  const CARS = [["coche_compacto", 3.6], ["coche_berlina", 4.6], ["furgoneta", 5.2]];
-  Promise.all(CARS.map(([n]) => (window.SA ? Promise.resolve(SA[n + ".glb"]) : fetch("street/" + n + ".txt").then(r => r.text())).then(t => loader.parseAsync(b64buf(t), "")))).then(gs => {
-    for (let i = 0; i < 8; i++) { const [n, len] = CARS[i % 3], g = gs[i % 3].scene.clone(), bb = new THREE.Box3().setFromObject(g), k = len / (bb.max.x - bb.min.x);
-      g.scale.setScalar(k); g.position.set(-52 + i * 14 + (i % 2) * 5, -bb.min.y * k, i % 2 ? 3.7 : -3.7); g.rotation.y = i % 2 ? Math.PI : 0;
-      g.traverse(o => { if (o.isMesh) { o.castShadow = o.receiveShadow = true; } }); S.add(g); } }).catch(() => {});
+  buildBarrio(); buildCiudad(); buildCiudadGrande(); buildLimites(); buildInteriors(); buildCage();
+  // coches: tráfico por el circuito de calles y el tuyo (modelos 3D de Meshy)
+  cargarCoches().then(crearTrafico);
   ballM = new THREE.Mesh(new THREE.SphereGeometry(BR, 24, 16), new THREE.MeshStandardMaterial({ map: tex("../street/balon.webp"), roughness: .45 })); ballM.castShadow = true; S.add(ballM); ballM.position.set(CX, BR, 0);
   ring = new THREE.Mesh(new THREE.RingGeometry(.45, .6, 32), new THREE.MeshBasicMaterial({ color: 0xc8ff3c, transparent: true, opacity: .85, depthWrite: false })); ring.rotation.x = -Math.PI / 2; ring.position.y = -5; S.add(ring);
   const an = await loader.parseAsync(b64buf(await asset("m_anims")), "");
@@ -758,7 +877,7 @@ let ballM, ring;
   let last = performance.now(), fpsA = 60, lowQ = false;
   (function loop(now) { const dt = Math.min(.05, (now - last) / 1000); last = now;
     fpsA += (1 / Math.max(dt, .001) - fpsA) * .05; if (!lowQ && now > 8000 && fpsA < 32) { lowQ = true; R.setPixelRatio(Math.min(1, DPR())); R.shadowMap.enabled = false; S.traverse(o => { if (o.material) (Array.isArray(o.material) ? o.material : [o.material]).forEach(m => m.needsUpdate = true); }); }   // equipo justo: baja calidad sola
-    if (mode === "hub") { stepHub(dt); stepNPCs(dt); } else if (mode === "match") stepMatch(dt); else if (mode === "toques") stepToques(dt); else if (mode === "mini") stepMini(dt);
+    if (mode === "hub") { stepHub(dt); stepNPCs(dt); stepTrafico(dt); } else if (mode === "match") stepMatch(dt); else if (mode === "toques") stepToques(dt); else if (mode === "mini") stepMini(dt);
     if (me) stepNet(dt);
     R.render(S, cam); requestAnimationFrame(loop); })(last);
 })();
@@ -769,14 +888,13 @@ function buildCiudad() {
   const asf = mat("suelo_cemento.webp", [1, 9], { color: 0x6c6c70 }), acera = mat("suelo_acera.webp", [1, 30]);
   const L = -8 - AVZ1;   // largo de la avenida
   const rd = new THREE.Mesh(new THREE.PlaneGeometry(9, L), asf); rd.rotation.x = -Math.PI / 2; rd.position.set(AVX, .012, -8 - L / 2); rd.receiveShadow = true; S.add(rd);
-  for (const sx of [-1, 1]) { box(2, .18, L, acera, AVX + sx * 5.5, .09, -8 - L / 2); }
   // fachadas a los dos lados, mirando a la avenida
   const LO = ["fachada_c_bar.webp", "fachada_c_panaderia.webp", "fachada_c_taller.webp", "fachada_c_farmacia.webp", "fachada_c_quiosco.webp", "fachada_c_gimnasio.webp"],
     LE = ["fachada_c_cafeteria.webp", "fachada_c_pizzeria.webp", "fachada_c_barberia.webp", "fachada_c_fruteria.webp", "fachada_azulejos.webp", "fachada_cadiz_blanca.webp"];
   for (const [sx, L] of [[-1, LO], [1, LE]]) filaFachadas(L, -20.5, AVZ1, (f, c, w, h) => { const m = mat(f, null); box(12, h, w - .2, sx < 0 ? [m, side, roof, roof, side, side] : [side, m, roof, roof, side, side], AVX + sx * (AVW / 2 + 6), h / 2, c); });
   // plaza del fondo
   const pw = PLZ.x1 - PLZ.x0, pd = PLZ.z1 - PLZ.z0, pl = new THREE.Mesh(new THREE.PlaneGeometry(pw, pd), mat("suelo_cemento.webp", [8, 4], { color: 0x6c6c70 })); pl.rotation.x = -Math.PI / 2; pl.position.set((PLZ.x0 + PLZ.x1) / 2, .011, (PLZ.z0 + PLZ.z1) / 2); pl.receiveShadow = true; S.add(pl);
-  const muro = mat("muro.webp", [10, 1]); box(pw, 3, .6, muro, (PLZ.x0 + PLZ.x1) / 2, 1.5, PLZ.z0 - .3); for (const x of [PLZ.x0 - .3, PLZ.x1 + .3]) box(.6, 3, pd, muro, x, 1.5, (PLZ.z0 + PLZ.z1) / 2);
+  const muro = mat("muro.webp", [10, 1]); for (const x of [PLZ.x0 - .3, PLZ.x1 + .3]) box(.6, 3, pd, muro, x, 1.5, (PLZ.z0 + PLZ.z1) / 2);
   // edificios al fondo de la plaza a los lados de la avenida (sin pisar los de la avenida)
   filaFachadas(["fachada_ladrillo.webp", "fachada_c_fruteria.webp"], PLZ.x0, AVX - AVW / 2 - 12, (f, c, w, h) => box(w - .2, h, 12, [side, side, roof, roof, mat(f, null), side], c, h / 2, PLZ.z1 + 6));
   filaFachadas(["fachada_c_cafeteria.webp", "fachada_bloque.webp"], AVX + AVW / 2 + 12, PLZ.x1, (f, c, w, h) => box(w - .2, h, 12, [side, side, roof, roof, mat(f, null), side], c, h / 2, PLZ.z1 + 6));
@@ -849,7 +967,7 @@ function ropaConj(n) { const I = inv(), c = ROPA.conjuntos.find(x => x[0] === n)
   kit.c1 = c[1]; kit.c2 = c[2]; store.set("kit", kit); me.a.mats.forEach(m => { m.userData.U.k1.value.set(c[1]); m.userData.U.k2.value.set(c[2]); }); misEv("kit"); tiendaPanel("ropa"); }
 function skateComprar() { if (!pagar(400, "Skate")) return; invSet({ skate: true }); skateUI(); say("¡Skate comprado! Pulsa T para subirte", 2200); tiendaPanel("skates"); }
 function movilComprar() { if (!pagar(600, "Móvil")) return; invSet({ movil: true }); skateUI(); say("¡Móvil comprado! Pulsa M para abrirlo", 2200); tiendaPanel("moviles"); }
-function skateUI() { const I = inv(); $("#bSk").style.display = I.skate ? "" : "none"; $("#bTel").style.display = I.movil ? "" : "none"; }
+function skateUI() { const I = inv(); $("#bCar").style.display = I.coche ? "" : "none"; $("#bSk").style.display = I.skate ? "" : "none"; $("#bTel").style.display = I.movil ? "" : "none"; }
 let skMesh = null;
 function skateToggle(force) {
   if (!me || !inv().skate) return; const on = force != null ? force : !me.skate; if (on && (place !== "calle" || mode !== "hub")) return say("El skate solo en la calle", 1200);
@@ -891,11 +1009,11 @@ function telApp(a) {
       <div class="tnote" style="margin-top:12px">Créditos: skate «Skateboard» de Jamoues, mostrador «Counter» de gorzi, skatepark «Skatepark Rails & Ramps Resource Kit» de maxkeeley, surtidores «Gas station» de suvorovtim y tienda de la gasolinera «Gas station Props» de Elbolilloduro (Sketchfab, CC BY 4.0).</div>`); }
 }
 // mapa y viaje rápido
-function telSitios() { const L = [["La jaula", CX - CW / 2 - 3, 0], ["Cancha de la playa", (BEACH.x0 + BEACH.x1) / 2, BEACH.z0 - 1.5], ["Rey de la pista", REY.x - 2, REY.z + 2], ["Toques", TOQ.x + 2, TOQ.z]];
+function telSitios() { const L = [["Gasolinera", GAS_PUERTA()[0], GAS_PUERTA()[1] + 2], ["Bulevar norte", -68.5, NZ + RW + ACE + 1], ["Calle oeste", WX + RW + 1, -60], ["Calle este", EX - RW - 1, -60], ["La jaula", CX - CW / 2 - 3, 0], ["Cancha de la playa", (BEACH.x0 + BEACH.x1) / 2, BEACH.z0 - 1.5], ["Rey de la pista", REY.x - 2, REY.z + 2], ["Toques", TOQ.x + 2, TOQ.z]];
   for (const s of SHOPS) L.push([INT[s.k][3], s.dx, s.z + 2.2]); return L; }
-function telIr(i) { const s = telSitios()[i]; if (!s) return; telCerrar(); if (place !== "calle") { place = "calle"; INTG.visible = false; S.fog = FOG; S.background = new THREE.Color(0xf2a86a); }
+function telIr(i) { const s = telSitios()[i]; if (!s) return; telCerrar(); if (me.coche) { me.coche.v = 0; cocheBajar(); } if (place !== "calle") { place = "calle"; INTG.visible = false; S.fog = FOG; S.background = new THREE.Color(0xf2a86a); }
   me.x = s[1]; me.z = s[2]; SNAP = 1; say("Has viajado a: " + s[0], 1500); }
-function telMapa() { const c = $("#tmap"); if (!c) return; const g = c.getContext("2d"), x0 = X0 - 4, x1 = CX + CW / 2 + 4, z0 = -10, z1 = SEA_Z + 2, sx = x => (x - x0) / (x1 - x0) * 600, sz = z => (z - z0) / (z1 - z0) * 260;
+function telMapa() { const c = $("#tmap"); if (!c) return; const g = c.getContext("2d"), x0 = WX - 22, x1 = CX + CW / 2 + 4, z0 = NZ - 22, z1 = SEA_Z + 2, sx = x => (x - x0) / (x1 - x0) * 600, sz = z => (z - z0) / (z1 - z0) * 260;
   g.fillStyle = "#1c6a86"; g.fillRect(0, 0, 600, 260); g.fillStyle = "#d9c9a8"; g.fillRect(sx(X0), sz(5), sx(X1 + 42) - sx(X0), sz(SEA_Z) - sz(5)); g.fillStyle = "#555"; g.fillRect(sx(X0), sz(-5), sx(X1) - sx(X0), sz(5) - sz(-5));
   g.fillStyle = "#8a6d55"; g.fillRect(sx(X0), 0, sx(X1) - sx(X0), sz(-5)); g.fillStyle = "#3a8a3a"; g.fillRect(sx(CX - CW / 2), sz(-CH / 2), sx(CX + CW / 2) - sx(CX - CW / 2), sz(CH / 2) - sz(-CH / 2));
   g.fillStyle = "#e8d08c"; g.fillRect(sx(BEACH.x0), sz(BEACH.z0), sx(BEACH.x1) - sx(BEACH.x0), sz(BEACH.z1) - sz(BEACH.z0)); g.font = "bold 13px sans-serif"; g.textAlign = "center";
