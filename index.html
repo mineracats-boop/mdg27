@@ -8170,16 +8170,18 @@ setTimeout(() => { if (SES && SES.tok) nubeBajar(); }, 2500);
 /* ---------------- clasificación online y ligas entre amigos ---------------- */
 function rkTabla(rows, yo) { if (!rows.length) return `<p style="color:var(--mute)">Aún no hay partidos. Juega online contra un amigo para entrar en la tabla.</p>`;
   return `<table class="rkt"><tr><th>#</th><th style="text-align:left">Jugador</th><th>PJ</th><th>G</th><th>E</th><th>P</th><th>DG</th><th>PTS</th></tr>${rows.map((r, i) => `<tr class="${yo && r.u === yo ? "yo" : ""}"><td>${i + 1}</td><td style="text-align:left">${esc(r.n || r.u)}</td><td>${r.pj}</td><td>${r.g}</td><td>${r.e}</td><td>${r.p}</td><td>${r.gf - r.gc > 0 ? "+" : ""}${r.gf - r.gc}</td><td><b>${r.pts}</b></td></tr>`).join("")}</table>`; }
-async function onlineTabla(tab = "global") {
+async function onlineTabla(tab = "div") {
   if (!SES || !SES.tok) return info("Clasificación", "Inicia sesión para ver la clasificación online.");
   dlg("Clasificación online", "Cargando…", [["Cerrar", closeDlg]]);
   const [g, l] = await Promise.all([cuentaApi("/cuenta/ranking", {}), cuentaApi("/cuenta/liga", { tok: SES.tok })]);
   if (!g || !g.ok) return info("Clasificación online", "No se ha podido conectar con el servidor.");
   const ligas = (l && l.ligas) || [], yo = SES.u;
-  let html = `<div class="rktabs"><button data-t="global" class="${tab === "global" ? "on" : ""}">Mundial</button>${ligas.map(x => `<button data-t="${x.c}" class="${tab === x.c ? "on" : ""}">${esc(x.nombre)}</button>`).join("")}</div>`;
-  if (tab === "global") html += `<p class="rkyo">${l && l.yo ? `Tú: <b>${l.yo.pts} pts</b> · ${l.yo.g}G ${l.yo.e}E ${l.yo.p}P` : "Tú: sin partidos online todavía"}</p>` + rkTabla(g.top, yo);
+  let html = `<div class="rktabs"><button data-t="div" class="${tab === "div" ? "on" : ""}">Divisiones</button><button data-t="global" class="${tab === "global" ? "on" : ""}">Mundial</button>${ligas.map(x => `<button data-t="${x.c}" class="${tab === x.c ? "on" : ""}">${esc(x.nombre)}</button>`).join("")}</div>`;
+  const divDe = e => e >= 1700 ? "Élite" : "División " + Math.max(1, Math.min(10, 10 - Math.floor((e - 700) / 100)));
+  if (tab === "div") html += `<p class="rkyo">${l && l.yo && l.yo.rj ? `Tú: <b>${divDe(l.yo.elo)}</b> · ${l.yo.elo} puntos · ${l.yo.rj} partidos de división` : "Tú: División 7 · 1000 puntos. Juega con <b>Online → Buscar partido</b> para subir."}</p>` + ((g.div || []).length ? `<table class="rkt"><tr><th>#</th><th style="text-align:left">Jugador</th><th style="text-align:left">División</th><th>Partidos</th><th>PUNTOS</th></tr>${g.div.map((r, i) => `<tr class="${r.u === yo ? "yo" : ""}"><td>${i + 1}</td><td style="text-align:left">${esc(r.n || r.u)}</td><td style="text-align:left">${divDe(r.elo)}</td><td>${r.rj}</td><td><b>${r.elo}</b></td></tr>`).join("")}</table>` : `<p style="color:var(--mute)">Aún nadie ha jugado partidos de división.</p>`);
+  else if (tab === "global") html += `<p class="rkyo">${l && l.yo ? `Tú: <b>${l.yo.pts} pts</b> · ${l.yo.g}G ${l.yo.e}E ${l.yo.p}P` : "Tú: sin partidos online todavía"}</p>` + rkTabla(g.top, yo);
   else { const lg = ligas.find(x => x.c === tab); html += `<p class="rkyo">Código para invitar: <b class="rkcode">${lg.c}</b> · ${lg.tab.length} jugadores</p>` + rkTabla(lg.tab, yo); }
-  dlg("Clasificación online", "", [["Crear liga", () => onlineLigaCrear()], ["Unirme con código", () => onlineLigaUnir()], ...(tab !== "global" ? [["Salir de la liga", () => confirmDlg("Salir de la liga", "¿Seguro que quieres salir de esta liga?", "Salir", async () => { await cuentaApi("/cuenta/liga", { tok: SES.tok, op: "salir", c: tab }); onlineTabla(); })]] : []), ["Cerrar", closeDlg, true]], html, { wide: true });
+  dlg("Clasificación online", "", [["Crear liga", () => onlineLigaCrear()], ["Unirme con código", () => onlineLigaUnir()], ...(tab !== "global" && tab !== "div" ? [["Salir de la liga", () => confirmDlg("Salir de la liga", "¿Seguro que quieres salir de esta liga?", "Salir", async () => { await cuentaApi("/cuenta/liga", { tok: SES.tok, op: "salir", c: tab }); onlineTabla(); })]] : []), ["Cerrar", closeDlg, true]], html, { wide: true });
   $$(".rktabs button").forEach(b => b.onclick = () => onlineTabla(b.dataset.t));
 }
 function onlineLigaCrear() { dlg("Crear liga", "Ponle nombre. Te daremos un código para que tus amigos se unan. Cuenta lo que jugáis online entre todos.", [["Crear", async () => { const n = ($("#lgN") || {}).value || ""; const j = await cuentaApi("/cuenta/liga", { tok: SES.tok, op: "crear", nombre: n.trim() || "Liga de amigos" }); if (!j || !j.ok) return info("Crear liga", (j && j.error) || "No se ha podido crear."); onlineTabla(j.liga.c); }, true], ["Cancelar", () => onlineTabla()]], `<input id="lgN" maxlength="30" placeholder="Liga de los del cole" class="lginp">`); setTimeout(() => { const i = $("#lgN"); if (i) { i.focus(); ["keydown", "keyup"].forEach(t => i.addEventListener(t, e => e.stopPropagation())); } }, 60); }
@@ -11993,7 +11995,7 @@ ACT.qm = el => {
   const m = el.dataset.m;
   if (m === "cpu") { initPre("cpu"); return show("pre"); }
   if (m === "local") { if (!localSources()) return info("Multijugador local", `Para jugar dos personas en el mismo dispositivo hacen falta <b>2 mandos</b> conectados${device === "Ordenador" ? " (o 1 mando + el teclado)" : ""}.<br>Detectados ahora: <b>${padCount()}</b>.`); initPre("local"); return show("pre"); }
-  dlg("Contra un amigo", "Partido online en tiempo real: crea una sala y pásale el código a tu amigo, o únete con el suyo. Cada partido online cuenta para la clasificación mundial y para tus ligas de amigos.", [["Ir al online", () => { const back = location.pathname.split("/").pop() || "index.html"; location.href = "motor/" + "index" + ".html?online=1&volver=" + encodeURIComponent("../" + back); }, true], ["Clasificación y ligas", () => onlineTabla()], ["Cancelar", closeDlg]]);
+  dlg("Contra un amigo", "Partido online en tiempo real. <b>Buscar partido</b> te empareja con un rival de tu nivel y cuenta para tu división (de la 10 a la 1 y Élite). También puedes crear una sala y pasarle el código a un amigo. Todos los partidos cuentan para la clasificación mundial y tus ligas de amigos.", [["Ir al online", () => { const back = location.pathname.split("/").pop() || "index.html"; location.href = "motor/" + "index" + ".html?online=1&volver=" + encodeURIComponent("../" + back); }, true], ["Clasificación y ligas", () => onlineTabla()], ["Cancelar", closeDlg]]);
 };
 function updateLocal() {
   const ok = !!localSources(), n = padCount();
@@ -15727,7 +15729,7 @@ document.addEventListener("keydown", e => { if (e.key === "Enter" && e.target &&
 const HM = [
   { k: "ut", s: "JUGAR", n: "Ultimate Team", kick: "MODO PRINCIPAL", d: "Abre sobres, monta tu plantilla, ficha en el mercado y compite en ligas con tus amigos.", v: "celebracion" },
   { k: "qm", n: "Partido rápido", kick: "JUEGA YA", d: "Clubes o selecciones contra la máquina o contra un amigo en el mismo dispositivo.", v: "tunel" },
-  { k: "online", n: "Online", kick: "CON AMIGOS", d: "Crea una sala, pasa el código y juega contra quien quieras.", v: "grada" },
+  { k: "online", n: "Online", kick: "DIVISIONES", d: "Busca partido contra un rival de tu nivel y sube de división, o crea una sala para jugar con un amigo.", v: "grada" },
   { k: "car", n: "Modo Carrera", kick: "MÁNAGER Y JUGADOR", t: "NUEVO", d: "Temporadas, fichajes, ruedas de prensa, copas, Europa y selecciones.", i: "a/e4b754eda42e5c.webp", e: "a/458b3118f23c5d.webp", eh: 30 },
   { k: "street", n: "Street Football", kick: "EL BARRIO", t: "NUEVO", d: "Pasea por el barrio, reta a otros jugadores, minijuegos y partidos en la jaula.", i: "a/848c1c54cd5a6b.webp", e: "a/d7c20914309bb4.webp", eh: 15 },
   { k: "tor", s: "MÁS MODOS", n: "Torneos", kick: "COPAS", t: "NUEVO", d: "Crea tu torneo de 4 a 32 equipos, juega el Mundial o la Copa de Europa, solo o con amigos.", v: "red" },

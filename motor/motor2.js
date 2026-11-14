@@ -364,19 +364,47 @@
   async function pickSrv() { for (const u of NET_LIST) { try { const c = new AbortController(), tm = setTimeout(() => c.abort(), u.includes("onrender") ? 70000 : 4000); const r = await fetch(u + "/ping", { signal: c.signal }); clearTimeout(tm); if (r.ok) { NET_SRV = u; return u; } } catch (e) {} } throw new Error("No hay conexión con el servidor online. Revisa internet y vuelve a intentarlo."); }
   function netSend(o) { try { if (NET && NET.ws && NET.ws.readyState === 1) NET.ws.send(JSON.stringify(o)); } catch (e) {} }
   async function netLobby() {
-    const box = document.createElement("div"); Object.assign(box.style, { position: "fixed", inset: 0, display: "grid", placeItems: "center", background: "#050a14f2", zIndex: 50, color: "#fff", font: "600 16px system-ui", textAlign: "center", padding: "16px" }); document.body.appendChild(box);
-    const B = (t, f) => { const b = document.createElement("button"); b.textContent = t; Object.assign(b.style, { font: "800 18px system-ui", padding: "12px 26px", minWidth: "240px", borderRadius: "10px", border: 0, background: "#ffd23a", color: "#111", cursor: "pointer", margin: "6px" }); b.onclick = f; return b; };
-    const show = html => { box.innerHTML = `<div style="display:grid;gap:12px;justify-items:center;max-width:420px">${html}</div>`; return box.firstChild; };
+    const box = document.createElement("div"); box.id = "nlob"; document.body.appendChild(box);
+    const st = document.createElement("style"); st.textContent = `#nlob{position:fixed;inset:0;display:grid;place-items:center;background:radial-gradient(ellipse at 50% 30%,#13264f,#050a14 70%);z-index:50;color:#fff;font:600 16px var(--bc);text-align:center;padding:16px;overflow:auto}
+      #nlob .nc{display:grid;gap:12px;justify-items:center;width:min(460px,94vw);background:linear-gradient(180deg,#0d1a38f2,#060d1ef2);border:1px solid #d4a64a88;border-radius:18px;padding:22px 20px;box-shadow:0 18px 50px #000a}
+      #nlob h2{margin:0;font:italic 900 40px var(--bc);letter-spacing:.03em}#nlob .sub{opacity:.75;font-size:17px}#nlob .div{font:800 20px var(--bc);color:#ffd86b;letter-spacing:.06em;text-transform:uppercase}
+      #nlob button{font:800 19px var(--bc);letter-spacing:.06em;text-transform:uppercase;padding:13px 22px;width:100%;border-radius:12px;border:1px solid #ffffff22;background:#1d2a48;color:#fff;cursor:pointer}
+      #nlob button.pri{background:linear-gradient(180deg,#ffe07a,#e2a92c);color:#1a1205;border:0;font-size:22px}#nlob button.sec{background:transparent;opacity:.8}
+      #nlob .row{display:flex;gap:8px;width:100%}#nlob input{font:800 24px var(--bc);text-transform:uppercase;width:100%;text-align:center;padding:10px;border-radius:12px;border:1px solid #ffffff33;background:#050a14;color:#fff;letter-spacing:.15em}
+      #nlob .big{font:900 58px var(--bc);letter-spacing:.14em;color:#ffd23a}#nlob .err{color:#ff8a8a}#nlob .note{font-size:14px;opacity:.6}
+      #nlob .spin{width:46px;height:46px;border-radius:50%;border:5px solid #ffffff22;border-top-color:#ffd23a;animation:nsp 1s linear infinite}@keyframes nsp{to{transform:rotate(360deg)}}`; document.head.appendChild(st);
+    const B = (t, f, cls) => { const b = document.createElement("button"); b.textContent = t; if (cls) b.className = cls; b.onclick = f; return b; };
+    const show = html => { box.innerHTML = `<div class="nc">${html}</div>`; return box.firstChild; };
+    const ses = (() => { try { return JSON.parse(localStorage.getItem("mdg27_ses") || "null"); } catch (e) { return null; } })();
+    const mmOp = (op, o) => fetch(NET_LIST[0] + "/cuenta/srv", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(Object.assign({ tok: ses && ses.tok, op }, o || {})) }).then(r => r.json()).catch(() => ({ ok: false, error: "Sin conexión con el servidor" }));
     const connect = sala => new Promise((res, rej) => { const ws = new WebSocket(NET_SRV.replace(/^http/, "ws") + "/sala/" + sala + (STREET ? "?max=2" : "")); NET.ws = ws; NET.sala = sala;
       ws.onmessage = e => { let d; try { d = JSON.parse(e.data); } catch (er) { return; } netRecv(d); if (d.t === "hola") res(d); }; ws.onerror = () => rej(new Error("No se puede conectar con el servidor")); ws.onclose = () => { if (!NET.ended) netGone(); }; });
     return new Promise(done => {
-      NET.onCfg = cfg => { box.remove(); done(cfg); };
-      const home = () => { const w = show(`<h2 style="margin:0;font-size:30px;font-style:italic">PARTIDO ONLINE</h2><div style="opacity:.8">Juega contra un amigo en otro dispositivo</div>`);
-        w.append(B("Crear sala", create), (() => { const d = document.createElement("div"); d.innerHTML = `<input id="ncode" maxlength="6" placeholder="CÓDIGO" style="font:800 22px system-ui;text-transform:uppercase;width:150px;text-align:center;padding:10px;border-radius:10px;border:0">`; d.append(B("Unirse", () => join($("#ncode").value.trim().toUpperCase()))); return d; })(), B("Volver", () => history.back())); };
-      const fail = e => { const w = show(`<div style="color:#ff8a8a">${e.message || e}</div>`); w.append(B("Volver a intentarlo", home)); };
-      const create = async () => { try { show("Conectando con el servidor…"); await pickSrv(); show("Creando sala…"); const r = await fetch(NET_SRV + "/nueva").then(x => x.json()); const h = await connect(r.sala); NET.host = h.host;
-          show(`<div style="opacity:.8">Dile a tu amigo este código</div><div style="font:900 54px system-ui;letter-spacing:.12em;color:#ffd23a">${r.sala}</div><div>Esperando rival…</div>`); } catch (e) { fail(e); } };
-      const join = async c => { if (!/^[A-Z0-9]{4,8}$/.test(c)) return fail(new Error("Código no válido")); try { show("Conectando con el servidor…"); await pickSrv(); show("Entrando en la sala " + c + "…"); const h = await connect(c); NET.host = h.host; NET.guest = !h.host; if (NET.guest) show("Conectado. Esperando al anfitrión…"); else show(`<div>La sala estaba vacía: eres el anfitrión</div><div style="font:900 54px system-ui;letter-spacing:.12em;color:#ffd23a">${c}</div><div>Esperando rival…</div>`); } catch (e) { fail(e); } };
+      NET.onCfg = cfg => { clearTimeout(MM.tm); MM.on = false; box.remove(); done(cfg); };
+      const MM = { on: false, tm: 0 };
+      const home = async () => { MM.on = false; const w = show(`<h2>ONLINE</h2><div class="sub">Partidos en tiempo real contra otros jugadores</div><div class="div" id="ndiv">${ses && ses.tok ? "…" : ""}</div>`);
+        w.append(B("Buscar partido", buscar, "pri"));
+        const t = document.createElement("div"); t.className = "note"; t.textContent = ses && ses.tok ? "Te empareja con un rival de tu nivel. Cuenta para tu división." : "Inicia sesión en MDG 27 (Cuenta) para buscar partido y subir de división."; w.append(t);
+        w.append(B("Crear sala para un amigo", create));
+        const d = document.createElement("div"); d.className = "row"; d.innerHTML = `<input id="ncode" maxlength="6" placeholder="CÓDIGO">`; d.append(B("Unirse", () => join($("#ncode").value.trim().toUpperCase()))); d.lastChild.style.width = "auto"; w.append(d);
+        w.append(B("Volver", () => history.back(), "sec"));
+        if (ses && ses.tok) { const j = await mmOp("mmYo"); const e = $("#ndiv"); if (e) e.textContent = j.ok ? `${j.div} · ${j.elo} puntos${j.rj ? "" : " · aún sin partidos de división"}` : ""; } };
+      const fail = e => { MM.on = false; const w = show(`<div class="err">${e.message || e}</div>`); w.append(B("Volver", home, "pri")); };
+      // buscar partido: cola en el servidor; el margen de nivel se abre con la espera
+      const buscar = async () => { if (!ses || !ses.tok) return fail(new Error("Para buscar partido tienes que iniciar sesión en MDG 27 (menú principal → Cuenta).")); MM.on = true; const t0 = Date.now();
+        const w = show(`<h2>BUSCANDO RIVAL</h2><div class="spin"></div><div class="sub" id="nmm">Buscando un rival de tu nivel…</div>`); w.append(B("Cancelar", () => { MM.on = false; clearTimeout(MM.tm); mmOp("mmCancelar"); home(); }, "sec"));
+        const paso = async () => { if (!MM.on) return; const j = await mmOp("mmBuscar", { nombre: ses.nombre || ses.u }); if (!MM.on) return;
+          if (!j.ok) return fail(new Error(j.error || "No se ha podido buscar partido"));
+          if (j.sala) { MM.on = false; NET.ranked = { rival: j.rival, relo: j.relo }; show(`<h2>¡RIVAL ENCONTRADO!</h2><div class="div">${String(j.rival).replace(/[<>&]/g, "")}</div><div class="sub">${j.relo} puntos</div>`); setTimeout(() => join(j.sala, true), 900); return; }
+          const s = Math.round((Date.now() - t0) / 1000), e = $("#nmm"); if (e) e.innerHTML = `${j.div} · buscando rival… <b>${s} s</b>${s > 25 ? "<br><span class='note'>Ampliando el nivel de búsqueda</span>" : ""}${s > 90 ? "<br><span class='note'>Hay poca gente buscando ahora: prueba a crear sala para un amigo</span>" : ""}`;
+          if (s > 240) { MM.on = false; mmOp("mmCancelar"); return fail(new Error("No hemos encontrado rival. Prueba otra vez en un rato.")); } MM.tm = setTimeout(paso, 2500); };
+        paso(); };
+      const create = async () => { try { show(`<div class="spin"></div><div class="sub">Conectando con el servidor…</div>`); await pickSrv(); const r = await fetch(NET_SRV + "/nueva").then(x => x.json()); const h = await connect(r.sala); NET.host = h.host;
+          const w = show(`<h2>SALA CREADA</h2><div class="sub">Dile a tu amigo este código</div><div class="big">${r.sala}</div><div class="spin"></div><div class="sub">Esperando rival…</div>`);
+          w.append(B("Copiar código", () => { try { navigator.clipboard.writeText(r.sala); } catch (e) {} }, ""), B("Cancelar", () => location.reload(), "sec")); } catch (e) { fail(e); } };
+      const join = async (c, rk) => { if (!/^[A-Z0-9]{4,8}$/.test(c)) return fail(new Error("Código no válido")); try { show(`<div class="spin"></div><div class="sub">Entrando en la sala ${c}…</div>`); await pickSrv(); const h = await connect(c); NET.host = h.host; NET.guest = !h.host;
+          if (NET.guest) show(`<div class="spin"></div><div class="sub">Conectado. Empieza enseguida…</div>`); else show(`${rk ? `<h2>¡RIVAL ENCONTRADO!</h2>` : `<div class="sub">La sala estaba vacía: eres el anfitrión</div><div class="big">${c}</div>`}<div class="spin"></div><div class="sub">Esperando a que entre tu rival…</div>`);
+          if (rk) setTimeout(() => { if (!NET.peer && !NET.ended) fail(new Error("Tu rival no ha entrado. Vuelve a buscar partido.")); }, 45000); } catch (e) { fail(e); } };
       const auto = NQ.get("sala"); if (auto) join(auto.toUpperCase()); else home();
     });
   }
@@ -392,8 +420,14 @@
     else if (d.t === "i") NET.rin = d;
     else if (d.t === "s") NET.snap = d;
     else if (d.t === "sale") netGone();
+    else if (d.t === "rev") { NET.revEl = true; const b = $("#nrev"); if (b && !NET.revYo) b.textContent = "¡Tu rival quiere la revancha! Aceptar"; else if (b) b.textContent = "Empezando…"; netRevGo(); }
+    else if (d.t === "revsala" && /^[A-Z0-9]{4,8}$/.test(d.sala || "")) netIr(d.sala);
   }
-  function netGone() { if (!NET || NET.ended) return; NET.ended = true; try { msg("El rival se ha desconectado", 4); } catch (e) {} if (window.__netEnd) window.__netEnd(); }
+  function netGone() { if (NET && NET.ended) { const b = $("#nrev"); if (b) { b.disabled = true; b.textContent = "Tu rival se ha ido"; } return; } if (!NET) return; NET.ended = true; try { if (NET.peer && M.phase !== "end") { NET.aband = true; msg("Tu rival ha abandonado: ¡ganas el partido!", 4); } else msg("El rival se ha desconectado", 4); } catch (e) {} if (window.__netEnd) window.__netEnd(); setTimeout(() => { try { if (M.phase !== "end") { M.phase = "end"; showEnd(); } } catch (e) { console.warn("netEnd", e); } }, 2500); }
+  // revancha: los dos la piden y el anfitrión abre una sala nueva para los dos
+  function netRev() { if (!NET || NET.aband) return; NET.revYo = true; netSend({ t: "rev" }); const b = $("#nrev"); if (b) { b.disabled = true; b.textContent = NET.revEl ? "Empezando…" : "Esperando a tu rival…"; } netRevGo(); }
+  async function netRevGo() { if (!NET.revYo || !NET.revEl || !NET.host || NET.revSala) return; try { const r = await fetch(NET_SRV + "/nueva").then(x => x.json()); NET.revSala = r.sala; netSend({ t: "revsala", sala: r.sala }); setTimeout(() => netIr(r.sala), 400); } catch (e) {} }
+  function netIr(sala) { const q = new URLSearchParams(location.search); q.set("sala", sala); location.href = location.pathname + "?" + q.toString(); }
   const EMB = NET ? await netLobby() : await new Promise(res => { if (!/embed/.test(location.search)) return res(null); addEventListener("message", e => { if (e.data && e.data.type === "mdg27cfg") res(e.data.cfg); }); parent.postMessage({ type: "mdg27ready" }, "*"); });
   // ciudad deportiva: ejercicio de entrenamiento (si viene)
   const DRK = EMB && EMB.drill ? EMB.drill : new URLSearchParams(location.search).get("ejercicio"); if (DRK && window.__ldBg) window.__ldBg("carga_ciudad");
@@ -1723,14 +1757,17 @@
       if (gs.mode === "hold" || el > 3.2 || (el > .6 && Math.hypot(ball.vx, ball.vy) < .8) || ball.x < L - 25 || ball.y < -1 || ball.y > W + 1 || (ball.x > L + .3 && !ball.inNet)) { M.phase = "stop"; soResult(false); } } }
   // online: cada jugador apunta su resultado en la clasificación (y en sus ligas de amigos)
   function netReport() { if (!NET || NET.rep || !NET.sala) return; NET.rep = true; let ses = null; try { ses = JSON.parse(localStorage.getItem("mdg27_ses") || "null"); } catch (e) {} if (!ses || !ses.tok) return;
-    const me = NET.host ? 0 : 1, body = JSON.stringify({ tok: ses.tok, sala: NET.sala, gf: TEAMS[me].score, ga: TEAMS[1 - me].score });
-    for (const u of [NET_SRV || NET_LIST[0], ...NET_LIST.filter(x => x !== NET_SRV)].slice(0, 2)) { fetch(u + "/cuenta/resultado", { method: "POST", headers: { "content-type": "application/json" }, body }).then(r => r.json()).then(j => { if (j && j.ok && !j.dup && j.r) msg("Clasificación online: " + j.r.pts + " puntos", 3); }).catch(() => {}); break; } }
+    const me = NET.host ? 0 : 1; let gf = TEAMS[me].score, ga = TEAMS[1 - me].score; if (NET.aband && gf <= ga) gf = ga + 1;   // el rival abandonó: ganas
+    const body = JSON.stringify({ tok: ses.tok, sala: NET.sala, gf, ga });
+    for (const u of [NET.ranked ? NET_LIST[0] : NET_SRV || NET_LIST[0], ...NET_LIST.filter(x => x !== NET_SRV)].slice(0, 2)) { fetch(u + "/cuenta/resultado", { method: "POST", headers: { "content-type": "application/json" }, body }).then(r => r.json()).then(j => { if (!j || !j.ok || j.dup) return; if (j.r) msg("Clasificación online: " + j.r.pts + " puntos", 3);
+      const e = $("#nrank"); if (e && j.rank) { const R = j.rank, sube = R.div !== R.antes; e.innerHTML = `<div class="nrk ${R.d >= 0 ? "up" : "dn"}">${R.d >= 0 ? "+" : ""}${R.d} puntos de división · ${R.elo}</div><div class="nrkd">${sube ? (R.d >= 0 ? "¡SUBES A " : "BAJAS A ") + R.div.toUpperCase() + "!" : R.div}</div>`; } }).catch(() => {}); break; } }
   function showEnd() { if (NET) { netReport(); if (NET.host && NET.peer && !NET.ended) netSend({ t: "s", b: [ball.x, ball.y, ball.z], p: [], sc: [TEAMS[0].score, TEAMS[1].score], ck: $("#clock").textContent, ph: "end", h: [-1, -1], ex: 0, ev: NET.ev.splice(0).concat([["end"]]) }); NET.ended = true; }
     if (EMB && !EMB.net) { const s = TEAMS.map(t => t.stats); parent.postMessage({ type: "mdg27end", r: { track: { f: TRK.f, sc: TRK.ev, n: P.length, side: P.map(p => p.t), names: P.map(p => p.name || ""), kits: TEAMS.map(t => t.kit[0]), L, W }, score: [TEAMS[0].score, TEAMS[1].score], goals: M.goals, stats: s.map(x => ({ sh: x.sh, ont: x.ont, pos: x.pos, fo: x.fo, pa: x.pa, pc: x.pc, co: x.co, off: x.off })), cards: M.cards || [], pens: M.pens || null } }, "*"); return; } const s = TEAMS.map(t => t.stats), tot = s[0].pos + s[1].pos || 1;
-    $("#end").innerHTML = `<h2>FINAL</h2><div class="es">${TEAMS[0].name} <b>${TEAMS[0].score} - ${TEAMS[1].score}</b> ${TEAMS[1].name}</div>${M.pens ? `<div>Penaltis: <b>${M.pens[0]} - ${M.pens[1]}</b></div>` : ""}
+    $("#end").innerHTML = `<h2>${NET && NET.aband ? "¡VICTORIA POR ABANDONO!" : "FINAL"}</h2>${NET && NET.ranked ? `<div class="nrkr">Partido de división contra ${String(NET.ranked.rival || "").replace(/[<>&]/g, "")}</div><div id="nrank"><div class="nrkd">Calculando tu división…</div></div>` : ""}<div class="es">${TEAMS[0].name} <b>${TEAMS[0].score} - ${TEAMS[1].score}</b> ${TEAMS[1].name}</div>${M.pens ? `<div>Penaltis: <b>${M.pens[0]} - ${M.pens[1]}</b></div>` : ""}
       <table><tr><td>${Math.round(s[0].pos / tot * 100)}%</td><th>Posesión</th><td>${Math.round(s[1].pos / tot * 100)}%</td></tr>
       ${[["sh", "Tiros"], ["ont", "A puerta"], ["pa", "Pases"], ["pc", "Pases completados"], ["co", "Córners"], ["fo", "Faltas"], ["off", "Fueras de juego"]].filter(([k]) => !STREET || (k !== "co" && k !== "off")).map(([k, n]) => `<tr><td>${s[0][k]}</td><th>${n}</th><td>${s[1][k]}</td></tr>`).join("")}</table>
-      <button onclick="location.reload()">Jugar otra vez</button>${VOLVER ? `<button id="volv">${STREET ? "Volver al barrio" : "Volver al menú"}</button>` : ""}`; $("#end").style.display = "grid";
+      ${NET ? `${NET.peer && !NET.aband ? `<button id="nrev">Revancha</button>` : ""}${NET.ranked ? `<button id="nbus">Buscar otro partido</button>` : ""}` : `<button onclick="location.reload()">Jugar otra vez</button>`}${VOLVER ? `<button id="volv">${STREET ? "Volver al barrio" : "Volver al menú"}</button>` : ""}`; $("#end").style.display = "grid";
+    if (NET) { const r = $("#nrev"); if (r) { r.onclick = netRev; if (NET.revEl) r.textContent = "¡Tu rival quiere la revancha! Aceptar"; } const bb = $("#nbus"); if (bb) bb.onclick = () => { const q = new URLSearchParams(location.search); q.delete("sala"); location.href = location.pathname + "?" + q.toString(); }; }
     if (VOLVER) $("#volv").onclick = () => { location.href = VOLVER + (STREET && !NET ? "?res=" + TEAMS[0].score + "-" + TEAMS[1].score : ""); }; }
   const VOLVER = (() => { const v = new URLSearchParams(location.search).get("volver"); return v && /^[\w.\/-]+\.html$/.test(v) ? v : null; })();
 
