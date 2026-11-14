@@ -986,7 +986,7 @@
   function foul(f, v, hard, force) {
     if (DR) return;
     if (M.phase !== "play" || (M.adv && !force)) return;
-    const inBox = prog(f.t, v.x) < .158 && Math.abs(v.y - W / 2) < 20.16;
+    const inBox = inArea(f.t, v.x, v.y);
     if (!force) { TEAMS[f.t].stats.fo++; knockDown(v, Math.atan2(v.y - f.y, v.x - f.x));
       // lesión: rara, más probable en entradas duras; el lesionado corre menos hasta que lo cambien
       if (!v.inj && !v.gk && Math.random() < (hard ? .14 : .025)) { v.inj = true; v.st.pac -= 14; v.st.acc -= 14; v.st.agi -= 10; later(2.4, () => msg(v.name + " se ha lesionado" + (v.t === M.humanTeam ? " · haz un cambio (Esc)" : ""), 2.6)); } }
@@ -996,7 +996,8 @@
       const gx = own(f.t), dG = Math.hypot(v.x - gx, v.y - W / 2), behindF = team(f.t).filter(q => q !== f && !q.sent && prog(f.t, q.x) < prog(f.t, v.x) - .005).length, mates = team(v.t).filter(q => q !== v && !q.gk && prog(v.t, q.x) > prog(v.t, v.x) - .05).length;
       const dogso = dG < 30 && behindF <= 1 && Math.abs(v.y - W / 2) < 22 && !inBox, counter = prog(v.t, v.x) > .4 && mates >= 2 && behindF <= 3;
       if (dogso) cc = "R"; else if (hard && Math.random() < .12) cc = "R"; else if (hard ? Math.random() < .65 : (counter && Math.random() < .55) || f.fouls >= 3 && Math.random() < .5 || Math.random() < .08) cc = "A";
-      if (cc === "A" && (f.yel || 0) >= 1) cc = "R2"; if (f.gk && cc && cc !== "A" && !dogso) cc = "A"; if (cc && f.fouls >= 3) f.fouls = 0; M.refWhy = dogso ? "ocasión manifiesta de gol" : counter && cc === "A" ? "cortar el contraataque" : ""; }
+      if (inBox && cc === "R") cc = "A";   // penalti: nunca roja directa (doble castigo); como mucho amarilla
+      if (cc === "A" && (f.yel || 0) >= 1) cc = "R2"; if (f.gk && cc && cc !== "A" && !dogso) cc = "A"; if (inBox && (cc === "R" || cc === "R2")) cc = cc === "R2" ? "" : "A"; if (cc && f.fouls >= 3) f.fouls = 0; M.refWhy = dogso ? "ocasión manifiesta de gol" : counter && cc === "A" ? "cortar el contraataque" : ""; }
     if (cc) { (M.cards = M.cards || []).push({ m: mm, s: f.t, n: f.name, c: cc === "A" ? "A" : "R" }); if (cc === "A") { f.yel = (f.yel || 0) + 1; card = "  ·  AMARILLA para " + f.name; } else card = "  ·  ROJA para " + f.name + (cc === "R2" ? " (segunda amarilla)" : M.refWhy ? " (" + M.refWhy + ")" : ""); }
     const doCard = () => { if (!cc) return; if (refA) refA.goto = { x: clamp(f.x + 1.8, 1, L - 1), y: clamp(f.y + .8, 1, W - 1), until: simT + 3.2 }; later(1.7, () => showCard(cc === "A" ? 0xffd400 : 0xe11d2e, f, cc !== "A")); };
     // ley de la ventaja: si el equipo que recibe la falta sigue con opciones (atacando y con compañeros cerca del balón), el árbitro deja seguir
@@ -1206,9 +1207,9 @@
     if (!att && !p.gk) {   // bloque: tres líneas juntas (unos 12-14 m entre líneas) que bascula hacia el lado del balón
       const dl = clamp(bd - (STREET ? .2 : .25), .07, .48); d = p.cat === "def" ? dl : p.cat === "mid" ? dl + (STREET ? .15 : .135) : dl + (STREET ? .3 : .28);
       w = clamp(ball.y / W + (bw - .5) * (p.cat === "fwd" ? .75 : p.cat === "mid" ? .55 : .6), .05, .95); w = lerp(w, .5, bd < .3 ? .18 : .06); }
-    else if (att && !p.gk && (p.role === "EI" || p.role === "ED" || p.role === "MI" || p.role === "MD")) w = bw < .5 ? .07 : .93;   // atacando: extremos abiertos para dar amplitud
+    else if (att && !p.gk && (p.role === "EI" || p.role === "ED" || p.role === "MI" || p.role === "MD")) w = STREET ? (bw < .5 ? .28 : .72) : (bw < .5 ? .07 : .93);   // atacando: extremos abiertos para dar amplitud
     const mt = TEAMS[t].ment || 0; if (!p.gk) d += mt === 2 ? (att ? .03 : .07) : mt * .045;   // táctica: defensiva -1, equilibrada 0, ofensiva 1, presión alta 2
-    return { x: fx(t, clamp(d, .05, .93)), y: clamp(w * W, 3, W - 3) };
+    return { x: fx(t, clamp(d, STREET ? .1 : .05, STREET ? .88 : .93)), y: clamp(w * W, STREET ? 4.5 : 3, W - (STREET ? 4.5 : 3)) };
   }
   function aiPlayer(p, dt) {
     const t = p.t, C = { dir: null, m: 0, spr: false };
@@ -1248,7 +1249,7 @@
       const sup = team(t).filter(q => !q.gk && q !== owner && q.down <= 0 && !q.ai.run && !(M.lockP && q === M.lockP)).sort((a, b) => dist(a, owner) - dist(b, owner)).slice(0, 2);
       if (sup.includes(p)) { const S0 = p.ai.sup; if (!S0 || simT > S0.until || dist(owner, S0) > (STREET ? 11 : 20)) {
           const fwdA = M.dirOf[t] > 0 ? 0 : Math.PI, R = STREET ? 6.5 : 11.5, other = sup.find(q => q !== p), oS = other && other.ai.sup; let best = null, bs = -1e9;
-          for (const da of [-1.05, -.55, .55, 1.05, 1.75, -1.75, 2.5, -2.5]) { const a = fwdA + da, x = clamp(owner.x + Math.cos(a) * R, 2, L - 2), y = clamp(owner.y + Math.sin(a) * R, 2, W - 2);
+          for (const da of [-1.05, -.55, .55, 1.05, 1.75, -1.75, 2.5, -2.5]) { const a = fwdA + da, x = clamp(owner.x + Math.cos(a) * R, STREET ? 3.5 : 2, L - (STREET ? 3.5 : 2)), y = clamp(owner.y + Math.sin(a) * R, STREET ? 3.5 : 2, W - (STREET ? 3.5 : 2));
             const sc = Math.min(6, openness({ x, y }, t)) * .8 - passRisk(owner, x, y) * 2.5 + Math.cos(da) * .9 - Math.hypot(x - p.x, y - p.y) * .08 - (oS && Math.hypot(x - oS.x, y - oS.y) < R * .8 ? 4 : 0);
             if (sc > bs) { bs = sc; best = { x, y }; } }
           p.ai.sup = best ? { x: best.x, y: best.y, until: simT + .7 } : null; }
@@ -1520,7 +1521,7 @@
       if (dG < 34 && !indirect) { // barrera
         const a = Math.atan2(W / 2 - ball.y, gd - ball.x), n = STREET ? 1 : dG < 22 ? 4 : 3, wall = team(def).filter(p => !p.gk).sort((a2, b2) => dist(a2, ball) - dist(b2, ball)).slice(0, n);
         wall.forEach((p, i) => { const off = (i - (n - 1) / 2) * .62 + .3; const wd = STREET ? 4.5 : 9.15; p.x = ball.x + Math.cos(a) * wd - Math.sin(a) * off; p.y = ball.y + Math.sin(a) * wd + Math.cos(a) * off; p.h = p.mh = a + Math.PI; p.wall = true; }); M.wallP = wall; } }
-    else if (type === "pen") { taker = M.so && M.so.taker && !M.so.taker.sent ? M.so.taker : team(atk).filter(p => !p.gk).sort((a, b) => b.st.sho - a.st.sho)[0]; ball.x = gd - M.dirOf[atk] * (STREET ? 6 : 11); ball.y = W / 2;
+    else if (type === "pen") { taker = M.so && M.so.taker && !M.so.taker.sent ? M.so.taker : team(atk).filter(p => !p.gk).sort((a, b) => b.st.sho - a.st.sho)[0]; ball.x = gd - M.dirOf[atk] * (STREET ? 4.2 : 11);   // en la jaula el punto de penalti pintado está a 4,2 m ball.y = W / 2;
       for (const p of P) { if (p.gk || p === taker) continue; if (prog(atk, p.x) > .82) p.x = fx(atk, .8 - Math.random() * .05); } const g = GKP(def); g.x = gd; g.y = W / 2; }
     if (taker) { const tgt = type === "corner" || type === "throw" ? { x: L / 2, y: W / 2 } : { x: gd, y: W / 2 };
       const a = Math.atan2(tgt.y - ball.y, tgt.x - ball.x); taker.x = ball.x - Math.cos(a) * (type === "pen" ? 2.2 : .7); taker.y = ball.y - Math.sin(a) * (type === "pen" ? 2.2 : .7); taker.h = taker.mh = a;
@@ -1639,7 +1640,7 @@
     const g = radar.getContext("2d"), RW = 230, RH = 150, px = x => 8 + x / L * (RW - 16), py = y => 8 + y / W * (RH - 16);
     g.clearRect(0, 0, RW, RH); g.fillStyle = "rgba(10,30,15,.55)"; g.strokeStyle = "rgba(255,255,255,.55)"; g.lineWidth = 1; g.beginPath(); g.roundRect ? g.roundRect(1, 1, RW - 2, RH - 2, 8) : g.rect(1, 1, RW - 2, RH - 2); g.fill();
     g.strokeRect(px(0), py(0), px(L) - px(0), py(W) - py(0)); g.beginPath(); g.moveTo(px(L / 2), py(0)); g.lineTo(px(L / 2), py(W)); g.stroke(); g.beginPath(); g.arc(px(L / 2), py(W / 2), 9.15 / L * (RW - 16), 0, 7); g.stroke();
-    g.strokeRect(px(0), py(W / 2 - 20.16), px(16.5) - px(0), py(W / 2 + 20.16) - py(W / 2 - 20.16)); g.strokeRect(px(L - 16.5), py(W / 2 - 20.16), px(L) - px(L - 16.5), py(W / 2 + 20.16) - py(W / 2 - 20.16));
+    const AD_ = STREET ? 6.3 : 16.5, AW_ = STREET ? 7.2 : 20.16; g.strokeRect(px(0), py(W / 2 - AW_), px(AD_) - px(0), py(W / 2 + AW_) - py(W / 2 - AW_)); g.strokeRect(px(L - AD_), py(W / 2 - AW_), px(L) - px(L - AD_), py(W / 2 + AW_) - py(W / 2 - AW_));
     for (const p of P) { if (p.sent) continue; g.fillStyle = p.gk ? (p.t ? "#f59e0b" : "#16a34a") : TEAMS[p.t].kit[0]; g.beginPath(); g.arc(px(p.x), py(p.y), p === M.human ? 4.5 : 3.4, 0, 7); g.fill(); if (p === M.human) { g.strokeStyle = "#ffd23a"; g.lineWidth = 2; g.stroke(); g.lineWidth = 1; g.strokeStyle = "rgba(255,255,255,.55)"; } }
     g.fillStyle = "#fff"; g.beginPath(); g.arc(px(ball.x), py(ball.y), 2.6, 0, 7); g.fill();
     radar.style.display = M.replay || M.intro ? "none" : ""; if (aimMesh.visible && (!M.set || !M.set.aim || M.phase !== "set")) aimMesh.visible = false;
