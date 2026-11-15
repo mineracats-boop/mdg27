@@ -1253,4 +1253,12 @@ async function srvEntrar(code, nombre) { srvNombre(); NB.srvNom = nombre; srvMsg
 async function srvGlobal() { srvNombre(); NB.srvNom = ""; const ok = await nbJoin("global"); if (!ok) say($("#nbmsg").textContent || "No se pudo entrar", 2000); }
 function srvInvitar(code) { const t = "Únete a mi servidor de Street Football en MDG 27 con el código " + code; try { navigator.clipboard.writeText(t); srvMsg("Copiado: pásaselo a tus amigos (código " + code + ")"); } catch (e) { srvMsg("El código es " + code); } }
 async function srvQuitar(code, mio) { if (!confirm(mio ? "¿Borrar este servidor para todos?" : "¿Salir de este servidor?")) return; const j = await telOp("srvSalir", { code, borrar: mio ? 1 : 0 }); if (!j.ok) return srvMsg(j.error || "No se pudo"); if (NB.sala === code) nbLeave(); srvPanel(true); }
+
+/* ---------- música del barrio (canción hecha con Gemini): suena en el barrio y se para en los partidos ---------- */
+const SMUS = { au: null, ok: false };
+function smusVol() { try { const st = JSON.parse(localStorage.getItem("mdg27.settings") || "{}"); return st.music == null ? 70 : +st.music; } catch (e) { return 70; } }
+function smusTick() { if (!SMUS.ok) return; if (!SMUS.au) { SMUS.au = new Audio("musica/street.mp3"); SMUS.au.loop = true; }
+  const a = SMUS.au, want = !document.hidden && mode !== "match" && mode !== "loading" && smusVol() > 0, vol = Math.min(1, smusVol() / 100) * .45;
+  if (want) { if (a.paused) { a.volume = 0; a.play().catch(() => {}); } a.volume = Math.min(vol, a.volume + .05); } else if (!a.paused) { a.volume = Math.max(0, a.volume - .1); if (a.volume <= .01) a.pause(); } }
+addEventListener("pointerdown", () => { SMUS.ok = true; }); addEventListener("keydown", () => { SMUS.ok = true; }); setInterval(smusTick, 120);
 </script></body></html>
