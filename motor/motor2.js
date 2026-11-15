@@ -1416,6 +1416,9 @@
       const ts = 1.5, tReach = (D[2] - D[1]) / ts;
       if ((s.t <= tReach + .04 || s.t < .5) && s.react <= 0) { const t0 = Math.max(D[1], D[2] - Math.max(.05, s.t - .02) * ts); const o = startOne(g, D[0], { ts, t0, end: Math.min(META[D[0]].dur, D[2] + 1.2), fadeIn: .06, h0: g.h }); if (o) { if (!D[3]) o.rootScale = 0; { const need = dy - Math.sign(dy) * D[3] * clamp((D[2] - t0) / Math.max(.01, D[2] - D[1]), 0, 1), cap = .85 + (g.st.gk - 80) * .025; o.warp = { x: 0, y: s.ws ? clamp(need, -1.8, 1.8) : clamp(need * .55, -cap, cap), t: Math.max(.05, D[2] - t0) }; } } s.mode = "diving"; }
     }
+    // tras una estirada sin parada (tiro desviado, rechace, tiro fuera) se levanta y vuelve a colocarse; antes se quedaba donde cayó hasta el siguiente saque
+    if (s.mode === "diving" && !g.one && g.down <= 0) { s.mode = "idle"; s.ws = null; s.prevRel = null; }
+    if (s.mode === "dive" && (s.t < -.6 || (M.owner && M.owner.t === 1 - t && simT - ((M.shot && M.shot.t) || -9) > .8))) { s.mode = "idle"; s.ws = null; }
     // el balón cruza la línea del portero en este fotograma (a 25-30 m/s avanza casi un metro por fotograma: sin esto se «saltaba» la parada)
     let crossNow = false; { const rel = (ball.x - g.x) * dirF; if (s.ws === true && (s.mode === "diving" || s.mode === "dive") && s.prevRel != null && s.prevRel > 0 && rel <= .15 && Math.abs(ball.y - g.y) < 3.3 && ball.z < 2.6 && !ball.inNet) crossNow = true; s.prevRel = rel; }
     if ((s.mode === "diving" || s.mode === "idle" || s.mode === "rush" || crossNow) && !ball.hold && M.phase === "play") {
