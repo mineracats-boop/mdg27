@@ -936,6 +936,12 @@ body.touch #mnarr{bottom:auto;top:calc(max(.8rem,env(safe-area-inset-top)) + 6.5
 .hmit.guiaon{animation:guPulse 1.2s ease-in-out infinite}
 @keyframes guPulse{50%{box-shadow:0 0 0 .25rem var(--gold2),0 0 2rem rgba(243,210,122,.6)}}
 
+/* IA del modo carrera */
+.vthink{display:inline-block;margin-top:.4rem;font-size:1.2rem;color:var(--gold2);animation:vthk 1s ease-in-out infinite}
+@keyframes vthk{50%{opacity:.45}}
+.vtit{font-family:"BC";font-weight:900;font-style:italic;font-size:2.2rem;line-height:1.1;margin:.2rem 0 .6rem;text-transform:uppercase}
+.vneg-hab{display:flex;gap:.8rem;margin:.6rem 0}.vneg-hab .vtxt{flex:1;min-height:0;height:3.6rem}
+
 .fl-de{background-image:url(data:image/webp;base64,UklGRlQCAABXRUJQVlA4WAoAAAAgAAAAPwAALwAASUNDUMgBAAAAAAHIAAAAAAQwAABtbnRyUkdCIFhZWiAH4AABAAEAAAAAAABhY3NwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAA9tYAAQAAAADTLQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAlkZXNjAAAA8AAAACRyWFlaAAABFAAAABRnWFlaAAABKAAAABRiWFlaAAABPAAAABR3dHB0AAABUAAAABRyVFJDAAABZAAAAChnVFJDAAABZAAAAChiVFJDAAABZAAAAChjcHJ0AAABjAAAADxtbHVjAAAAAAAAAAEAAAAMZW5VUwAAAAgAAAAcAHMAUgBHAEJYWVogAAAAAAAAb6IAADj1AAADkFhZWiAAAAAAAABimQAAt4UAABjaWFlaIAAAAAAAACSgAAAPhAAAts9YWVogAAAAAAAA9tYAAQAAAADTLXBhcmEAAAAAAAQAAAACZmYAAPKnAAANWQAAE9AAAApbAAAAAAAAAABtbHVjAAAAAAAAAAEAAAAMZW5VUwAAACAAAAAcAEcAbwBvAGcAbABlACAASQBuAGMALgAgADIAMAAxADZWUDggZgAAAFAFAJ0BKkAAMAA+LRCGQqGhDf+OAAwBYliAHYA/AD9jv5zyAXYD9gAK6ns+8ORK/4TEUAD+/w3bEiVP97K2D2Zy93I///8mObEJfumZQUNa/z86W5lajnRWmIEQv4mSE6/yGwYAAA==)}
 .fl-fr{background-image:url(data:image/webp;base64,UklGRooCAABXRUJQVlA4WAoAAAAgAAAAPwAALwAASUNDUMgBAAAAAAHIAAAAAAQwAABtbnRyUkdCIFhZWiAH4AABAAEAAAAAAABhY3NwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAA9tYAAQAAAADTLQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAlkZXNjAAAA8AAAACRyWFlaAAABFAAAABRnWFlaAAABKAAAABRiWFlaAAABPAAAABR3dHB0AAABUAAAABRyVFJDAAABZAAAAChnVFJDAAABZAAAAChiVFJDAAABZAAAAChjcHJ0AAABjAAAADxtbHVjAAAAAAAAAAEAAAAMZW5VUwAAAAgAAAAcAHMAUgBHAEJYWVogAAAAAAAAb6IAADj1AAADkFhZWiAAAAAAAABimQAAt4UAABjaWFlaIAAAAAAAACSgAAAPhAAAts9YWVogAAAAAAAA9tYAAQAAAADTLXBhcmEAAAAAAAQAAAACZmYAAPKnAAANWQAAE9AAAApbAAAAAAAAAABtbHVjAAAAAAAAAAEAAAAMZW5VUwAAACAAAAAcAEcAbwBvAGcAbABlACAASQBuAGMALgAgADIAMAAxADZWUDggnAAAAHAGAJ0BKkAAMAA+MRKHQqIhDKoAEAGCWIAzMKm/SBTgP6B+Ku9/5yB/VcgABBpttKkelUK/Mrxtnv2J8AD+/fuL//kB/bUvWD//Jsv5wFPXz3/Sk/+Nrn/zv7Ee+3+G0UFj//HAfNJejrRZepdrP//tcQ/8iZBh3cZZO7WWc5rL8MPEz/zPKKBhsNg34C9myuf9nlInlTaH84QAAA==)}
 .fl-es{background-image:url(data:image/webp;base64,UklGRtIDAABXRUJQVlA4WAoAAAAgAAAAPwAALwAASUNDUMgBAAAAAAHIAAAAAAQwAABtbnRyUkdCIFhZWiAH4AABAAEAAAAAAABhY3NwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAA9tYAAQAAAADTLQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAlkZXNjAAAA8AAAACRyWFlaAAABFAAAABRnWFlaAAABKAAAABRiWFlaAAABPAAAABR3dHB0AAABUAAAABRyVFJDAAABZAAAAChnVFJDAAABZAAAAChiVFJDAAABZAAAAChjcHJ0AAABjAAAADxtbHVjAAAAAAAAAAEAAAAMZW5VUwAAAAgAAAAcAHMAUgBHAEJYWVogAAAAAAAAb6IAADj1AAADkFhZWiAAAAAAAABimQAAt4UAABjaWFlaIAAAAAAAACSgAAAPhAAAts9YWVogAAAAAAAA9tYAAQAAAADTLXBhcmEAAAAAAAQAAAACZmYAAPKnAAANWQAAE9AAAApbAAAAAAAAAABtbHVjAAAAAAAAAAEAAAAMZW5VUwAAACAAAAAcAEcAbwBvAGcAbABlACAASQBuAGMALgAgADIAMAAxADZWUDgg5AEAAPAKAJ0BKkAAMAA+MRaJQyIhIRFXRCADBLUAPL35n+AH7AcdP2YswD8gMcB52foA3gDnr/Yk/a8myT+f8V/0n7ABdIk3BXwelooaVLGv0TPPW9ZuakZWv9TnmV+dLbZLYAD+/p9NH9kZv//mBF2U+xDx5sv0Bt82jzZf//9hlZ/2rSmNfLWHowy7pE/ZdItPrjtu9ceiLmd5mwo8vE42ORNinDty/FXyXk9cTzkkqH8cfUgDZ4rp1fFbyt8W5i8Nfw8O0PEXibQPf9QOt1//lhgPa5C5b406G1Mf2Hy7MRu7zgJEFyFpXxK0UY9Tvcx6PmKkfY6//MV2lUdVnwMG7N875ioIZnUK6342C7XMWXhss+frsbdJgmkvIdHZI5VMMGnd1zPjE5SJtzjN9fGIY5dYRMJnsE+BnsTSbz8/+onI1vs+2KyHx6qBbwstmQ0ushkZi/4x73/65heCXQf67pZ3bhcaz8P/8+dB6uRA1NnyXDhMzQ98uPj+CVcf7154uK9BJkjGRfp8E6EOGe/8dp5uE0SVPyocNV/kJB3OlU/NTO68ndao9K2/6qd/4st0sys+z+5a5CBQBWKPQ2yVJaRXt0PffkgryDC74Ochwe43Yukb+t48ZjkqjQD4dftYgDcAUAA=)}
@@ -15632,11 +15638,11 @@ function vPrensaHTML(S) {
   if (S.res) return `<div class="vida" style="background-image:url(${VBG.prensa})">${top}<div class="vcard">
       <div class="vwho">Tu respuesta</div><div class="vquote">«${esc(S.res.txt)}»</div>
       <div class="vlbl">Cómo ha sonado</div><div>${S.res.tonos.map(t => `<span class="vchip tono">${esc(t)}</span>`).join("")}</div>
-      <div class="vlbl">Efecto</div><div>${vFxHTML(S.res.d)}</div><div class="vreac">${esc(S.res.reac)}</div>
+      ${S.res.titular ? `<div class="vlbl">Titular de mañana</div><div class="vtit">${esc(S.res.titular)}</div>` : ""}<div class="vlbl">Efecto</div><div>${vFxHTML(S.res.d)}</div><div class="vreac">${esc(S.res.reac)}</div>
       ${S.n + 1 < S.max ? `<button class="mbtn gold" data-nav data-a="vNext" data-first>Siguiente pregunta</button>` : ""}<button class="mbtn${S.n + 1 < S.max ? "" : " gold"}" data-nav data-a="vExit"${S.n + 1 < S.max ? "" : " data-first"}>${S.n + 1 < S.max ? "Terminar la rueda de prensa" : "Salir de la sala"}</button></div></div>`;
   return `<div class="vida" style="background-image:url(${VBG.prensa})">${top}<div class="vcard">
     <div class="vwho">🎙 ${esc(S.medio)}</div><div class="vq">«${esc(P.q)}»</div>
-    <div class="vtr" id="vTr">${S.busy ? `<i>Te escucho… habla con naturalidad</i>` : S.txt ? esc(S.txt) : `<span class="mute">Pulsa «Responder hablando» y contesta en voz alta, como en una rueda de prensa de verdad. El juego entiende el tono: humilde, ambicioso, chulo, crítico, contra el árbitro…</span>`}</div>
+    <div class="vtr" id="vTr">${S.iaBusy ? `<i>${esc(S.iaTxt || "")}</i><br><span class="vthink">El periodista toma nota…</span>` : S.busy ? `<i>Te escucho… habla con naturalidad</i>` : S.txt ? esc(S.txt) : `<span class="mute">Pulsa «Responder hablando» y contesta en voz alta, como en una rueda de prensa de verdad. El juego entiende el tono: humilde, ambicioso, chulo, crítico, contra el árbitro…</span>`}</div>
     <div class="vbtns">${vMic(S.busy)}${vWrite(S)}</div>
     <div class="vlbl">O elige una respuesta rápida</div><div class="vbtns">${P.a.map((a, i) => `<button class="mbtn" data-nav data-a="vQuick" data-i="${i}">${esc(a.txt)}</button>`).join("")}</div>
     <button class="mbtn sm vsal" data-nav data-a="vLeave">Abandonar la sala</button></div></div>`;
@@ -15679,7 +15685,7 @@ function vCharlaHTML(S) {
       <button class="mbtn gold" data-nav data-a="vCharlaGo" data-first>⚽ Salir al campo</button></div></div>`;
   return `<div class="vida" style="background-image:url(${VBG.vestuario})">${top}<div class="vcard">
     <div class="vwho">${derbi ? "Semana de derbi. La afición lleva días esperando este partido: ganarlo vale doble." : "Faltan diez minutos. Tus jugadores te miran."}</div><div class="vq">Rival: ${esc(cname(opp))} · ${cstr(me) + (me === P.h ? 1 : 0) > cstr(opp) + 2 ? "sois favoritos" : cstr(opp) > cstr(me) + 2 ? "el rival es mejor sobre el papel" : "partido igualado"}</div>
-    <div class="vtr" id="vTr">${S.busy ? `<i>Habla a tus jugadores…</i>` : `<span class="mute">Diles lo que quieras en voz alta o elige una charla. Según el momento del equipo, les subirá o bajará la moral para este partido.</span>`}</div>
+    <div class="vtr" id="vTr">${S.iaBusy ? `<i>${esc(S.iaTxt || "")}</i><br><span class="vthink">El vestuario te escucha…</span>` : S.busy ? `<i>Habla a tus jugadores…</i>` : `<span class="mute">Diles lo que quieras en voz alta o elige una charla. Según el momento del equipo, les subirá o bajará la moral para este partido.</span>`}</div>
     <div class="vbtns">${vMic(S.busy)}${vWrite(S)}</div>
     <div class="vbtns">${VCHARLA.map(c => `<button class="mbtn" data-nav data-a="vCharla" data-c="${c[0]}">${c[1]}</button>`).join("")}</div>
     <button class="mbtn sm vsal" data-nav data-a="vCharlaSkip">Sin charla, al campo</button></div></div>`;
@@ -15743,7 +15749,7 @@ function vMsgHTML(S) {
       <button class="mbtn gold" data-nav data-a="vMsgClose" data-first>Cerrar</button></div></div>`;
   return `<div class="vida" style="background-image:url(${bg})">${top}<div class="vcard">
     <div class="vwho">${VAV(m.from)} <b>${esc(m.from)}</b> <span class="mute">· ${esc(m.rol)}</span></div><div class="vq">${esc(m.body)}</div>
-    <div class="vtr" id="vTr">${S.busy ? `<i>Te escucho…</i>` : `<span class="mute">Contesta hablando o escribiendo con tus palabras, o elige una respuesta.</span>`}</div>
+    <div class="vtr" id="vTr">${S.iaBusy ? `<i>${esc(S.iaTxt || "")}</i><br><span class="vthink">Pensando qué contestarte…</span>` : S.busy ? `<i>Te escucho…</i>` : `<span class="mute">Contesta hablando o escribiendo con tus palabras, o elige una respuesta.</span>`}</div>
     <div class="vbtns">${vMic(S.busy)}${vWrite(S)}</div>
     <div class="vbtns">${m.o.map((o, i) => `<button class="mbtn" data-nav data-a="vMsgOpt" data-i="${i}">${esc(o[0])}</button>`).join("")}</div>
     <button class="mbtn sm vsal" data-nav data-a="vMsgLater">Dejarlo para luego</button></div></div>`;
@@ -15887,6 +15893,7 @@ function vNegHTML(S) { const k = S.k, p = pinfo(k), s = cps(k), from = s[0], N =
   else if (S.fase === "jug") ctl = `<div class="vlbl">Contrato: ${money(S.sal)}/año · ${S.yrs} año${S.yrs > 1 ? "s" : ""}</div><div class="vbtns"><button class="mbtn" data-nav data-a="vNegSal" data-d="-1">Sueldo −5 %</button><button class="mbtn" data-nav data-a="vNegSal" data-d="1">Sueldo +5 %</button><button class="mbtn" data-nav data-a="vNegYrs">Años: ${S.yrs}</button><button class="mbtn gold" data-nav data-a="vNegSign" data-first>Ofrecer contrato</button></div>`;
   else if (S.fase === "firma") ctl = `<div class="vneg-ok">¡TRATO CERRADO!</div><div class="vreac">${esc(S.okMsg || "")}</div><div class="vbtns"><button class="mbtn gold" data-nav data-a="vNegPres" data-first>Presentarlo en el estadio</button><button class="mbtn" data-nav data-a="vNegOut">Volver al despacho</button></div>`;
   else ctl = `<div class="vreac">${esc(S.failMsg || "No hay acuerdo.")}</div><div class="vbtns"><button class="mbtn gold" data-nav data-a="vNegOut" data-first>Salir</button></div>`;
+  if ((S.fase === "club" || S.fase === "jug") && (S.iaN || 0) < 3) ctl = `<div class="vneg-hab">${S.iaBusy ? `<span class="vthink">Te escuchan…</span>` : `<input id="vNegTxt" class="vtxt" data-nav maxlength="300" placeholder="Convéncele con tus palabras (opcional)…"><button class="mbtn" data-nav data-a="vNegHablar">Decírselo</button>`}</div>` + ctl;
   return `<div class="vida" style="background-image:url(${VBG.despacho})">${top}<div class="vcard">${ficha}<div class="vwho">${S.fase === "firma" ? "🤝 Apretón de manos" : esc(who)}</div>${log}${ctl}${S.fase === "club" || S.fase === "jug" ? `<button class="mbtn sm vsal" data-nav data-a="vNegOut">Levantarse de la mesa</button>` : ""}</div></div>`; }
 ACT.vNegAmt = el => { const S = CT.scene; S.amt = Math.max(.1, Math.round(S.amt * (+el.dataset.d > 0 ? 1.1 : .9) * 10) / 10); renderCar(); reFocus(`[data-a="vNegAmt"][data-d="${el.dataset.d}"]`); };
 ACT.vNegSal = el => { const S = CT.scene; S.sal = Math.round(S.sal * (+el.dataset.d > 0 ? 1.05 : .95) * 100) / 100; renderCar(); reFocus(`[data-a="vNegSal"][data-d="${el.dataset.d}"]`); };
@@ -15945,6 +15952,103 @@ userAfterMatch = (o => function (r) { o(r); try { vAfterMatch(r); } catch (e) { 
 diarioEdition = (o => function (w) { o(w); try { vEdition(w); } catch (e) { console.error(e); } })(diarioEdition);
 endWeek = (o => function () { try { vMsgsGen(); } catch (e) { console.error(e); } o(); })(endWeek);
 document.addEventListener("keydown", e => { if (e.key === "Enter" && e.target && e.target.id === "carQ") { e.preventDefault(); ACT.carQGo(); } });
+
+/* =====================================================================
+   IA DEL MODO CARRERA
+   El servidor (con la clave escondida) entiende lo que dices con tus
+   palabras en la rueda de prensa, la charla del vestuario, los mensajes
+   del despacho y las negociaciones. Si la IA no responde (sin conexión,
+   límite, error), el juego usa su análisis de siempre sin que se note.
+   ===================================================================== */
+const IAC = { fails: 0 };
+async function iaCarrera(tipo, data) {
+  if (IAC.fails >= 3 || (typeof navigator !== "undefined" && navigator.onLine === false)) return null;
+  try {
+    const c = new AbortController(), tm = setTimeout(() => c.abort(), 10000);
+    const r = await fetch(MDG_SRV + "/ia/carrera", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(Object.assign({ tipo }, data)), signal: c.signal });
+    clearTimeout(tm); const j = await r.json();
+    if (j && j.ok && j.r) { IAC.fails = 0; return j.r; }
+  } catch (e) {}
+  IAC.fails++; return null;
+}
+function iaCtx() {
+  if (!CAR) return "";
+  const base = `Temporada ${CAR.season}, semana ${CAR.week}.`;
+  if (vJug()) return `${base} Confianza del míster ${Math.round(CAR.trust)}/100, fama ${Math.round(CAR.fame)}/100.`;
+  let mor = ""; try { mor = ` Moral media del vestuario ${Math.round(avgMor())}/100.`; } catch (e) {}
+  return `${base} Directiva ${Math.round(CAR.junta)}/100, afición ${Math.round(CAR.afi)}/100.${mor}${CAR.lastQuote ? ` Su última frase en prensa: «${String(CAR.lastQuote.txt).slice(0, 80)}».` : ""}`;
+}
+const iaWho = () => vJug() ? pinfo(CAR.me).n : CAR.name;
+
+/* ---------- rueda de prensa ---------- */
+vPrensaAnswer = (orig => function (txt, quickFx) {
+  if (quickFx || !txt) return orig(txt, quickFx);
+  const S = CT.scene, P = CAR && CAR.press; if (!S || !P || S.iaBusy) return;
+  S.iaBusy = true; S.iaTxt = txt; S.busy = false; S.write = false; renderCar();
+  iaCarrera("prensa", { rol: vJug() ? "jugador" : "entrenador", nombre: iaWho(), club: cname(CAR.club), ctx: iaCtx(), q: P.q, txt }).then(r => {
+    S.iaBusy = false; if (CT.scene !== S || CAR.press !== P) return;
+    if (!r) return orig(txt);
+    const base = vozAnaliza(txt, { star: P.star }), fx = Object.assign({}, r.fx || {});
+    if (base.fx.pl) fx.pl = base.fx.pl;   // elogios o críticas a jugadores con nombre: los detecta el juego
+    const tonos = (r.tonos || []).slice(); if (base.tonos.includes("malsonante") && !tonos.includes("malsonante")) { tonos.unshift("malsonante"); if (vJug()) fx.trust = Math.min(fx.trust || 0, -4); else fx.junta = Math.min(fx.junta || 0, -6); }
+    const d = vFxApply(fx, txt, P.q);
+    if (r.titular && CAR.news && CAR.news[0]) { const n = CAR.news[0]; n.body = n.title; n.title = r.titular; carSave(); }
+    S.res = { txt, tonos: tonos.length ? tonos : ["neutral"], d, titular: r.titular || "", reac: r.reac || "Los periodistas toman nota." };
+    S.txt = ""; CAR.press = { ...P, done: true }; carSave(); renderCar();
+  });
+})(vPrensaAnswer);
+
+/* ---------- charla en el vestuario ---------- */
+vCharlaAnswer = (orig => function (txt) {
+  const S = CT.scene, P = CAR && CAR.pending; if (!S || !P || S.iaBusy || !txt) return orig(txt);
+  const me = isMe(P.h) ? P.h : P.a, opp = me === P.h ? P.a : P.h, fav = cstr(me) + (me === P.h ? 1 : 0) - cstr(opp);
+  S.iaBusy = true; S.iaTxt = txt; S.busy = false; S.write = false; renderCar();
+  iaCarrera("charla", { rival: cname(opp), ctx: `${iaCtx()} ${fav > 4 ? "Somos favoritos." : fav < -2 ? "El rival es mejor sobre el papel." : "Partido igualado."}${opp === vRival() ? " Es el derbi." : ""}`, txt }).then(r => {
+    S.iaBusy = false; if (CT.scene !== S || CAR.pending !== P) return;
+    if (!r) return orig(txt);
+    vCharlaApply(r.tipo, txt, r.extra);
+    if (r.eco && CT.scene && CT.scene.res) { CT.scene.res.reac = r.eco + " " + CT.scene.res.reac; renderCar(); }
+  });
+})(vCharlaAnswer);
+
+/* ---------- mensajes del despacho (presidente, jugadores, agente…) ---------- */
+vMsgAnswer = (orig => function (txt) {
+  const S = CT.scene, m = S && (CAR.msgs || []).find(x => x.id === S.id); if (!m || S.iaBusy || !txt) return orig(txt);
+  S.iaBusy = true; S.iaTxt = txt; S.busy = false; S.write = false; renderCar();
+  iaCarrera("msg", { rol: vJug() ? "jugador" : "entrenador", quien: `${m.from} (${m.rol})`, msg: m.body, opciones: m.o, txt }).then(r => {
+    S.iaBusy = false; if (CT.scene !== S) return;
+    if (!r || !m.o.some(o => o[1] === r.c)) return orig(txt);
+    vMsgDo(m, r.c, txt, vozAnaliza(txt).tonos);
+    if (r.eco && CT.scene && CT.scene.res) { CT.scene.res.reac = `«${r.eco}» ${CT.scene.res.reac}`; renderCar(); }
+  });
+})(vMsgAnswer);
+
+/* ---------- negociaciones: convencer con tus palabras (como mucho 3 veces por negociación) ---------- */
+// si el club aún no había fijado su precio, se fija igual que en tryBuy
+function iaNegN(k) {
+  const s = cps(k), from = s[0], v = pval(k), key = ROST[from].slice().sort((a, b) => cps(b)[1] - cps(a)[1]).indexOf(k) < 3, need = v * (key ? 1.35 : 1.05) * (CL(from).ov > CL(CAR.club).ov ? 1.15 : 1);
+  return (CAR.neg = CAR.neg || {})[k] || (CAR.neg[k] = { pat: 3, need: need * (.94 + rnd() * .14), win: CAR.week < 21 ? "v" : "i", s: CAR.season });
+}
+// lo que el agente pide de sueldo se mueve un poco según cómo le hayas convencido
+contractAsk = (orig => function (k) { const N = CAR && CAR.neg && CAR.neg[k]; return orig(k) * (N && N.askF ? N.askF : 1); })(contractAsk);
+ACT.vNegHablar = () => {
+  const S = CT.scene, t = $("#vNegTxt"), txt = t ? t.value.trim() : ""; if (!S || S.iaBusy) return; if (txt.length < 3) return toast("Escribe algo antes");
+  const k = S.k, p = pinfo(k), s = cps(k), from = s[0], club = S.fase === "club";
+  S.log.push(["yo", txt]); S.iaBusy = true; S.iaN = (S.iaN || 0) + 1; renderCar();
+  const N0 = iaNegN(k), minTxt = club ? ` Precio mínimo real del club vendedor: ${money(N0.need)}.` : ` Sueldo mínimo que acepta el jugador: ${money(contractAsk(k) * .92)}/año.`;
+  const hist = S.log.slice(-5).map(l => `${l[0] === "yo" ? "Comprador" : "Vendedor"}: ${l[1]}`).join(" / ");
+  iaCarrera("neg", { fase: club ? "club" : "jug", club: cname(from), jugador: p.n, txt, hist,
+    ctx: `${p.pos}, media ${s[1]}, ${s[2]} años, valor ${money(pval(k))}, cobra ${money(pwage(k))}/año. Club comprador: ${cname(CAR.club)}.${minTxt}${club ? ` Última oferta: ${money(S.amt)}.` : ` Oferta de contrato: ${money(S.sal)}/año, ${S.yrs} años.`}` }).then(r => {
+    S.iaBusy = false; if (CT.scene !== S) return;
+    const who = club ? `Director deportivo del ${cname(from)}` : `Agente de ${p.n}`;
+    if (!r) { S.log.push(["ellos", pick(club ? VNEG_NO : VNEG_JUG), who]); renderCar(); return; }
+    S.log.push(["ellos", r.reply, who]);
+    const N = iaNegN(k), a = r.animo || 0;
+    if (club) { const a2 = clamp((N.iaAdj || 0) + a, -4, 4) - (N.iaAdj || 0); N.need = N.need * (1 - a2 * .025); N.iaAdj = (N.iaAdj || 0) + a2; if (a <= -2) { N.pat -= 1; if (N.pat <= 0) { N.closed = true; S.fase = "fin"; S.failMsg = `El ${cname(from)} se levanta de la mesa: rompe las negociaciones hasta el próximo mercado.`; } } }
+    else { N.askF = clamp((N.askF || 1) * (1 - a * .025), .9, 1.1); if (a <= -2) { N.cp = (N.cp || 0) + 1; if (N.cp >= 3) { N.closed = true; S.fase = "fin"; S.failMsg = `${p.n} deja de negociar.`; } } }
+    carSave(); renderCar();
+  });
+};
 
 /* =====================================================================
    MENÚ PRINCIPAL — lista de modos a la izquierda y fondo (vídeo o foto)
