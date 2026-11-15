@@ -941,6 +941,7 @@ body.touch #mnarr{bottom:auto;top:calc(max(.8rem,env(safe-area-inset-top)) + 6.5
 @keyframes vthk{50%{opacity:.45}}
 .vtit{font-family:"BC";font-weight:900;font-style:italic;font-size:2.2rem;line-height:1.1;margin:.2rem 0 .6rem;text-transform:uppercase}
 .vneg-hab{display:flex;gap:.8rem;margin:.6rem 0}.vneg-hab .vtxt{flex:1;min-height:0;height:3.6rem}
+.ianal{margin:.4rem 0 0 1.6rem;display:flex;flex-direction:column;gap:.8rem;font-size:1.5rem;line-height:1.4}
 
 .fl-de{background-image:url(data:image/webp;base64,UklGRlQCAABXRUJQVlA4WAoAAAAgAAAAPwAALwAASUNDUMgBAAAAAAHIAAAAAAQwAABtbnRyUkdCIFhZWiAH4AABAAEAAAAAAABhY3NwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAA9tYAAQAAAADTLQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAlkZXNjAAAA8AAAACRyWFlaAAABFAAAABRnWFlaAAABKAAAABRiWFlaAAABPAAAABR3dHB0AAABUAAAABRyVFJDAAABZAAAAChnVFJDAAABZAAAAChiVFJDAAABZAAAAChjcHJ0AAABjAAAADxtbHVjAAAAAAAAAAEAAAAMZW5VUwAAAAgAAAAcAHMAUgBHAEJYWVogAAAAAAAAb6IAADj1AAADkFhZWiAAAAAAAABimQAAt4UAABjaWFlaIAAAAAAAACSgAAAPhAAAts9YWVogAAAAAAAA9tYAAQAAAADTLXBhcmEAAAAAAAQAAAACZmYAAPKnAAANWQAAE9AAAApbAAAAAAAAAABtbHVjAAAAAAAAAAEAAAAMZW5VUwAAACAAAAAcAEcAbwBvAGcAbABlACAASQBuAGMALgAgADIAMAAxADZWUDggZgAAAFAFAJ0BKkAAMAA+LRCGQqGhDf+OAAwBYliAHYA/AD9jv5zyAXYD9gAK6ns+8ORK/4TEUAD+/w3bEiVP97K2D2Zy93I///8mObEJfumZQUNa/z86W5lajnRWmIEQv4mSE6/yGwYAAA==)}
 .fl-fr{background-image:url(data:image/webp;base64,UklGRooCAABXRUJQVlA4WAoAAAAgAAAAPwAALwAASUNDUMgBAAAAAAHIAAAAAAQwAABtbnRyUkdCIFhZWiAH4AABAAEAAAAAAABhY3NwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAA9tYAAQAAAADTLQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAlkZXNjAAAA8AAAACRyWFlaAAABFAAAABRnWFlaAAABKAAAABRiWFlaAAABPAAAABR3dHB0AAABUAAAABRyVFJDAAABZAAAAChnVFJDAAABZAAAAChiVFJDAAABZAAAAChjcHJ0AAABjAAAADxtbHVjAAAAAAAAAAEAAAAMZW5VUwAAAAgAAAAcAHMAUgBHAEJYWVogAAAAAAAAb6IAADj1AAADkFhZWiAAAAAAAABimQAAt4UAABjaWFlaIAAAAAAAACSgAAAPhAAAts9YWVogAAAAAAAA9tYAAQAAAADTLXBhcmEAAAAAAAQAAAACZmYAAPKnAAANWQAAE9AAAApbAAAAAAAAAABtbHVjAAAAAAAAAAEAAAAMZW5VUwAAACAAAAAcAEcAbwBvAGcAbABlACAASQBuAGMALgAgADIAMAAxADZWUDggnAAAAHAGAJ0BKkAAMAA+MRKHQqIhDKoAEAGCWIAzMKm/SBTgP6B+Ku9/5yB/VcgABBpttKkelUK/Mrxtnv2J8AD+/fuL//kB/bUvWD//Jsv5wFPXz3/Sk/+Nrn/zv7Ee+3+G0UFj//HAfNJejrRZepdrP//tcQ/8iZBh3cZZO7WWc5rL8MPEz/zPKKBhsNg34C9myuf9nlInlTaH84QAAA==)}
@@ -9914,7 +9915,7 @@ function startNew(cfg) {
       if (d.r && d.r.drill) { if (cfg.onDrill) cfg.onDrill(d.r.drill); return; }
       if (d.r && d.r.track && typeof partidoGuardar === "function") try { partidoGuardar(cfg, d.r); } catch (e) { console.warn(e); }
       const x = d.r, r = { pens: x.pens || null, score: x.score, ev: (x.goals || []).map(g => ({ m: g.m, s: g.s, sc: g.sc, as: g.as, su: g.u })), cards: x.cards || [], teams: cfg.teams.map(T => ({ name: T.name, sh: T.sh })), stats: x.stats,
-        players: cfg.teams.flatMap((T, t) => T.pl.map(dd => ({ t, u: dd.u, name: dd.n }))) };
+        players: cfg.teams.flatMap((T, t) => T.pl.map(dd => ({ t, u: dd.u, name: dd.n }))) }; r.me = data.human >= 0 ? data.human : 0; r.cfgModo = cfg.modo || null;
       showResult(r, cfg.onEnd, r.players); } };
   addEventListener("message", onMsg);
 }
@@ -11983,7 +11984,7 @@ function showResult(r, cb, pls) {
   const extra = cb ? cb(r) : "";
   const evs = [...r.ev.map(e => ({ ...e, k: "g" })), ...r.cards.map(c => ({ m: c.m, s: c.s, k: c.c }))].sort((a, b) => a.m - b.m);
   const evTxt = e => e.k === "g" ? `${esc(e.sc)}${e.as ? ` <span class="mute">(${esc(e.as)})</span>` : ""}` : `<span class="crd ${e.k === "A" ? "a" : "r"}">${e.k === "A" ? "AMARILLA" : "ROJA"}</span> ${esc(e.n)}`;
-  dlg(`${r.teams[0].name} ${r.score[0]} - ${r.score[1]} ${r.teams[1].name}${r.pens ? ` (pen. ${r.pens[0]}-${r.pens[1]})` : ""}`, `Jugador del partido: <b style="color:var(--gold2)">${esc(r.mvp)}</b>`, [["Continuar", closeDlg, true]],
+  dlg(`${r.teams[0].name} ${r.score[0]} - ${r.score[1]} ${r.teams[1].name}${r.pens ? ` (pen. ${r.pens[0]}-${r.pens[1]})` : ""}`, `Jugador del partido: <b style="color:var(--gold2)">${esc(r.mvp)}</b>`, [["Continuar", closeDlg, true], ...(typeof iaAnalisis === "function" ? [["🧠 Análisis del míster", () => iaAnalisis(r)]] : [])],
     `<div class="det" style="grid-template-columns:1fr 1fr;gap:2rem">
       <div class="scroll" style="max-height:40vh">${evs.length ? evs.map(e => `<div class="ev"><b>${e.m}'</b><span>${e.s === 0 ? evTxt(e) : ""}</span><span class="r">${e.s === 1 ? evTxt(e) : ""}</span></div>`).join("") : `<div class="mute">Sin goles.</div>`}</div>
       <table class="tb"><tr><th>${esc(r.teams[0].sh)}</th><th></th><th>${esc(r.teams[1].sh)}</th></tr>
@@ -16049,6 +16050,58 @@ ACT.vNegHablar = () => {
     carSave(); renderCar();
   });
 };
+
+/* ---------- memoria de la prensa: lo que has dicho se recuerda ---------- */
+vFxApply = (orig => function (fx, txt, q) { const d = orig(fx, txt, q); if (CAR && txt) { CAR.quotes = [txt.slice(0, 140)].concat(CAR.quotes || []).slice(0, 8); } return d; })(vFxApply);
+
+/* ---------- repregunta del periodista (recuerda lo que dijiste) ---------- */
+ACT.vNext = (orig => function () {
+  const S = CT.scene, old = CAR && CAR.press; if (!S || !old || !S.res || S.iaBusy || !S.res.txt) return orig();
+  S.iaBusy = true; toast("El periodista prepara la siguiente pregunta…");
+  iaCarrera("pregunta", { rol: vJug() ? "jugador" : "entrenador", nombre: iaWho(), club: cname(CAR.club), ctx: iaCtx(), memoria: (CAR.quotes || []).slice(1), q: old.q, txt: S.res.txt }).then(r => {
+    S.iaBusy = false; if (CT.scene !== S) return;
+    if (!r) return orig();
+    CAR.press = { q: r.q, a: r.a, kind: old.kind, ctx: old.ctx, star: old.star }; S.n++; S.res = null; S.medio = pick(VMEDIOS); carSave(); renderCar();
+  });
+})(ACT.vNext);
+
+/* ---------- el entrenador rival te contesta en prensa ---------- */
+function iaRivalResponde(txt, tonos) {
+  if (!CAR || vJug() || !txt) return;
+  const P = CAR.pending, opp = P && !P.nat ? (isMe(P.h) ? P.a : P.h) : vRival(); if (opp == null) return;
+  const t = vnorm(txt), nombra = vnorm(cname(opp)).split(" ").some(w => w.length > 3 && t.includes(w));
+  const picante = (tonos || []).some(x => ["chulo", "contra el árbitro", "polémico", "ambicioso", "irónico"].includes(x));
+  if (!nombra && !(picante && rnd() < .5)) return;
+  iaCarrera("rival", { rival: cname(opp), club: cname(CAR.club), nombre: CAR.name, rol: "entrenador", ctx: iaCtx() + (opp === vRival() ? " Es el eterno rival (derbi)." : ""), txt }).then(r => {
+    if (!r || !CAR) return; carNews("prensa", r.titular || `El ${cname(opp)} responde a ${CAR.name}`, `Entrenador del ${cname(opp)}: «${r.quote}»`); carSave();
+    toast(`📰 El entrenador del ${cname(opp)} te responde en prensa`); });
+}
+vPrensaAnswer = (orig => function (txt, quickFx) { orig(txt, quickFx);
+  const S = CT.scene; if (!txt || !S) return;
+  // si la IA aún está pensando, se espera a que termine para saber el tono
+  const go = (n = 0) => { const R = CT.scene && CT.scene.res; if (R) iaRivalResponde(txt, R.tonos); else if (n < 24 && CT.scene && CT.scene.iaBusy) setTimeout(() => go(n + 1), 500); };
+  go(); })(vPrensaAnswer);
+
+/* ---------- los jugadores escriben con su propia voz ---------- */
+vMsgAdd = (orig => function (m) { const n0 = (CAR.msgs || []).length; orig(m);
+  if (!CAR || (CAR.msgs || []).length === n0 || !m.k || !["queja", "capitan"].includes(m.t)) return;
+  const p = pinfo(m.k), s = cps(m.k);
+  iaCarrera("jugador", { jugador: p.n, datos: `${p.pos}, ${s[2]} años, media ${s[1]}, moral ${Math.round(s[3])}/100`, situacion: `${m.title}. Idea del mensaje: ${m.body}`, tipoMsg: m.t === "queja" ? "queja, quiere hablar con el míster" : "el capitán habla en nombre del vestuario", txt: "-" }).then(r => {
+    if (r && r.body && CAR && (CAR.msgs || []).includes(m)) { m.body = r.body; carSave(); if (CT.scene && CT.scene.t === "msg" && CT.scene.id === m.id && !CT.scene.res) renderCar(); } });
+})(vMsgAdd);
+
+/* ---------- análisis del partido (cualquier modo) ---------- */
+function iaAnalisis(r) {
+  const me = r.me || 0, op = 1 - me, st = r.stats || [], tot = (st[0] && st[1] && (st[0].pos + st[1].pos)) || 1, pc = i => st[i] ? Math.round(st[i].pos / tot * 100) : 50;
+  const stats = st[me] && st[op] ? `posesión ${pc(me)}%-${pc(op)}%, tiros ${st[me].sh}-${st[op].sh}, a puerta ${st[me].ont}-${st[op].ont}, faltas ${st[me].fo}-${st[op].fo}` : "sin estadísticas";
+  const ev = [...(r.ev || []).map(e => `${e.m}' gol ${e.s === me ? "nuestro" : "del rival"} (${e.sc})`), ...(r.cards || []).map(c => `${c.m}' ${c.c === "A" ? "amarilla" : "roja"} ${c.s === me ? "nuestra" : "del rival"}`)].join("; ");
+  dlg("🧠 Análisis del míster", `<div class="vthink">Revisando el partido…</div>`, [["Cerrar", closeDlg, true]]);
+  iaCarrera("analisis", { modo: (typeof CAR !== "undefined" && CAR && current && current.id === "car") ? "Modo Carrera" : "partido", yo: r.teams[me].name, rival: r.teams[op].name, res: `${r.score[me]}-${r.score[op]}${r.pens ? ` (penaltis ${r.pens[me]}-${r.pens[op]})` : ""}`, stats, eventos: ev || "sin goles", txt: "-" }).then(a => {
+    if (!$("#dlg").classList.contains("on")) return;
+    if (!a) return dlg("🧠 Análisis del míster", "Ahora mismo no puedo analizar el partido. Inténtalo en un rato.", [["Cerrar", closeDlg, true]]);
+    dlg("🧠 " + (a.titulo || "Análisis del míster"), `<ul class="ianal">${a.puntos.map(x => `<li>${esc(x)}</li>`).join("")}</ul>`, [["Cerrar", closeDlg, true]]);
+  });
+}
 
 /* =====================================================================
    MENÚ PRINCIPAL — lista de modos a la izquierda y fondo (vídeo o foto)
