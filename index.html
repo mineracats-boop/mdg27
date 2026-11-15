@@ -12970,8 +12970,8 @@ const fld = (lab, html) => `<label class="afld"><span>${lab}</span>${html}</labe
 
 ACT.admNewType = () => {
   const list = (S.custom.types || []).map(t => `<div class="arow"><b>${esc(t.n)}</b> · +${t.b} de media · ${t.count} jugadores (media ≥ ${t.min})<button class="mbtn red" data-nav data-a="admDelType" data-id="${t.id}">Borrar</button></div>`).join("");
-  dlg("Tipos de carta", "Crea una versión especial (por ejemplo «Héroes de Halloween»). Luego elige en qué sobres puede tocar.", [["Crear", admSaveType, true], ["Cerrar", closeDlg]],
-    `<div class="aform">${fld("Nombre", `<input class="inp" id="atN" data-nav data-first placeholder="Héroes de Halloween">`)}
+  dlg("Tipos de carta", "Crea una versión especial (por ejemplo «Especial de Halloween»). Luego elige en qué sobres puede tocar.", [["Crear", admSaveType, true], ["Cerrar", closeDlg]],
+    `<div class="aform">${fld("Nombre", `<input class="inp" id="atN" data-nav data-first placeholder="Especial de Halloween">`)}
       ${fld("Sube la media", `<input class="inp" id="atB" type="number" min="1" max="10" value="3" data-nav>`)}
       ${fld("Jugadores con media desde", `<input class="inp" id="atMin" type="number" min="50" max="95" value="80" data-nav>`)}
       ${fld("Número de jugadores", `<input class="inp" id="atC" type="number" min="1" max="60" value="12" data-nav>`)}
@@ -14705,9 +14705,9 @@ ACT.jugJob = el => { jugTransfer(+el.dataset.i, 0, pwage(jMe()) * .9, true); CT.
 ACT.jugMore = () => { CAR.jobOff = jugJobOffers(); jugSave(); renderCar(); };
 
 /* =====================================================================
-   LEYENDAS E HISTORIA — equipos históricos, cartas Leyenda / Héroe
+   LEYENDAS E HISTORIA — equipos históricos, cartas Leyenda / Retro
    y modo DRAFT HISTÓRICO (dado por posición, 3 cambiar año, 3 cambiar equipo)
-   Formato de cada jugador: "Nombre:POS:media:País:L|H"  (L = Leyenda, H = Héroe)
+   Formato de cada jugador: "Nombre:POS:media:País:L|H"  (L = Leyenda, H = Retro)
    ===================================================================== */
 const HIST_RAW = [
  ["BRA1962", "Brasil", 1962, "BRA", "#ffdf00", "#009c3b", "Gilmar:POR:84:Brasil:H|Djalma Santos:LD:87:Brasil:H|Mauro Ramos:DFC:80:Brasil:H|Zózimo:DFC:79:Brasil:H|Nílton Santos:LI:89:Brasil:L|Zito:MCD:82:Brasil:H|Didi:MC:91:Brasil:L|Garrincha:ED:95:Brasil:L|Vavá:DC:86:Brasil:H|Amarildo:DC:82:Brasil:H|Mário Zagallo:EI:84:Brasil:H"],
@@ -14763,8 +14763,8 @@ for (const [id, club, year, sh, c1, c2, raw] of HIST_RAW) {
 }
 const HCLUBS = [...new Set(HIST.map(t => t.club))];
 const histOv = T => Math.round(T.pl.reduce((a, p) => a + p.ov, 0) / T.pl.length);
-// cartas Leyenda y Héroe en los sobres del Ultimate Team
-VER.leyenda = { n: "Leyenda", b: 0, sp: 1 }; VER.heroe = { n: "Héroe", b: 0, sp: 1 };
+// cartas Leyenda y Retro en los sobres del Ultimate Team
+VER.leyenda = { n: "Leyenda", b: 0, sp: 1 }; VER.heroe = { n: "Retro", b: 0, sp: 1 };
 SPEC.leyenda = LEGS.filter(p => p.leg === "L").map(p => p.k); SPEC.heroe = LEGS.filter(p => p.leg === "H").map(p => p.k);
 SP_ODDS.splice(0, SP_ODDS.length, ["jornada", 55], ["promesas", 20], ["mes", 10], ["anio", 6], ["heroe", 6], ["corona", 2], ["leyenda", 1]);
 
@@ -14801,7 +14801,7 @@ function renderDraft() {
       <p>Monta un once con <b>leyendas de todas las épocas</b>. Para cada posición sale un equipo histórico al azar y eliges a uno de sus jugadores.</p>
       <p>Tienes <b>3 cambios de año</b> (el mismo club en otra época) y <b>3 cambios de equipo</b>. Al terminar, juega un torneo contra equipos históricos o simúlalo.</p>
       <div class="lbl" style="margin-top:1rem">Formación</div><div class="tabs">${DRAFT_FORMS.map((f, i) => `<button class="tab" data-nav data-a="drNew" data-k="${f}"${i ? "" : " data-first"}>${f}</button>`).join("")}</div>
-      <p class="mute" style="margin-top:1rem">${HIST.length} equipos históricos · ${LEGS.filter(p => p.leg === "L").length} Leyendas y ${LEGS.filter(p => p.leg === "H").length} Héroes.</p></div>`; return; }
+      <p class="mute" style="margin-top:1rem">${HIST.length} equipos históricos · ${LEGS.filter(p => p.leg === "L").length} Leyendas y ${LEGS.filter(p => p.leg === "H").length} Retros.</p></div>`; return; }
   const xi = draftXI(), F = FORMS[DF.form];
   const pitch = `<div class="dpitch">${F.map(([role, x, y], i) => { const s = xi[i];
     return `<div class="dslot${DF.sel === i ? " on" : ""}${s ? " full" : ""}${s && draftPen(s.p.pos, role) < 0 ? " fuera" : ""}"${DF.stage !== "cup" ? ` data-nav data-a="drSlot" data-i="${i}"` : ""} style="left:${y}%;bottom:${x * .92 + 2}%">${s ? `<b>${s.ov}</b><span>${esc(shortName(s.p.n))}</span>` : `<b>${role}</b><span>—</span>`}</div>`; }).join("")}</div>`;
@@ -14814,11 +14814,11 @@ function renderDraft() {
       <p class="mute" style="margin:.2rem 0 .6rem">Puedes coger a cualquiera: va al hueco libre donde mejor encaja. Toca dos jugadores en el campo para cambiarlos de sitio.</p>
       <div class="dbtns"><button class="mbtn" data-nav data-a="drYear"${DF.yr && sameY ? "" : " disabled"}>Cambiar año (${DF.yr})</button><button class="mbtn" data-nav data-a="drTeam"${DF.eq ? "" : " disabled"}>Cambiar equipo (${DF.eq})</button></div>
       <div class="dlist scroll">${opts.map(({ p, role, pen }) => { const taken = DF.picks.includes(p.k);
-        return `<button class="lurow${taken ? " nc" : ""}" data-nav data-a="drPick" data-k="${p.k}"${taken ? " disabled" : ""}><span class="lr">${p.pos}</span><span class="ln">${esc(p.n)} <i class="dleg ${p.leg}">${p.leg === "L" ? "LEYENDA" : "HÉROE"}</i><small class="mute"> → ${taken ? "ya en tu equipo" : role}</small></span><span class="lo${pen < 0 ? " bad" : ""}">${p.ov + pen}</span></button>`; }).join("")}</div>`;
+        return `<button class="lurow${taken ? " nc" : ""}" data-nav data-a="drPick" data-k="${p.k}"${taken ? " disabled" : ""}><span class="lr">${p.pos}</span><span class="ln">${esc(p.n)} <i class="dleg ${p.leg}">${p.leg === "L" ? "LEYENDA" : "RETRO"}</i><small class="mute"> → ${taken ? "ya en tu equipo" : role}</small></span><span class="lo${pen < 0 ? " bad" : ""}">${p.ov + pen}</span></button>`; }).join("")}</div>`;
   } else if (DF.stage === "done") {
     side = `<h3>¡Draft completado!</h3><p>Tu once tiene <b>${draftRating()}</b> de media. Ahora compite contra equipos históricos:</p>
       <div class="dbtns col"><button class="mbtn gold" data-nav data-a="drCup" data-m="play" data-first>Jugar el torneo (cuartos, semis y final)</button><button class="mbtn" data-nav data-a="drCup" data-m="sim">Simular el torneo</button></div>
-      <p class="mute">Premios: cuartos 2.000 · semifinal 5.000 · final 10.000 · campeón 20.000 monedas y una carta Héroe para tu Ultimate Team.</p>`;
+      <p class="mute">Premios: cuartos 2.000 · semifinal 5.000 · final 10.000 · campeón 20.000 monedas y una carta Retro para tu Ultimate Team.</p>`;
   } else if (DF.stage === "cup") side = draftCupHTML();
   B.innerHTML = `<div class="dgrid"><div class="panel">${head}${pitch}</div><div class="panel dside">${side}</div></div>`;
 }
@@ -14843,7 +14843,7 @@ function draftCupHTML() {
     return `<div class="lrow"><span>${DR_ROUNDS[i]}</span><span>${esc(T.nombre)} <span class="mute">(${histOv(T)})</span></span><span class="r">${r ? `<b class="${r.w ? "win" : "lose"}">${r.g[0]}-${r.g[1]}${r.p ? ` (${r.p[0]}-${r.p[1]} pen.)` : ""}</b>` : i === C.r && !C.out ? "Siguiente" : "—"}</span></div>`; }).join("");
   const won = C.r >= 3 && !C.out;
   return `<h3>Torneo del draft</h3><div class="ltable">${rows}</div>
-    ${done ? `<div class="okb" style="margin:1rem 0">${won ? "¡CAMPEÓN! " : "Eliminado. "}Premio: <b>${fmt(DR_PRIZE[C.r])}</b> monedas${won ? " y una carta Héroe" : ""}.</div><button class="mbtn gold" data-nav data-a="drReset2" data-first>Nuevo draft</button>`
+    ${done ? `<div class="okb" style="margin:1rem 0">${won ? "¡CAMPEÓN! " : "Eliminado. "}Premio: <b>${fmt(DR_PRIZE[C.r])}</b> monedas${won ? " y una carta Retro" : ""}.</div><button class="mbtn gold" data-nav data-a="drReset2" data-first>Nuevo draft</button>`
       : `<div class="dbtns col"><button class="mbtn gold" data-nav data-a="drNext" data-first>${C.mode === "play" ? "Jugar " : "Simular "}${DR_ROUNDS[C.r].toLowerCase()}</button>${C.mode === "play" ? `<button class="mbtn" data-nav data-a="drNext" data-m="sim">Simular este partido</button>` : ""}</div>`}`;
 }
 ACT.drCup = el => { draftCupStart(el.dataset.m); renderDraft(); };
@@ -14851,7 +14851,7 @@ ACT.drReset2 = () => { DF = null; dSave(); renderDraft(); };
 function draftCupResult(g, p) {
   const C = DF.cup, w = g[0] > g[1] || (g[0] === g[1] && p && p[0] > p[1]); C.res[C.r] = { g, p, w };
   if (w) C.r++; else C.out = true;
-  if (C.out || C.r >= 3) { addCoins(DR_PRIZE[C.r], undefined, "draft"); if (C.r >= 3 && SPEC.heroe.length) { const c = mkCard(pick(SPEC.heroe), "heroe"); S.cards.push(c); addLog(`Draft: carta Héroe de ${PBY[c.k].n}`); toast(`Carta Héroe: ${shortName(PBY[c.k].n)}`); } save(); }
+  if (C.out || C.r >= 3) { addCoins(DR_PRIZE[C.r], undefined, "draft"); if (C.r >= 3 && SPEC.heroe.length) { const c = mkCard(pick(SPEC.heroe), "heroe"); S.cards.push(c); addLog(`Draft: carta Retro de ${PBY[c.k].n}`); toast(`Carta Retro: ${shortName(PBY[c.k].n)}`); } save(); }
   dSave(); renderDraft();
 }
 ACT.drNext = el => {
@@ -14868,7 +14868,7 @@ function simScore(a, b, ko) {
   let p = null; if (ko && g[0] === g[1]) { p = [3 + Math.floor(rnd() * 3), 0]; p[1] = p[0] + (rnd() < .5 + d * .02 ? -1 - Math.floor(rnd() * 2) : 1); if (p[1] < 0) p[1] = 0; if (p[1] === p[0]) p[1]++; }
   return { g, p };
 }
-PACKS.historico = { n: "Sobre Histórico", img: IMG.sobre_especial, price: 75000, cards: 3, desc: "1 Héroe o Leyenda garantizado y 2 oros raros.", slots: [["cs:heroe,leyenda", 1], ["oro_raro", 2]] };
+PACKS.historico = { n: "Sobre Histórico", img: IMG.sobre_especial, price: 75000, cards: 3, desc: "1 Retro o Leyenda garantizado y 2 oros raros.", slots: [["cs:heroe,leyenda", 1], ["oro_raro", 2]] };
 
 /* =====================================================================
    CARRERA 2009 · temporada 2009-10 (datos) — España e Inglaterra
