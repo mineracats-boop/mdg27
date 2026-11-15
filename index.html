@@ -7695,7 +7695,7 @@ const store = {
   get(k, d) { try { const v = localStorage.getItem("mdg27." + k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
   set(k, v) { try { localStorage.setItem("mdg27." + k, JSON.stringify(v)); } catch (e) {} }
 };
-const settings = Object.assign({ music: 70, sfx: 80, vibra: true, quality: "Alta", vista: "3D", lang: "Español", cam: "Televisión", passAssist: "Asistido", narr: true, voz: true, padTipo: "Automático" }, store.get("settings", {}));
+const settings = Object.assign({ carga: (() => { try { return matchMedia("(pointer: coarse)").matches ? "Rápida" : "Completa"; } catch (e) { return "Completa"; } })(), music: 70, sfx: 80, vibra: true, quality: "Alta", vista: "3D", lang: "Español", cam: "Televisión", passAssist: "Asistido", narr: true, voz: true, padTipo: "Automático" }, store.get("settings", {}));
 const ACT = {};            // acciones: data-a="nombre"
 const ONSHOW = {};         // al entrar en una pantalla
 
@@ -7930,6 +7930,7 @@ const CFG = [
   { k: "music", lab: "Música", sub: "Volumen de la música de menús", type: "range" },
   { k: "sfx", lab: "Efectos", sub: "Volumen de los efectos de sonido", type: "range" },
   { k: "vibra", lab: "Vibración", sub: "Vibración del mando y del móvil", type: "bool" },
+  { k: "carga", lab: "Carga del partido", sub: "Rápida: menos cuerpos distintos y el partido empieza mucho antes (recomendada en móvil)", type: "list", opts: ["Rápida", "Completa"] },
   { k: "quality", lab: "Calidad gráfica", sub: "Baja ahorra batería en móviles", type: "list", opts: ["Baja", "Media", "Alta"] },
   { k: "lang", lab: "Idioma", sub: "Más idiomas próximamente", type: "list", opts: ["Español"] },
   { k: "cam", lab: "Cámara del partido", sub: "Televisión, cercana o lejana", type: "list", opts: ["Televisión", "Cercana", "Lejana"] },
@@ -8169,7 +8170,7 @@ function cuentaGuardar(j) {
   if (!j.admin && had) { try { localStorage.removeItem("mdg27_admkey"); } catch (e) {} return true; }
   return false;
 }
-async function cuentaSalir() { try { await nubeSubir(true); const ok = +(localStorage.getItem("mdg27_sub") || 0) >= +(localStorage.getItem("mdg27_mod") || 0); if (ok) { for (const k of Object.keys(nubeLocal())) if (k !== "mdg27.settings") localStorage.removeItem(k); localStorage.removeItem("mdg27_mod"); localStorage.removeItem("mdg27_sub"); } } catch (e) {} const tok = SES && SES.tok; if (tok) cuentaApi("/cuenta/salir", { tok }); SES = null; try { localStorage.removeItem("mdg27_ses"); localStorage.removeItem("mdg27_admkey"); } catch (e) {} location.reload(); }
+async function cuentaSalir() { try { await nubeSubir(); const ok = !nubeSucio(); if (ok) { for (const k of Object.keys(nubeLocal())) if (k !== "mdg27.settings") localStorage.removeItem(k); localStorage.removeItem("mdg27_mod"); localStorage.removeItem("mdg27_sub"); localStorage.removeItem("mdg27_ver"); localStorage.removeItem("mdg27_dirty"); } } catch (e) {} const tok = SES && SES.tok; if (tok) cuentaApi("/cuenta/salir", { tok }); SES = null; try { localStorage.removeItem("mdg27_ses"); localStorage.removeItem("mdg27_admkey"); } catch (e) {} location.reload(); }
 function cuentaPantalla() {
   if (document.getElementById("login")) return;
   const d = document.createElement("div"); d.id = "login";
@@ -8194,7 +8195,7 @@ function cuentaPantalla() {
     go.disabled = false; go.textContent = mode === "up" ? "CREAR CUENTA" : "ENTRAR";
     if (!j || !j.ok) { err.textContent = (j && j.error) || "No se ha podido entrar."; if (j && j.red) { err.textContent += " Puedes jugar sin conexión mientras tanto (sin online); cuando vuelva el servidor te pedirá entrar."; off.style.display = ""; } return; }
     if (cuentaGuardar(j)) { location.reload(); return; }
-    d.remove(); document.body.classList.remove("nolog"); toast("¡Hola, " + (j.nombre || j.u) + "!"); setTimeout(nubeBajar, 800); };
+    d.remove(); document.body.classList.remove("nolog"); toast("¡Hola, " + (j.nombre || j.u) + "!"); setTimeout(nubeComprobar, 800); };
   setTimeout(() => f.u.focus(), 50);
 }
 // sin conexión: se vuelve a probar cada minuto; en cuanto haya servidor, se pide iniciar sesión
@@ -8209,34 +8210,52 @@ function cuentaReintento() { setTimeout(async () => { if (SES && SES.tok) return
 /* ---------------- guardado en la nube ----------------
    Todo el progreso (Ultimate Team, carreras, torneos, alineaciones…) se sube comprimido a tu cuenta.
    Al entrar en otro dispositivo se baja la partida más reciente. */
-const NUBE_SKIP = /^mdg27\.(padmap)$/;
+// Sincronización con número de versión (como las partidas en la nube de los juegos de móvil):
+//  · cada guardado en el servidor sube la versión; este dispositivo recuerda la última que conoce (mdg27_ver)
+//  · si cambias algo aquí queda «pendiente» y se sube a los pocos segundos
+//  · al abrir el juego, al volver a él y cada minuto se mira si otro dispositivo ha guardado algo más nuevo
+//  · si los dos dispositivos tienen cambios sin juntar, se pregunta cuál quedarse (nunca se pisa en silencio)
+const NUBE_SKIP = /^mdg27\.(padmap|settings|guia)$/;   // ajustes de este aparato: no viajan
 function nubeLocal() { const o = {}; try { for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k && k.startsWith("mdg27.") && !NUBE_SKIP.test(k)) o[k] = localStorage.getItem(k); } } catch (e) {} return o; }
-const nubeMod = () => { try { localStorage.setItem("mdg27_mod", String(Date.now())); } catch (e) {} };
-{ const _set = store.set; store.set = (k, v) => { _set.call(store, k, v); if (k !== "padmap") nubeMod(); }; }
+const LS = { g: k => { try { return localStorage.getItem(k); } catch (e) { return null; } }, s: (k, v) => { try { localStorage.setItem(k, String(v)); } catch (e) {} } };
+const nubeVer = () => +(LS.g("mdg27_ver") || 0), nubeSucio = () => LS.g("mdg27_dirty") === "1";
+// compatibilidad: quien venía del sistema anterior con cambios sin subir, los conserva como pendientes
+if (LS.g("mdg27_dirty") == null) LS.s("mdg27_dirty", +(LS.g("mdg27_mod") || 0) > +(LS.g("mdg27_sub") || 0) ? "1" : "0");
+let nubeT = 0; const nubeMod = () => { LS.s("mdg27_dirty", "1"); LS.s("mdg27_mod", Date.now()); clearTimeout(nubeT); nubeT = setTimeout(() => nubeSubir(), 12000); };
+{ const _set = store.set; store.set = (k, v) => { const key = "mdg27." + k, antes = LS.g(key); _set.call(store, k, v); if (!NUBE_SKIP.test(key) && LS.g(key) !== antes) nubeMod(); }; }
 async function nubeZip(str) { if (typeof CompressionStream === "undefined") return "J" + str;
   const s = new Blob([str]).stream().pipeThrough(new CompressionStream("gzip")), b = new Uint8Array(await new Response(s).arrayBuffer()); let bin = ""; for (let i = 0; i < b.length; i += 32768) bin += String.fromCharCode.apply(null, b.subarray(i, i + 32768)); return "Z" + btoa(bin); }
 async function nubeUnzip(d) { if (d[0] === "J") return d.slice(1); const bin = atob(d.slice(1)), b = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) b[i] = bin.charCodeAt(i);
   return await new Response(new Blob([b]).stream().pipeThrough(new DecompressionStream("gzip"))).text(); }
-let nubeUlt = "", nubeOcup = false;
+const nubeOp = (op, o) => cuentaApi("/cuenta/srv", Object.assign({ tok: SES && SES.tok, op }, o || {}));
+let nubeOcup = false, nubePreg = false;
 async function nubeSubir(forzar) {
-  if (!SES || !SES.tok || nubeOcup) return; const mod = +(localStorage.getItem("mdg27_mod") || 0), sub = +(localStorage.getItem("mdg27_sub") || 0); if (!forzar && (!mod || mod <= sub)) return;
-  const raw = JSON.stringify(nubeLocal()); if (raw === nubeUlt && !forzar) return; nubeOcup = true;
-  try { const j = await cuentaApi("/cuenta/guardar", { tok: SES.tok, d: await nubeZip(raw), t: mod || Date.now(), dev: device }); if (j && j.ok) { nubeUlt = raw; localStorage.setItem("mdg27_sub", String(mod || Date.now())); } } catch (e) {} nubeOcup = false;
+  if (!SES || !SES.tok || nubeOcup || nubePreg) return; if (!forzar && !nubeSucio()) return; nubeOcup = true;
+  try { const raw = JSON.stringify(nubeLocal()), j = await nubeOp("nubePut", { d: await nubeZip(raw), base: nubeVer(), dev: device, forzar: forzar ? 1 : 0 });
+    if (j && j.ok) { LS.s("mdg27_ver", j.v); LS.s("mdg27_dirty", "0"); LS.s("mdg27_sub", Date.now()); }
+    else if (j && j.conflict) { nubeOcup = false; return nubeComprobar(); } } catch (e) {} nubeOcup = false;
 }
-async function nubeAplicar(j) { const o = JSON.parse(await nubeUnzip(j.d)); try { for (const k of Object.keys(nubeLocal())) localStorage.removeItem(k); for (const [k, v] of Object.entries(o)) localStorage.setItem(k, v); localStorage.setItem("mdg27_mod", String(j.t)); localStorage.setItem("mdg27_sub", String(j.t)); } catch (e) {} location.reload(); }
-async function nubeBajar() {
-  if (!SES || !SES.tok) return; const j = await cuentaApi("/cuenta/cargar", { tok: SES.tok }); if (!j || !j.ok) return;
-  const mod = +(localStorage.getItem("mdg27_mod") || 0), sub = +(localStorage.getItem("mdg27_sub") || 0);
-  if (j.none) { nubeSubir(true); return; }
-  if (j.t <= Math.max(sub, mod)) { if (mod > sub) nubeSubir(); return; }     // la de aquí es igual o más nueva
-  const fecha = new Date(j.t).toLocaleString("es-ES", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }), local = Object.keys(nubeLocal()).length > 1 && mod > 0;
-  if (!local) { toast("Cargando tu partida de la nube…"); return nubeAplicar(j); }
-  dlg("Partida en la nube", `Tu cuenta tiene una partida guardada más reciente (${esc(fecha)}${j.dev ? " · " + esc(j.dev) : ""}).<br>¿Quieres cargarla en este dispositivo? Si eliges quedarte con la de aquí, se subirá a la nube y sustituirá a esa.`,
-    [["Cargar la de la nube", () => { closeDlg(); nubeAplicar(j); }, true], ["Quedarme con la de aquí", () => { closeDlg(); nubeSubir(true); }]]);
+async function nubeAplicar(j) { const o = JSON.parse(await nubeUnzip(j.d)); try { for (const k of Object.keys(nubeLocal())) localStorage.removeItem(k); for (const [k, v] of Object.entries(o)) if (!NUBE_SKIP.test(k)) localStorage.setItem(k, v);
+    LS.s("mdg27_ver", j.v || 0); LS.s("mdg27_dirty", j.legacy ? "1" : "0"); LS.s("mdg27_mod", Date.now()); } catch (e) {} location.reload(); }
+async function nubeBajarYAplicar() { toast("Cargando tu partida de la nube…"); const j = await nubeOp("nubeGet", {}); if (j && j.ok && j.d) return nubeAplicar(j); toast("No se ha podido bajar la partida. Se intentará de nuevo."); }
+async function nubeComprobar() {
+  if (!SES || !SES.tok || nubeOcup || nubePreg || (typeof MATCH_ON !== "undefined" && MATCH_ON)) return;
+  const j = await nubeOp("nubeGet", { soloV: 1 }); if (!j || !j.ok) return;
+  const hayLocal = Object.keys(nubeLocal()).length > 1;
+  if (j.none) { if (hayLocal) nubeSubir(true); return; }
+  const otra = j.legacy ? !nubeVer() && j.t > +(LS.g("mdg27_sub") || 0) : j.v > nubeVer();
+  if (!otra) { if (nubeSucio() || j.legacy) nubeSubir(!!j.legacy); return; }
+  // dispositivo que nunca se ha sincronizado con esta cuenta: solo se pregunta si aquí se ha jugado de verdad (partidos, carrera)
+  const progresoLocal = () => { try { const sv = store.get("save", null); return !!((sv && sv.st && sv.st.played > 0) || store.get("car", null) || store.get("carj", null)); } catch (e) { return false; } };
+  if (!hayLocal || !nubeSucio() || (!nubeVer() && !progresoLocal())) return nubeBajarYAplicar();           // aquí no hay nada sin guardar: se baja la de la nube
+  const fecha = new Date(j.t).toLocaleString("es-ES", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }); nubePreg = true;
+  dlg("Tu partida en otro dispositivo", `Has jugado en otro dispositivo (${esc(fecha)}${j.dev ? " · " + esc(j.dev) : ""}) y aquí también hay cambios sin juntar.<br><br>¿Con cuál te quedas? La otra se sustituye.`,
+    [["Usar la de la nube", () => { closeDlg(); nubePreg = false; nubeBajarYAplicar(); }, true], ["Quedarme con la de este dispositivo", () => { closeDlg(); nubePreg = false; nubeSubir(true); }]]);
 }
-setInterval(() => nubeSubir(), 90000);
-document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") nubeSubir(); });
-setTimeout(() => { if (SES && SES.tok) nubeBajar(); }, 2500);
+setInterval(() => { nubeSubir(); nubeComprobar(); }, 60000);
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") nubeSubir(); else setTimeout(nubeComprobar, 600); });
+addEventListener("pagehide", () => nubeSubir());
+setTimeout(() => { if (SES && SES.tok) nubeComprobar(); }, 2000);
 /* ---------------- clasificación online y ligas entre amigos ---------------- */
 function rkTabla(rows, yo) { if (!rows.length) return `<p style="color:var(--mute)">Aún no hay partidos. Juega online contra un amigo para entrar en la tabla.</p>`;
   return `<table class="rkt"><tr><th>#</th><th style="text-align:left">Jugador</th><th>PJ</th><th>G</th><th>E</th><th>P</th><th>DG</th><th>PTS</th></tr>${rows.map((r, i) => `<tr class="${yo && r.u === yo ? "yo" : ""}"><td>${i + 1}</td><td style="text-align:left">${esc(r.n || r.u)}</td><td>${r.pj}</td><td>${r.g}</td><td>${r.e}</td><td>${r.p}</td><td>${r.gf - r.gc > 0 ? "+" : ""}${r.gf - r.gc}</td><td><b>${r.pts}</b></td></tr>`).join("")}</table>`; }
@@ -9901,7 +9920,7 @@ function teamKits(T) {
   return T.kits || kitOf(T.name, T.c1, T.c2);
 }
 function startNew(cfg) {
-  const fr = document.createElement("iframe"); fr.id = "m2"; fr.src = "motor/index.html?embed=1"; fr.allow = "gamepad; fullscreen; autoplay";
+  const fr = document.createElement("iframe"); fr.id = "m2"; fr.src = "motor/index.html?embed=1" + (settings.carga === "Completa" ? "" : "&ligero=1"); fr.allow = "gamepad; fullscreen; autoplay";
   fr.style.cssText = "position:fixed;inset:0;width:100%;height:100%;border:0;z-index:9999;background:#050a14"; document.body.appendChild(fr);
   document.body.classList.add("inmatch"); MATCH_ON = true;
   const data = { teams: cfg.teams.map(T => ({ name: T.name, sh: T.sh, c1: T.c1, c2: T.c2, kits: teamKits(T), pl: T.pl.map(d => ({ n: d.n, role: d.role, st: d.st, ov: d.ov, u: d.u, num: d.num })), bench: (T.bench || []).map(d => ({ n: d.n, role: d.role, st: d.st, ov: d.ov, u: d.u, num: d.num })) })).map(dorsalesRellenar),
@@ -12128,7 +12147,7 @@ ACT.qm = el => {
   const m = el.dataset.m;
   if (m === "cpu") { initPre("cpu"); return show("pre"); }
   if (m === "local") { if (!localSources()) return info("Multijugador local", `Para jugar dos personas en el mismo dispositivo hacen falta <b>2 mandos</b> conectados${device === "Ordenador" ? " (o 1 mando + el teclado)" : ""}.<br>Detectados ahora: <b>${padCount()}</b>.`); initPre("local"); return show("pre"); }
-  dlg("Contra un amigo", "Partido online en tiempo real. <b>Buscar partido</b> te empareja con un rival de tu nivel y cuenta para tu división (de la 10 a la 1 y Élite). También puedes crear una sala y pasarle el código a un amigo. Todos los partidos cuentan para la clasificación mundial y tus ligas de amigos.", [["Ir al online", () => { const back = location.pathname.split("/").pop() || "index.html"; location.href = "motor/" + "index" + ".html?online=1&volver=" + encodeURIComponent("../" + back); }, true], ["Clasificación y ligas", () => onlineTabla()], ["Cancelar", closeDlg]]);
+  dlg("Contra un amigo", "Partido online en tiempo real. <b>Buscar partido</b> te empareja con un rival de tu nivel y cuenta para tu división (de la 10 a la 1 y Élite). También puedes crear una sala y pasarle el código a un amigo. Todos los partidos cuentan para la clasificación mundial y tus ligas de amigos.", [["Ir al online", () => { const back = location.pathname.split("/").pop() || "index.html"; location.href = "motor/" + "index" + ".html?online=1" + (settings.carga === "Completa" ? "" : "&ligero=1") + "&volver=" + encodeURIComponent("../" + back); }, true], ["Clasificación y ligas", () => onlineTabla()], ["Cancelar", closeDlg]]);
 };
 function updateLocal() {
   const ok = !!localSources(), n = padCount();
@@ -16304,6 +16323,38 @@ Object.keys(TIPS).forEach(id => { const o = ONSHOW[id]; ONSHOW[id] = function ()
       if (current && current.id === "home" && !$("#login") && !$("#dlg").classList.contains("on") && !(typeof MATCH_ON !== "undefined" && MATCH_ON)) { clearInterval(window.__guiaW); window.__guiaW = 0; guiaStart(); } }, 1200); } }; }
 // los consejos que ya ha visto quien jugaba antes de que existiera la guía no molestan: si ya tiene partidos jugados, se salta la guía del menú
 try { if (typeof S !== "undefined" && S && S.st && S.st.played > 3 && !guiaVisto("menu")) { guiaMarca("menu"); Object.keys(TIPS).filter(k => k !== "retos").forEach(k => guiaMarca("tip_" + k)); } } catch (e) {}
+
+/* =====================================================================
+   PRECARGA DEL PARTIDO (como DLS o FIFA Mobile, que descargan los datos
+   del partido al empezar): mientras navegas por los menús, el juego baja
+   en segundo plano los modelos 3D del partido y los deja guardados.
+   El primer partido ya no tiene que esperar a la descarga.
+   No se hace con «ahorro de datos» activado ni con conexión muy lenta,
+   y se para mientras juegas un partido.
+   ===================================================================== */
+(function () {
+  if (!("serviceWorker" in navigator) || !/^https?:$/.test(location.protocol)) return;
+  const BASE = ["basis_js", "basis_wasm", "m_mx", "campo2", "m_estadio2", "estadio2_seats", "m_est_banquillo", "balon", "red", "vallas", "camisetas", "sonidos", "m_gn01", "m_gn02", "m_gn03", "m_arbitro", "m_juez", "m_entrenador1", "m_entrenador2", "m_aficionado1", "m_aficionado2", "m_aficionado3", "hud_marcador", "carga_estadio"];
+  const LIG = ["pn01", "pn04", "pn07", "pn10", "pj01", "pj03", "pj05", "pj11"];
+  const TODOS = Array.from({ length: 12 }, (_, i) => "pn" + String(i + 1).padStart(2, "0")).concat(["pj01", "pj05", "pj02", "pj07", "pj11", "pj14", "pj03", "pj04", "pj06", "pj08"]);
+  const lista = () => ["motor/three.js", "motor/meshopt.js", "motor/motor2.js", "motor/mx_meta.json", "musica/himno.mp3", "musica/canto.mp3"]
+    .concat(BASE.map(n => "motor/m3d/" + n + ".txt"), (settings.carga === "Completa" ? TODOS : LIG).map(n => "motor/m3d/m_" + n + ".txt"));
+  const red = () => { const c = navigator.connection; return !(c && (c.saveData || /(^|-)2g$/.test(c.effectiveType || ""))); };
+  let corriendo = false;
+  async function precargar() {
+    if (corriendo || !red()) return; const clave = settings.carga + "|" + new Date().toISOString().slice(0, 10);
+    try { if (localStorage.getItem("mdg27_pre") === clave) return; } catch (e) {}
+    corriendo = true; const L = lista();
+    for (let i = 0; i < L.length; i++) {
+      while ((typeof MATCH_ON !== "undefined" && MATCH_ON) || document.hidden) await new Promise(r => setTimeout(r, 4000));
+      try { const r = await fetch(L[i], { priority: "low" }); if (r.ok) await r.blob(); } catch (e) { corriendo = false; return; }   // sin conexión: se reintenta otro día
+    }
+    try { localStorage.setItem("mdg27_pre", clave); } catch (e) {} corriendo = false;
+  }
+  // espera a que el guardado de archivos (service worker) controle la página y a que el menú esté tranquilo
+  const go = () => { if (navigator.serviceWorker.controller) setTimeout(precargar, 6000); else navigator.serviceWorker.addEventListener("controllerchange", () => setTimeout(precargar, 6000), { once: true }); };
+  if (document.readyState === "complete") go(); else addEventListener("load", go);
+})();
 
 </script>
 </body>
