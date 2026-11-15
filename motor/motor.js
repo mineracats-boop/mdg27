@@ -15,19 +15,28 @@
   const AC_ = {}, asset = n => { if (window.MA && window.MA[n]) { const v = window.MA[n]; if (n !== "meta") delete window.MA[n]; return Promise.resolve(v); } return AC_[n] || (AC_[n] = fetch("m3d/" + n + ".txt").then(r => r.text())); };
   if (!window.MA) (window.PREF || []).forEach(n => asset(n).catch(() => {}));
   // calidad gráfica: alta / media / baja (se guarda en el navegador); por defecto media en tabletas, móviles y equipos con poca memoria
-  const QUAL = (() => { let q = null; try { q = localStorage.getItem("mdg27q"); } catch (e) {} if (q) return q; const touch = matchMedia("(pointer: coarse)").matches, mem = navigator.deviceMemory || 8; return touch || mem <= 4 ? "baja" : "media"; })();
+  const QUAL = (() => { let q = (location.search.match(/[?&]q=(alta|media|baja)/) || [])[1] || null; try { q = q || localStorage.getItem("mdg27q"); } catch (e) {} if (q) return q; const touch = matchMedia("(pointer: coarse)").matches, mem = navigator.deviceMemory || 8; return touch || mem <= 4 ? "baja" : "media"; })();
   let REAL = (() => { try { const v = localStorage.getItem("mdg27real"); return v == null ? QUAL === "alta" : v === "1"; } catch (e) { return false; } })();
   window.QUAL = QUAL; const TEXMAX = QUAL === "alta" ? 2048 : QUAL === "media" ? 1024 : 768;   // descargas en paralelo desde el principio
   const T0_ = performance.now(); window.__LT0 = Math.round(T0_); let TL_ = T0_; window.__LT = []; const setLoad = t => { const n = performance.now(); window.__LT.push([t, Math.round(n - TL_)]); TL_ = n; const e = $("#load b"); if (e) e.textContent = t; };
 
   /* ---------- render ---------- */
   const cv = $("#cv"), Rn = new THREE.WebGLRenderer({ canvas: cv, antialias: true, powerPreference: "high-performance" });
-  window.__RN = Rn; Rn.domElement.addEventListener("webglcontextlost", e => { e.preventDefault(); try { localStorage.setItem("mdg27q", "baja"); } catch (er) {} const d = document.createElement("div"); Object.assign(d.style, { position: "fixed", inset: "0", display: "grid", placeItems: "center", background: "#050a14", color: "#fff", zIndex: 99, textAlign: "center", padding: "16px", font: "600 18px system-ui" }); d.innerHTML = "La tarjeta gráfica se ha quedado sin memoria.<br>He puesto la calidad en Baja.<br><br><button style='font:inherit;padding:10px 22px;border:0;border-radius:8px;background:#ffd23a;color:#111;cursor:pointer'>Volver a cargar</button>"; d.querySelector("button").onclick = () => location.reload(); document.body.appendChild(d); }); Rn.debug.checkShaderErrors = !!window.SHDBG; if (QUAL !== "alta") Rn.shadowMap.type = THREE.PCFShadowMap; Rn.outputColorSpace = THREE.SRGBColorSpace; Rn.toneMapping = THREE.ACESFilmicToneMapping; Rn.toneMappingExposure = 1.05;
+  window.__RN = Rn; window.__CAM = () => [cam, sun]; Rn.domElement.addEventListener("webglcontextlost", e => { e.preventDefault(); try { localStorage.setItem("mdg27q", "baja"); } catch (er) {} const d = document.createElement("div"); Object.assign(d.style, { position: "fixed", inset: "0", display: "grid", placeItems: "center", background: "#050a14", color: "#fff", zIndex: 99, textAlign: "center", padding: "16px", font: "600 18px system-ui" }); d.innerHTML = "La tarjeta gráfica se ha quedado sin memoria.<br>He puesto la calidad en Baja.<br><br><button style='font:inherit;padding:10px 22px;border:0;border-radius:8px;background:#ffd23a;color:#111;cursor:pointer'>Volver a cargar</button>"; d.querySelector("button").onclick = () => location.reload(); document.body.appendChild(d); }); Rn.debug.checkShaderErrors = !!window.SHDBG; if (QUAL !== "alta") Rn.shadowMap.type = THREE.PCFShadowMap; Rn.outputColorSpace = THREE.SRGBColorSpace; Rn.toneMapping = THREE.ACESFilmicToneMapping; Rn.toneMappingExposure = 1.05;
   Rn.shadowMap.enabled = true; Rn.shadowMap.type = THREE.PCFSoftShadowMap;
-  const S = new THREE.Scene(); S.fog = new THREE.Fog(0xa9c4dc, 180, 420);
+  // texturas comprimidas para la tarjeta gráfica (KTX2/Basis): ocupan unas 8 veces menos memoria; el descompresor va incluido (sin internet también)
+  if (window.KTX2Loader && !/ktx=0/.test(location.search)) { try { const [bj, bw] = await Promise.all([asset("basis_js"), asset("basis_wasm")]);
+      const u1 = URL.createObjectURL(new Blob([atob(bj)], { type: "text/javascript" })), u2 = URL.createObjectURL(new Blob([b64buf(bw)], { type: "application/wasm" }));
+      const prevMod = THREE.DefaultLoadingManager.urlModifier; THREE.DefaultLoadingManager.setURLModifier(u => /basis_transcoder\.js$/.test(u) ? u1 : /basis_transcoder\.wasm$/.test(u) ? u2 : prevMod ? prevMod(u) : u);
+      const K2 = new KTX2Loader().setTranscoderPath("basis/").detectSupport(Rn); window.__KTX2 = K2;
+      const op = GLTFLoader.prototype.parse; GLTFLoader.prototype.parse = function (...a) { if (!this.ktx2Loader) this.setKTX2Loader(K2); return op.apply(this, a); };
+    } catch (e) { console.warn("KTX2", e); } }
+  // modelos comprimidos (meshopt): pesan bastante menos al descargarlos
+  if (window.MeshoptDecoder) { const op2 = GLTFLoader.prototype.parse; GLTFLoader.prototype.parse = function (...a) { if (!this.meshoptDecoder) this.setMeshoptDecoder(window.MeshoptDecoder); return op2.apply(this, a); }; }
+  const S = new THREE.Scene(); window.__S = S; S.fog = new THREE.Fog(0xa9c4dc, 180, 420);
   { const sky = new THREE.Mesh(new THREE.SphereGeometry(500, 32, 16), new THREE.ShaderMaterial({ side: THREE.BackSide, depthWrite: false, fog: false, uniforms: {},
       vertexShader: "varying vec3 vP; void main(){ vP = position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.); }",
-      fragmentShader: "varying vec3 vP; void main(){ float h = normalize(vP).y; vec3 c = mix(vec3(.72,.82,.92), vec3(.25,.5,.85), smoothstep(0., .55, h)); gl_FragColor = vec4(c, 1.); }" })); S.add(sky); }
+      fragmentShader: "varying vec3 vP; float h2(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); } float vn(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3. - 2. * f); return mix(mix(h2(i), h2(i + vec2(1., 0.)), f.x), mix(h2(i + vec2(0., 1.)), h2(i + vec2(1., 1.)), f.x), f.y); } float fbm(vec2 p){ float a = .5, r = 0.; for (int k = 0; k < 5; k++) { r += a * vn(p); p *= 2.03; a *= .5; } return r; } void main(){ vec3 d = normalize(vP); float h = d.y; vec3 c = mix(vec3(.78,.86,.95), vec3(.18,.42,.82), smoothstep(0., .6, h)); vec2 uv = d.xz / max(.12, h + .15) * 1.6; float n = smoothstep(.5, .8, fbm(uv)) * smoothstep(.02, .25, h); c = mix(c, vec3(.97,.98,1.), n * .8); gl_FragColor = vec4(c, 1.); }" })); S.add(sky); window.__sky = sky; }
   const cam = new THREE.PerspectiveCamera(30, 16 / 9, .1, 600);
   // luz ambiental de imagen (cielo + césped): da brillo y volumen a camisetas y piel como en la tele
   { const es = new THREE.Scene(), sk = new THREE.Mesh(new THREE.SphereGeometry(50, 32, 16), new THREE.ShaderMaterial({ side: THREE.BackSide, uniforms: {},
@@ -62,10 +71,10 @@
   const pitch = STREET ? await loadTex("st_suelo") : await loadTex("campo2"); const F = STREET ? { x0: -1, y0: -1, w: L + 2, h: W + 2 } : { x0: -3, y0: -3, w: 111, h: 74 };
   const CANCHA = STREET && !PLAYA; if (CANCHA) { const ct = await loadTex("st_cancha"); pitch.image = ct.image; pitch.needsUpdate = true; pitch.repeat.set(.9287 * (L + 2) / L, .8908 * (W + 2) / W); pitch.offset.set(37 / 1024 - .9287 / L, .0555 - .8908 / W); }   // cancha pintada (imagen de Guille): líneas ajustadas a 40 x 22
   else if (STREET) { pitch.wrapS = pitch.wrapT = THREE.RepeatWrapping; pitch.repeat.set(L / 8, W / 8); }   // césped nuevo, recalibrado a 14 px/m con las líneas en su sitio
-  const gMat = new THREE.MeshStandardMaterial({ map: pitch, roughness: .9, color: PLAYA ? new THREE.Color(1.25, 1.05, .72) : CANCHA ? new THREE.Color(.8, .82, .86) : STREET ? new THREE.Color(.42, .44, .48) : new THREE.Color(.76, .82, .72) });
+  const gMat = new THREE.MeshStandardMaterial({ map: pitch, roughness: .9, color: PLAYA ? new THREE.Color(1.25, 1.05, .72) : CANCHA ? new THREE.Color(.8, .82, .86) : STREET ? new THREE.Color(.42, .44, .48) : new THREE.Color(.7, .77, .68) });
   // detalle fino del césped (ruido por posición): da textura de hierba de cerca sin imágenes nuevas
   if (!STREET) gMat.onBeforeCompile = sh => { sh.vertexShader = "varying vec3 vWP;\n" + sh.vertexShader.replace("#include <worldpos_vertex>", "#include <worldpos_vertex>\n vWP = (modelMatrix * vec4(transformed, 1.)).xyz;");
-    sh.fragmentShader = "varying vec3 vWP;\nfloat h21(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }\nfloat vn(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3. - 2. * f); return mix(mix(h21(i), h21(i + vec2(1, 0)), f.x), mix(h21(i + vec2(0, 1)), h21(i + vec2(1, 1)), f.x), f.y); }\n" + sh.fragmentShader.replace("#include <map_fragment>", "#include <map_fragment>\n { float n = vn(vWP.xz * 3.1) * .55 + vn(vWP.xz * 11.) * .3 + vn(vWP.xz * .6) * .15; diffuseColor.rgb *= .9 + n * .2; }"); };
+    sh.fragmentShader = "varying vec3 vWP;\nfloat h21(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }\nfloat vn(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3. - 2. * f); return mix(mix(h21(i), h21(i + vec2(1, 0)), f.x), mix(h21(i + vec2(0, 1)), h21(i + vec2(1, 1)), f.x), f.y); }\n" + sh.fragmentShader.replace("#include <map_fragment>", "#include <map_fragment>\n { float lg = dot(diffuseColor.rgb, vec3(.299,.587,.114)); diffuseColor.rgb = mix(vec3(lg), diffuseColor.rgb, .78) * vec3(.97, 1., .95); }\n { float n = vn(vWP.xz * 3.1) * .55 + vn(vWP.xz * 11.) * .3 + vn(vWP.xz * .6) * .15; diffuseColor.rgb *= .9 + n * .2; }"); };
   const ground = new THREE.Mesh(new THREE.PlaneGeometry(F.w, F.h), gMat);
   ground.rotation.x = -Math.PI / 2; ground.position.copy(P3(F.x0 + F.w / 2, F.y0 + F.h / 2, 0)); ground.receiveShadow = true; S.add(ground);
   const hm = STREET ? await loadTex("st_hormigon") : null; if (hm) { hm.wrapS = hm.wrapT = THREE.RepeatWrapping; hm.repeat.set(17, 13); }
@@ -103,24 +112,37 @@
       const w = new THREE.Group(); w.add(o); w.position.copy(P3(x, y, z)); w.rotation.y = ry; o.traverse(m => { if (m.isMesh) { m.castShadow = true; m.receiveShadow = true; } }); S.add(w); return w; } catch (e) { console.warn(n, e); } }
   // gradas: módulo de Meshy repetido en dos anillos (abajo y arriba) en tres lados, con cubierta
   setLoad("gradas");
-  const STANDS = [];
-  if (!STREET) { const g = await new GLTFLoader().parseAsync(b64buf(await asset("m_est_grada")), ""), src = g.scene, bb = new THREE.Box3().setFromObject(src), sz = bb.getSize(new THREE.Vector3());
+  const STANDS = []; window.EST2_SEATS = null;
+  const EST2 = !STREET && !/clasico/.test(location.search) && await (async () => { try {
+      const g = await new GLTFLoader().parseAsync(b64buf(await asset("m_estadio2")), ""), m = g.scene, SX = .0262, SY = .025, SZ = .0311;
+      m.scale.set(SX, SY, SZ); m.position.set(0, -38 * SY - .04, 0); m.updateMatrixWorld(true);
+      m.traverse(o => { if (o.isMesh) { o.castShadow = false; o.receiveShadow = false; if (!o.geometry.attributes.normal) o.geometry.computeVertexNormals(); const mt = o.material; if (!mt) return;
+        if (mt.map) o.material = new THREE.MeshLambertMaterial({ map: mt.map, color: 0xb4b8be, emissive: 0x7a7e86, emissiveMap: mt.map, side: THREE.DoubleSide });
+        else { const az = /azul/.test(mt.name); o.material = new THREE.MeshLambertMaterial({ color: az ? 0x8a2030 : 0x56627a, emissive: az ? 0x4a121a : 0x343c4e, side: THREE.DoubleSide }); } } }); S.add(m);
+      // puntos donde se sienta el público (calculados sobre las gradas del modelo)
+      const raw = JSON.parse(await asset("estadio2_seats")), pts = []; for (let i = 0; i < raw.length; i += 3) pts.push(new THREE.Vector3(raw[i] * SX, raw[i + 1] * SY - 38 * SY - .04 + .05, raw[i + 2] * SZ));
+      window.EST2_SEATS = pts; window.EST2 = m; return true; } catch (e) { console.warn("estadio nuevo", e); return false; } })();
+  if (!STREET && !EST2) { const g = await new GLTFLoader().parseAsync(b64buf(await asset("m_est_grada")), ""), src = g.scene, bb = new THREE.Box3().setFromObject(src), sz = bb.getSize(new THREE.Vector3());
     src.traverse(m => { if (m.isMesh) m.receiveShadow = true; });
-    const roofM = new THREE.MeshStandardMaterial({ color: 0xa4abb5, roughness: .8, metalness: 0, emissive: 0x4a4f57 }), wallM = new THREE.MeshStandardMaterial({ color: 0x8b8f96, roughness: .95, emissive: 0x2c3036 });
+    const roofM = new THREE.MeshStandardMaterial({ color: 0xdfe3e9, roughness: .7, metalness: .1, emissive: 0x7d838d }), wallM = new THREE.MeshStandardMaterial({ color: 0xbfc4cc, roughness: .95, emissive: 0x5d626b }),
+      fasM = new THREE.MeshStandardMaterial({ color: 0xf4f6fa, roughness: .5, emissive: 0xb8bec8 }), lampM = new THREE.MeshBasicMaterial({ color: 0xfff6dc, toneMapped: false });
     const side = (cx, cy, len, rot, e0 = 0, e1 = 0, nr = false) => { const grp = new THREE.Group(); grp.position.copy(P3(cx, cy, 0)); grp.rotation.y = rot; S.add(grp);
       const n = Math.max(1, Math.round(len / 13)), tw = len / n, k = tw / sz.x, d = sz.z * k, h = sz.y * k;
       for (let ring = 0; ring < 2; ring++) for (let i = 0; i < n; i++) { const o = src.clone(); o.scale.setScalar(k); o.position.set(-len / 2 + tw * (i + .5) - (bb.min.x + sz.x / 2) * k, -bb.min.y * k + ring * (h - .6), -d / 2 - (bb.min.z + sz.z / 2) * k - ring * (d - .4)); grp.add(o); STANDS.push(o); }
       e0 = e0 && 2 * d + 10; e1 = e1 && 2 * d + 10; const ox = (e1 - e0) / 2;
       const back = new THREE.Mesh(new THREE.BoxGeometry(len + e0 + e1, 2 * h + 6, .6), wallM); back.position.set(ox, h + 3, -2 * d - .2); 
-      const roof = new THREE.Mesh(new THREE.BoxGeometry(len + 2 + e0 + e1, .5, 2 * d + 4), roofM); roof.position.set(ox, 2 * h + 6, -d); roof.rotation.x = -.06; if (!nr) { grp.add(roof); grp.add(back); } };
+      const roof = new THREE.Mesh(new THREE.BoxGeometry(len + 2 + e0 + e1, .9, 2 * d + 4), roofM); roof.position.set(ox, 2 * h + 6, -d); roof.rotation.x = -.06;
+      const fas = new THREE.Mesh(new THREE.BoxGeometry(len + 2 + e0 + e1, 1.6, .5), fasM); fas.position.set(ox, 2 * h + 6.2 - (d + 2) * .06, 2.1);   // frontal de la cubierta
+      if (nr) return; grp.add(roof); grp.add(back); grp.add(fas);
+      { const n2 = Math.max(4, Math.round((len + e0 + e1) / 7)); for (let i = 0; i < n2; i++) { const lp = new THREE.Mesh(new THREE.BoxGeometry(1.6, .35, .5), lampM); lp.position.set(ox - (len + e0 + e1) / 2 + (i + .5) * (len + e0 + e1) / n2, 2 * h + 5.15 - (d + 2) * .06, 1.9); grp.add(lp); } } };   // focos bajo la cubierta
     side(L / 2, -7.6, L + 14, 0, 1, 1); side(-7.6, W / 2, W - 2, Math.PI / 2, 0, 1); side(L + 7.6, W / 2, W - 2, -Math.PI / 2, 1, 0);
     // esquinas: un tramo de grada en diagonal para cerrar el hueco entre la tribuna y los fondos
     side(-7.4, -7.4, 18, Math.PI / 4, 0, 0, true); side(L + 7.4, -7.4, 18, -Math.PI / 4, 0, 0, true); }
   // esquinas cerradas (módulo de esquina de Meshy) para que no se vea el hueco entre gradas
   setLoad("estadio (focos y banquillos)");
-  if (!STREET) for (const [x, y] of [[-22, -26], [L + 22, -26], [-22, W + 24], [L + 22, W + 24]]) await prop("est_foco", 42, "y", x, y, 0, Math.atan2(W / 2 - y, L / 2 - x));
+  if (!STREET && !EST2) for (const [x, y] of [[-22, -26], [L + 22, -26], [-22, W + 24], [L + 22, W + 24]]) await prop("est_foco", 42, "y", x, y, 0, Math.atan2(W / 2 - y, L / 2 - x));
   if (!STREET) for (const bx of [L / 2 - 11, L / 2 + 11]) await prop("est_banquillo", 7, "x", bx, -3.4, 0, 0);
-  if (!STREET) { // videomarcadores (imagen de Guille) con el resultado en directo
+  if (!STREET && !EST2) { // videomarcadores (imagen de Guille) con el resultado en directo
     const vim = await new Promise(res => { asset("videomarcador").then(u => { const im = new Image(); im.onload = () => res(im); im.onerror = () => res(null); im.src = u; }); });
     const vc = document.createElement("canvas"); vc.width = 831; vc.height = 518; const vg = vc.getContext("2d"), vt = new THREE.CanvasTexture(vc); vt.colorSpace = THREE.SRGBColorSpace; vt.anisotropy = 4;
     window.__vb = (a, b, s0, s1, ck, h, c0, c1) => { vg.clearRect(0, 0, 831, 518); if (vim) vg.drawImage(vim, 0, 0); else { vg.fillStyle = "#111"; vg.fillRect(0, 0, 831, 518); }
@@ -480,7 +502,7 @@
     // salir a por el balón: suelto en el área y llega antes que el delantero, o 1 contra 1 encimando
     gk.run = false;
     if ((gkSt.mode === "idle" || gkSt.mode === "rush") && !gk.one && !ball.inNet) {
-      const inBox = ball.x > L - 16.5 && Math.abs(ball.y - W / 2) < 20.15, plHas = Math.hypot(ball.x - pl.x, ball.y - pl.y) < 1.4 && ball.z < .5;
+      const inBox = ball.x > L - (STREET ? 6.3 : 16.5) && Math.abs(ball.y - W / 2) < (STREET ? 7.2 : 20.15), plHas = Math.hypot(ball.x - pl.x, ball.y - pl.y) < 1.4 && ball.z < .5;
       const bsp = Math.hypot(ball.vx, ball.vy);
       let target = null;
       if (inBox && !plHas && bsp < 16 && ball.z < 2) {
