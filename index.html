@@ -14895,7 +14895,7 @@ function renderDraft() {
   } else if (DF.stage === "done") {
     side = `<h3>¡Draft completado!</h3><p>Tu once tiene <b>${draftRating()}</b> de media. Ahora compite contra equipos históricos:</p>
       <div class="dbtns col"><button class="mbtn gold" data-nav data-a="drCup" data-m="play" data-first>Jugar el torneo (cuartos, semis y final)</button><button class="mbtn" data-nav data-a="drCup" data-m="sim">Simular el torneo</button></div>
-      <p class="mute">Premios: cuartos 2.000 · semifinal 5.000 · final 10.000 · campeón 20.000 monedas y una carta Retro para tu Ultimate Team.</p>`;
+`;
   } else if (DF.stage === "cup") side = draftCupHTML();
   B.innerHTML = `<div class="dgrid"><div class="panel">${head}${pitch}</div><div class="panel dside">${side}</div></div>`;
 }
@@ -14920,7 +14920,7 @@ function draftCupHTML() {
     return `<div class="lrow"><span>${DR_ROUNDS[i]}</span><span>${esc(T.nombre)} <span class="mute">(${histOv(T)})</span></span><span class="r">${r ? `<b class="${r.w ? "win" : "lose"}">${r.g[0]}-${r.g[1]}${r.p ? ` (${r.p[0]}-${r.p[1]} pen.)` : ""}</b>` : i === C.r && !C.out ? "Siguiente" : "—"}</span></div>`; }).join("");
   const won = C.r >= 3 && !C.out;
   return `<h3>Torneo del draft</h3><div class="ltable">${rows}</div>
-    ${done ? `<div class="okb" style="margin:1rem 0">${won ? "¡CAMPEÓN! " : "Eliminado. "}Premio: <b>${fmt(DR_PRIZE[C.r])}</b> monedas${won ? " y una carta Retro" : ""}.</div><button class="mbtn gold" data-nav data-a="drReset2" data-first>Nuevo draft</button>`
+    ${done ? `<div class="okb" style="margin:1rem 0">${won ? "¡CAMPEÓN! Tu draft ha ganado el torneo." : "Eliminado. ¡Prueba otro draft!"}</div><button class="mbtn gold" data-nav data-a="drReset2" data-first>Nuevo draft</button>`
       : `<div class="dbtns col"><button class="mbtn gold" data-nav data-a="drNext" data-first>${C.mode === "play" ? "Jugar " : "Simular "}${DR_ROUNDS[C.r].toLowerCase()}</button>${C.mode === "play" ? `<button class="mbtn" data-nav data-a="drNext" data-m="sim">Simular este partido</button>` : ""}</div>`}`;
 }
 ACT.drCup = el => { draftCupStart(el.dataset.m); renderDraft(); };
@@ -14928,7 +14928,7 @@ ACT.drReset2 = () => { DF = null; dSave(); renderDraft(); };
 function draftCupResult(g, p) {
   const C = DF.cup, w = g[0] > g[1] || (g[0] === g[1] && p && p[0] > p[1]); C.res[C.r] = { g, p, w };
   if (w) C.r++; else C.out = true;
-  if (C.out || C.r >= 3) { addCoins(DR_PRIZE[C.r], undefined, "draft"); if (C.r >= 3 && SPEC.heroe.length) { const c = mkCard(pick(SPEC.heroe), "heroe"); S.cards.push(c); addLog(`Draft: carta Retro de ${PBY[c.k].n}`); toast(`Carta Retro: ${shortName(PBY[c.k].n)}`); } save(); }
+  if (C.out || C.r >= 3) save();   // el draft no da premios para el Ultimate Team
   dSave(); renderDraft();
 }
 ACT.drNext = el => {
@@ -15317,7 +15317,7 @@ function torAdvance() {   // cuando toda la jornada / ronda está jugada
     T.stage = "ko"; T.ko = [torPairs(ids)]; return;
   }
   const last = T.ko[T.ko.length - 1], win = last.map(m => m.r.w);
-  if (win.length === 1) { T.stage = "done"; T.champ = win[0]; const hum = isHum(T.champ); if (hum && T.prize) { addCoins(T.prize, undefined, "torneo"); save(); } T.log.unshift(`${qtBy(T.champ).nombre} campeón`); return; }
+  if (win.length === 1) { T.stage = "done"; T.champ = win[0]; const hum = isHum(T.champ); T.log.unshift(`${qtBy(T.champ).nombre} campeón`); return; }
   T.ko.push(torPairs(win));
 }
 function torSimMatch(m, ko) { const r = simScore(qtBy(m.h).ov, qtBy(m.a).ov, ko); torSetRes(m, r.g, r.p); }
@@ -15356,7 +15356,7 @@ function renderTor() {
   if (TN.setup) return renderTorSetup();
   if (!TR) {
     B.innerHTML = `<div class="tgrid"><button class="tile t-card tcard" data-nav data-a="torNew" data-first><div class="txt"><span class="tag blue">A TU GUSTO</span><h2>Crear torneo</h2><p>Elige equipos, tamaño (4 a 32), formato y cuántos amigos jugáis.</p></div></button>
-      ${TOR_FIXED.map(f => `<button class="tile t-card tcard" data-nav data-a="torFixed" data-k="${f.id}"><div class="txt"><span class="tag">PREMIO ${fmt(f.prize)}</span><h2>${esc(f.n)}</h2><p>${esc(f.d)}</p></div></button>`).join("")}</div>`;
+      ${TOR_FIXED.map(f => `<button class="tile t-card tcard" data-nav data-a="torFixed" data-k="${f.id}"><div class="txt"><span class="tag">${f.size} EQUIPOS</span><h2>${esc(f.n)}</h2><p>${esc(f.d)}</p></div></button>`).join("")}</div>`;
     return;
   }
   const T = TR, done = T.stage === "done";
@@ -15364,7 +15364,7 @@ function renderTor() {
   if (T.stage === "groups") main = `<div class="tgroups">${T.groups.map((g, gi) => `<div class="tgr"><h4>Grupo ${String.fromCharCode(65 + gi)}</h4><table class="ttab"><tr><th></th><th>PJ</th><th>DG</th><th>PTS</th></tr>${torTable(gi).map((r, i) => `<tr class="${i < 2 ? "q" : ""}${isHum(r.id) ? " me" : ""}"><td>${esc(qtBy(r.id).nombre)}</td><td>${r.pj}</td><td>${r.gf - r.gc}</td><td><b>${r.pts}</b></td></tr>`).join("")}</table></div>`).join("")}</div>`;
   const cur = torCur(), title = T.stage === "groups" ? `Jornada ${T.md + 1} de ${T.gm.length}` : T.stage === "ko" ? ROUND_N(cur.length * 2) : "Torneo terminado";
   const bracket = T.ko.length ? `<div class="tko">${T.ko.map(R => `<div class="tkr"><h4>${ROUND_N(R.length * 2)}</h4>${R.map(torRow).join("")}</div>`).join("")}</div>` : "";
-  const champ = done ? `<div class="okb tchamp">🏆 <b>${esc(qtBy(T.champ).nombre)}</b> es campeón${isHum(T.champ) ? `${T.prize ? ` · +${fmt(T.prize)} monedas para tu Ultimate Team` : ""}` : ""}</div>` : "";
+  const champ = done ? `<div class="okb tchamp">🏆 <b>${esc(qtBy(T.champ).nombre)}</b> es campeón</div>` : "";
   B.innerHTML = `<div class="tbar"><div><div class="lbl">${esc(T.name)}</div><h3>${title}</h3></div><div class="spacer"></div>
       ${done ? "" : `<button class="mbtn gold" data-nav data-a="torPlay" data-first>Jugar jornada</button><button class="mbtn" data-nav data-a="torPlay" data-m="sim">Simular jornada</button>`}
       <button class="mbtn" data-nav data-a="torQuit">${done ? "Nuevo torneo" : "Abandonar"}</button></div>
