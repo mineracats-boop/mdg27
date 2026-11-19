@@ -2317,7 +2317,7 @@
         if (lowQ >= 2 && !draw.q1) { draw.q1 = 1; sun.shadow.mapSize.set(1024, 1024); if (sun.shadow.map) { sun.shadow.map.dispose(); sun.shadow.map = null; } lowQ = 0; }
         else if (lowQ >= 2 && !draw.q2) { draw.q2 = 1; maxDpr = Math.min(maxDpr, 1); lowQ = 0; }
         else if (lowQ >= 2 && !draw.q3) { draw.q3 = 1; if (CROWD) CROWD.im.count = Math.floor(CROWD.n * .55); for (const a of P.concat(OFF)) a.inner.traverse(o => { if (o.isMesh) o.castShadow = a.gk || a === M.human; }); for (const a of P.concat(OFF)) a.inner.userData.cs = !!(a.gk || a === M.human); lowQ = 0; }
-        else if (lowQ >= 2 && !draw.q4) { draw.q4 = 1; maxDpr = Math.min(maxDpr, .85); Rn.shadowMap.autoUpdate = false; lowQ = 0; }
+        else if (lowQ >= 2 && !draw.q4) { draw.q4 = 1; maxDpr = Math.min(maxDpr, .85); sun.shadow.mapSize.set(512, 512); if (sun.shadow.map) { sun.shadow.map.dispose(); sun.shadow.map = null; } lowQ = 0; }   // antes se congelaban las sombras y, como el sol sigue al balón, salían manchas y cuadros negros fuera de sitio
         else if (lowQ >= 2 && !draw.q5) { draw.q5 = 1; maxDpr = .7; lowQ = 0; }
         else if (lowQ >= 2 && !draw.q6 && PF.on && PF.lite) { draw.q6 = 1; PF.on = false; lowQ = 0; } } }
   }

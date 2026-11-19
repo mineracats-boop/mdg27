@@ -655,7 +655,7 @@ const NPCS = [];
 const NPC_KIT = [["#e8e2d0", "#2c3e50"], ["#c0392b", "#222222"], ["#2e86c1", "#f0f0f0"], ["#f4d03f", "#34495e"], ["#7d3c98", "#dddddd"], ["#16a085", "#111111"], ["#ffffff", "#5d6d7e"], ["#e67e22", "#1b2631"], ["#5d6d7e", "#f8f9f9"], ["#1abc9c", "#2c2c2c"]];
 async function spawnNPCs() {
   const ids = ["aficionado1", "aficionado2", "aficionado3", "entrenador2", "aficionado2", "aficionado1", "entrenador1", "aficionado3"]; let n = 0;
-  const mk = async (i, cfg) => { const g = await loadModel(cfg.keeper ? "entrenador" + (1 + i % 2) : ids[i % ids.length]); const a = actor(g, null, null); return Object.assign({ a, dir: rnd() * 6.28, spd: 0, t: 0 }, cfg); };
+  const mk = async (i, cfg) => { const g = await loadModel(cfg.keeper ? "entrenador" + (1 + i % 2) : ids[i % ids.length]); const kt = NPC_KIT[i % NPC_KIT.length], a = actor(g, kt[0], kt[1]); return Object.assign({ a, dir: rnd() * 6.28, spd: 0, t: 0 }, cfg); };
   try {
     // paseantes por el paseo marítimo y la acera
     for (let i = 0; i < 9; i++) { const prom = i < 6, z = prom ? 6 + rnd() * (SEA_Z - 9) : -6.4 + rnd() * .8, x = X0 + 12 + rnd() * (X1 - X0 - 30);
@@ -881,9 +881,9 @@ function stepMini(dt) { if (!MG.k) { mode = "hub"; return; }
     if (MG.t > 1.8) { if (MG.shots >= 5) { const n = MG.hits; if (k === "larg") { if (n > store.get("larg", 0)) store.set("larg", n); misEv("larguero", n); if (n) addCoins(n * 15, "larguero"); } else { if (n > store.get("pen", 0)) store.set("pen", n); misEv("penaltis", n); if (n) addCoins(n * 8, "penaltis"); }
         setTimeout(() => say(MG_INFO[k][0] + ": " + n + " de 5", 2200), 1150); mgEnd(); return; }
       Object.assign(B, { x: me.x + .6, y: BR + .2, z: me.z, vx: 0, vy: 0, vz: 0, live: false }); MG.state = "aim"; MG.aim = 0; if (MG.kp) { MG.kp.z = LGOAL.z; MG.kp.dive = 0; MG.kp.a.lock = 0; play(MG.kp.a, "GkReady"); } } }
-  if (k === "pen" && MG.kp) { const kp = MG.kp; if (MG.state === "fly" && kp.dive != null && MG.t > .12 && !kp.did) { kp.did = 1; if (kp.dive) once(kp.a, kp.dive > 0 ? "DiveR" : "DiveL", 1.2, 1.4); } if (MG.state === "aim") kp.did = 0;
+  if (k === "pen" && MG.kp) { const kp = MG.kp; if (MG.state === "fly" && kp.dive != null && MG.t > .12 && !kp.did) { kp.did = 1; if (kp.dive) once(kp.a, kp.dive > 0 ? "DiveL" : "DiveR", 1.2, 1.4); } if (MG.state === "aim") kp.did = 0;
     if (MG.state === "fly" && kp.dive && MG.t > .12) kp.z += (LGOAL.z + kp.dive * 1.15 - kp.z) * Math.min(1, dt * 8);
-    kp.a.wrap.position.set(LGOAL.x - .5, gy(LGOAL.x - .5, kp.z), kp.z); kp.a.wrap.rotation.y = -Math.PI / 2 - Math.PI / 2; kp.a.lock = Math.max(0, (kp.a.lock || 0) - dt); kp.a.mixer.update(dt); }
+    kp.a.wrap.position.set(LGOAL.x - .5, gy(LGOAL.x - .5, kp.z), kp.z); kp.a.wrap.rotation.y = -Math.PI / 2; kp.a.lock = Math.max(0, (kp.a.lock || 0) - dt); kp.a.mixer.update(dt); }
   ballM.position.set(B.x, B.y, B.z); if (B.live) ballM.rotation.x += dt * 12;
   me.a.wrap.position.set(me.x, gy(me.x, me.z), me.z); me.a.wrap.rotation.y = -me.dir + Math.PI / 2; me.a.lock = Math.max(0, (me.a.lock || 0) - dt); loco(me.a, 0, false); me.a.mixer.update(dt);
   const want = new THREE.Vector3(me.x - 3.4, 3, me.z - 1.7); cam.position.lerp(want, SNAP ? 1 : Math.min(1, dt * 3)); SNAP = 0; cam.lookAt(LGOAL.x - 2, 1, LGOAL.z); sun.target.position.set(me.x, 0, me.z); sun.position.set(me.x - 40, 35, me.z + 25); }
@@ -998,7 +998,7 @@ let ballM, ring;
   for (const c of an.animations) { c.tracks = c.tracks.filter(t => !t.name.endsWith(".scale") && (!t.name.endsWith(".position") || t.name === "Hips.position")); baseClips[c.name] = c; }
   const g = await loadModel("pj18"); me = { a: actor(g, kit.c1, kit.c2), x: -40, z: 3, dir: 0, spd: 0 };
   spawnNPCs(); addProps(); addTiendas(); addCiudad(); mgSetup(); updCoins();
-  loadModel("entrenador1").then(g => { const a = actor(g, null, null); a.wrap.position.set(REY.x, gy(REY.x, REY.z), REY.z); a.wrap.rotation.y = -Math.PI + Math.PI / 2; play(a, "Idle"); const l = nbLabel("REY DE LA PISTA"); a.wrap.add(l); NPCS.push({ a, x: REY.x, z: REY.z, dir: Math.PI, walk: false, spd: 0, keeper: false, rey: 1 }); }).catch(() => {});
+  loadModel("entrenador1").then(g => { const a = actor(g, "#f4c430", "#111111"); a.wrap.position.set(REY.x, gy(REY.x, REY.z), REY.z); a.wrap.rotation.y = -Math.PI + Math.PI / 2; play(a, "Idle"); const l = nbLabel("REY DE LA PISTA"); a.wrap.add(l); NPCS.push({ a, x: REY.x, z: REY.z, dir: Math.PI, walk: false, spd: 0, keeper: false, rey: 1 }); }).catch(() => {});
   $("#load").remove(); bevAdd("vis"); cartInit().then(casaRentas); try { const nb = JSON.parse(sessionStorage.getItem("street_nb") || "null"); if (nb && nbName()) { NB.srvNom = nb.nom || ""; nbJoin(nb.k, nb.sala); } else srvPanel(true); } catch (e) { srvPanel(true); } tip("Bienvenido al barrio. Entra en las tiendas o ve a la jaula del fondo para jugar.");
   { const rs = new URLSearchParams(location.search).get("res"); if (rs && /^\d+-\d+$/.test(rs)) { const [a, b] = rs.split("-").map(Number); me.x = CX - CW / 2 - 4; me.z = 0; me.dir = Math.PI; SNAP = 1; applyResult(a, b); setTimeout(() => say(a > b ? "¡Ganaste " + a + "-" + b + "!" : a === b ? "Empate " + a + "-" + b : "Has perdido " + a + "-" + b, 2800), 300); history.replaceState(null, "", location.pathname); } }
   let last = performance.now(), fpsA = 60, lowQ = false;
