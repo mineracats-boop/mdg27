@@ -16186,7 +16186,7 @@ setInterval(() => { const on = current && current.id === "home"; $$("#hmBg video
    - Se paran en los partidos (y en cualquier pantalla de juego) y siguen al volver.
    - Volumen en Ajustes › Música (0 = sin música).
    ===================================================================== */
-const MUS = { list: ["musica/menu2.mp3", "musica/menu3.mp3", "musica/menu4.mp3", "musica/menu5.mp3", "musica/menu6.mp3", "musica/menu7.mp3"], au: null, i: -1, ok: false, fade: 0 };
+const MUS = { list: ["musica/menu2.mp3", "musica/menu4.mp3", "musica/menu5.mp3", "musica/menu6.mp3", "musica/menu7.mp3"], au: null, i: -1, ok: false, fade: 0 };
 function musNext() { const L = MUS.list; let n = Math.floor(Math.random() * L.length); if (L.length > 1 && n === MUS.i) n = (n + 1) % L.length; MUS.i = n;
   if (!MUS.au) { MUS.au = new Audio(); MUS.au.preload = "auto"; MUS.au.addEventListener("ended", () => { musNext(); musTick(); }); MUS.au.addEventListener("error", () => { setTimeout(() => { musNext(); musTick(); }, 3000); }); }
   MUS.au.src = L[n]; }
