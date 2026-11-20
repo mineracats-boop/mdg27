@@ -12,9 +12,9 @@
   const AC_ = {}, asset = n => { if (window.MA && window.MA[n]) { const v = window.MA[n]; if (n !== "meta") delete window.MA[n]; return Promise.resolve(v); } return AC_[n] || (AC_[n] = fetch("m3d/" + n + ".txt").then(r => r.text())); };
   if (!window.MA) (window.PREF || []).forEach(n => asset(n).catch(() => {}));
   // calidad gráfica: alta / media / baja (se guarda en el navegador); por defecto media en tabletas, móviles y equipos con poca memoria
-  const QUAL = (() => { let q = (location.search.match(/[?&]q=(alta|media|baja)/) || [])[1] || null; try { q = q || localStorage.getItem("mdg27q"); } catch (e) {} if (q) return q; const touch = matchMedia("(pointer: coarse)").matches, mem = navigator.deviceMemory || 8; return touch || mem <= 4 ? "baja" : "media"; })();
+  const QUAL = (() => { let q = (location.search.match(/[?&]q=(alta|media|baja)/) || [])[1] || null; try { q = q || localStorage.getItem("mdg27q"); } catch (e) {} if (q) return q; const touch = matchMedia("(pointer: coarse)").matches, mem = navigator.deviceMemory || 8; return touch ? (mem >= 6 ? "media" : "baja") : mem <= 4 ? "baja" : "media"; })();   // móvil con memoria: calidad media (más nitidez)
   let REAL = (() => { try { const v = localStorage.getItem("mdg27real"); return v == null ? QUAL === "alta" : v === "1"; } catch (e) { return false; } })();
-  window.QUAL = QUAL; const TEXMAX = QUAL === "alta" ? 2048 : QUAL === "media" ? 1024 : 768;   // descargas en paralelo desde el principio
+  window.QUAL = QUAL; const TEXMAX = QUAL === "alta" ? 2048 : QUAL === "media" ? 1536 : 1024;   // descargas en paralelo desde el principio
   const T0_ = performance.now(); window.__LT0 = Math.round(T0_); let TL_ = T0_; window.__LT = []; const setLoad = t => { const n = performance.now(); window.__LT.push([t, Math.round(n - TL_)]); TL_ = n; const e = $("#load b"); if (e) e.textContent = t; };
 
   /* ---------- render ---------- */
@@ -1828,7 +1828,8 @@
   const ring = new THREE.Mesh(new THREE.RingGeometry(.42, .55, 32), new THREE.MeshBasicMaterial({ color: 0xffd23a, transparent: true, opacity: .9, depthWrite: false })); ring.rotation.x = -Math.PI / 2; S.add(ring);
 
   /* ---------- bucle ---------- */
-  let dynS = 1, lowQ = 0, maxDpr = QUAL === "alta" ? 1.5 : QUAL === "media" ? 1.25 : (devicePixelRatio >= 2 ? 1 : .85), fpsN = 0, fpsT = 0, last = performance.now();
+  const TOUCHQ = matchMedia("(pointer: coarse)").matches;
+  let dynS = 1, lowQ = 0, maxDpr = QUAL === "alta" ? 2 : QUAL === "media" ? 1.75 : (devicePixelRatio >= 2 ? 1.4 : 1), fpsN = 0, fpsT = 0, last = performance.now();
   /* ---------- repetición de los goles: se graban los últimos segundos (huesos, posiciones y balón) y se reproducen a cámara lenta ---------- */
   const ACT = P.concat(OFF); for (const a of ACT) { a.bones = []; a.inner.traverse(o => { if (o.isBone) a.bones.push(o); }); }
   /* ---------- banquillo y cambios (máximo 5); la IA cambia a los cansados en la segunda parte ---------- */
@@ -2312,13 +2313,13 @@
     const now = performance.now(), rf = now - (draw.lt || now); draw.lt = now; fpsN++; fpsT += rf / 1000;
     if (fpsT > 1.5) { const f = Math.round(fpsN / fpsT); $("#fps").textContent = f + " fps · " + Math.round(dynS * 100) + " %"; fpsN = 0; fpsT = 0;
       // resolución dinámica (como en los juegos de móvil): baja un poco si no llega a 60 y vuelve a subir cuando sobra
-      if (!window.STEP && !M.intro && simT > 3) { if (f < 50) dynS = Math.max(.62, dynS - .08); else if (f >= 58) dynS = Math.min(1, dynS + .04); }
-      if (!window.STEP && !M.intro && simT > 4) { if (f < 48 && dynS <= .63) lowQ++; else lowQ = Math.max(0, lowQ - .5);
+      if (!window.STEP && !M.intro && simT > 3) { if (f < (TOUCHQ ? 40 : 50)) dynS = Math.max(.8, dynS - .05); else if (f >= (TOUCHQ ? 52 : 58)) dynS = Math.min(1, dynS + .04); }   // la nitidez es lo último que se toca
+      if (!window.STEP && !M.intro && simT > 4) { if (f < (TOUCHQ ? 38 : 48) && dynS <= .81) lowQ++; else lowQ = Math.max(0, lowQ - .5);
         if (lowQ >= 2 && !draw.q1) { draw.q1 = 1; sun.shadow.mapSize.set(1024, 1024); if (sun.shadow.map) { sun.shadow.map.dispose(); sun.shadow.map = null; } lowQ = 0; }
-        else if (lowQ >= 2 && !draw.q2) { draw.q2 = 1; maxDpr = Math.min(maxDpr, 1); lowQ = 0; }
+        else if (lowQ >= 2 && !draw.q2) { draw.q2 = 1; maxDpr = Math.min(maxDpr, 1.5); lowQ = 0; }
         else if (lowQ >= 2 && !draw.q3) { draw.q3 = 1; if (CROWD) CROWD.im.count = Math.floor(CROWD.n * .55); for (const a of P.concat(OFF)) a.inner.traverse(o => { if (o.isMesh) o.castShadow = a.gk || a === M.human; }); for (const a of P.concat(OFF)) a.inner.userData.cs = !!(a.gk || a === M.human); lowQ = 0; }
-        else if (lowQ >= 2 && !draw.q4) { draw.q4 = 1; maxDpr = Math.min(maxDpr, .85); sun.shadow.mapSize.set(512, 512); if (sun.shadow.map) { sun.shadow.map.dispose(); sun.shadow.map = null; } lowQ = 0; }   // antes se congelaban las sombras y, como el sol sigue al balón, salían manchas y cuadros negros fuera de sitio
-        else if (lowQ >= 2 && !draw.q5) { draw.q5 = 1; maxDpr = .7; lowQ = 0; }
+        else if (lowQ >= 2 && !draw.q4) { draw.q4 = 1; maxDpr = Math.min(maxDpr, 1.25); sun.shadow.mapSize.set(512, 512); if (sun.shadow.map) { sun.shadow.map.dispose(); sun.shadow.map = null; } lowQ = 0; }   // antes se congelaban las sombras y, como el sol sigue al balón, salían manchas y cuadros negros fuera de sitio
+        else if (lowQ >= 2 && !draw.q5) { draw.q5 = 1; maxDpr = Math.min(maxDpr, 1.1); lowQ = 0; }
         else if (lowQ >= 2 && !draw.q6 && PF.on && PF.lite) { draw.q6 = 1; PF.on = false; lowQ = 0; } } }
   }
   // paso de simulación nunca mayor de 1/60 s: con pocos fps se hacen varios pasos (el balón no se queda atrás ni cambia el ritmo del juego)

@@ -15,9 +15,9 @@
   const AC_ = {}, asset = n => { if (window.MA && window.MA[n]) { const v = window.MA[n]; if (n !== "meta") delete window.MA[n]; return Promise.resolve(v); } return AC_[n] || (AC_[n] = fetch("m3d/" + n + ".txt").then(r => r.text())); };
   if (!window.MA) (window.PREF || []).forEach(n => asset(n).catch(() => {}));
   // calidad gráfica: alta / media / baja (se guarda en el navegador); por defecto media en tabletas, móviles y equipos con poca memoria
-  const QUAL = (() => { let q = (location.search.match(/[?&]q=(alta|media|baja)/) || [])[1] || null; try { q = q || localStorage.getItem("mdg27q"); } catch (e) {} if (q) return q; const touch = matchMedia("(pointer: coarse)").matches, mem = navigator.deviceMemory || 8; return touch || mem <= 4 ? "baja" : "media"; })();
+  const QUAL = (() => { let q = (location.search.match(/[?&]q=(alta|media|baja)/) || [])[1] || null; try { q = q || localStorage.getItem("mdg27q"); } catch (e) {} if (q) return q; const touch = matchMedia("(pointer: coarse)").matches, mem = navigator.deviceMemory || 8; return touch ? (mem >= 6 ? "media" : "baja") : mem <= 4 ? "baja" : "media"; })();   // móvil con memoria: calidad media (más nitidez)
   let REAL = (() => { try { const v = localStorage.getItem("mdg27real"); return v == null ? QUAL === "alta" : v === "1"; } catch (e) { return false; } })();
-  window.QUAL = QUAL; const TEXMAX = QUAL === "alta" ? 2048 : QUAL === "media" ? 1024 : 768;   // descargas en paralelo desde el principio
+  window.QUAL = QUAL; const TEXMAX = QUAL === "alta" ? 2048 : QUAL === "media" ? 1536 : 1024;   // descargas en paralelo desde el principio
   const T0_ = performance.now(); window.__LT0 = Math.round(T0_); let TL_ = T0_; window.__LT = []; const setLoad = t => { const n = performance.now(); window.__LT.push([t, Math.round(n - TL_)]); TL_ = n; const e = $("#load b"); if (e) e.textContent = t; };
 
   /* ---------- render ---------- */
