@@ -187,8 +187,12 @@
   const FWD = [ Object.assign(LOC("StandardIdle"), { v: 0 }), Object.assign(LOC("StandardWalk"), { v: 1.49 }), Object.assign(LOC("JogForward"), { v: 2.46 }), Object.assign(LOC("StandardRun"), { v: 4.12 }), Object.assign(LOC("Running"), { v: 5.61 }), Object.assign(LOC("SprintForward"), { v: 6.9 }) ];
   const FWDb = [Object.assign(LOC("BreathingIdle"), { v: 0 })].concat(FWD.slice(1)), FWDc = [Object.assign(LOC("SoccerIdle"), { v: 0 })].concat(FWD.slice(1)), FWDS = [FWD, FWDb, FWDc];
   const SIDE = { back: Object.assign(LOC("JogBackward"), { v: 2.26 }), left: Object.assign(LOC("JogStrafeLeft"), { v: 2.86 }), right: Object.assign(LOC("JogStrafeRight"), { v: 2.31 }) };
+  // carrera en diagonal (mirando a un lado mientras corre) y esprint lateral: animaciones de Mixamo que no se usaban
+  const DIAG = META.RunForwardLeft && META.SprintLeft ? { L: [LOC("RunForwardLeft"), LOC("SprintLeft")], R: [LOC("RunForwardRight"), LOC("SprintRight")] } : null;
+  const FWDo = META.OffensiveIdle ? [Object.assign(LOC("OffensiveIdle"), { v: 0 })].concat(FWD.slice(1)) : FWD;
   const INJ = [ Object.assign(LOC("StandardIdle"), { v: 0 }), Object.assign(LOC("InjuredWalking"), { v: 1.7 }) ];
   const GKT = [ Object.assign(LOC("GoalkeeperIdle"), { v: 0 }), Object.assign(LOC("GoalkeeperSidestep"), { v: 2.4 }) ];
+  const GKT2 = META.GoalkeeperIdle1 ? [Object.assign(LOC("GoalkeeperIdle1"), { v: 0 }), GKT[1]] : GKT;
 
   /* ---------- equipaciones: el tinte se aplica sobre camiseta (verde) y pantalón (azul) del modelo ---------- */
   const numTex = (n, c1) => { const cv = document.createElement("canvas"); cv.width = cv.height = 128; const g = cv.getContext("2d"); const light = new THREE.Color(c1).getHSL({}).l > .62;
@@ -237,7 +241,7 @@
     for (let f = 0; f < ix.length; f += 3) { const i0 = ix[f], i1 = ix[f + 1], i2 = ix[f + 2]; a.fromBufferAttribute(P_, i0); b.fromBufferAttribute(P_, i1); c.fromBufferAttribute(P_, i2); b.sub(a); c.sub(a); b.cross(c); for (const i of [i0, i1, i2]) { sum[i * 3] += b.x; sum[i * 3 + 1] += b.y; sum[i * 3 + 2] += b.z; } }
     for (let i = 0; i < P_.count; i++) { const k = key(i); let e = acc.get(k); if (!e) acc.set(k, e = [0, 0, 0]); e[0] += sum[i * 3]; e[1] += sum[i * 3 + 1]; e[2] += sum[i * 3 + 2]; }
     for (let i = 0; i < P_.count; i++) { const e = acc.get(key(i)), l = Math.hypot(e[0], e[1], e[2]) || 1; N.setXYZ(i, e[0] / l, e[1] / l, e[2] / l); } N.needsUpdate = true; }
-  const WARM_L = ["Receive", "Receive_M", "BreathingIdle", "SoccerIdle", "SoccerTackle2", "GoalkeeperMiss", "GoalkeeperDropKick", "SoccerPenaltyKick", "FistPump", "StandingFistPump", "KneelingPointing", "Rallying", "StandingCheering", "Excited", "InjuredWalking", "Quick180Turn", "StandingArguing", "ShoveReaction", "JoggingStumble", "SoccerSpin", "StallSoccerball", "ScissorKick", "ScissorKick_M", "GoalkeeperCatch1", "GoalkeeperCatch2", "Cheering", "Chip", "Clapping", "Disappointed", "FallFlat", "GettingUp", "GoalkeeperBodyBlock", "GoalkeeperBodyBlock1", "GoalkeeperCatch", "GoalkeeperDivingSave", "GoalkeeperDivingSave1", "GoalkeeperIdle", "GoalkeeperOverhandThrow", "GoalkeeperScoop", "GoalkeeperSidestep", "JogBackward", "JogForward", "JogStrafeLeft", "JogStrafeRight", "KickSoccerball1", "KneeingSoccerball", "Pointing", "ReceiveSoccerball", "Running", "RunningSlide", "SoccerHeader", "SoccerPass", "SoccerTackle", "SoccerTrip", "SprintForward", "StandardIdle", "StandardRun", "StandardWalk", "StrikeFowardJog", "ThrowIn", "Victory", "Chip_M", "KickSoccerball1_M", "KneeingSoccerball_M", "ReceiveSoccerball_M", "SoccerHeader_M", "SoccerPass_M", "SoccerTackle_M", "StrikeFowardJog_M"];
+  const WARM_L = ["RunForwardLeft", "RunForwardRight", "SprintLeft", "SprintRight", "OffensiveIdle", "GoalkeeperIdle1", "StandingTurnLeft90", "StandingTurnRight90", "IdleToSprint", "RunToStop", "HitReaction", "AngryGesture", "VictoryIdle", "PointingForward", "Defeat", "Receive", "Receive_M", "BreathingIdle", "SoccerIdle", "SoccerTackle2", "GoalkeeperMiss", "GoalkeeperDropKick", "SoccerPenaltyKick", "FistPump", "StandingFistPump", "KneelingPointing", "Rallying", "StandingCheering", "Excited", "InjuredWalking", "Quick180Turn", "StandingArguing", "ShoveReaction", "JoggingStumble", "SoccerSpin", "StallSoccerball", "ScissorKick", "ScissorKick_M", "GoalkeeperCatch1", "GoalkeeperCatch2", "Cheering", "Chip", "Clapping", "Disappointed", "FallFlat", "GettingUp", "GoalkeeperBodyBlock", "GoalkeeperBodyBlock1", "GoalkeeperCatch", "GoalkeeperDivingSave", "GoalkeeperDivingSave1", "GoalkeeperIdle", "GoalkeeperOverhandThrow", "GoalkeeperScoop", "GoalkeeperSidestep", "JogBackward", "JogForward", "JogStrafeLeft", "JogStrafeRight", "KickSoccerball1", "KneeingSoccerball", "Pointing", "ReceiveSoccerball", "Running", "RunningSlide", "SoccerHeader", "SoccerPass", "SoccerTackle", "SoccerTrip", "SprintForward", "StandardIdle", "StandardRun", "StandardWalk", "StrikeFowardJog", "ThrowIn", "Victory", "Chip_M", "KickSoccerball1_M", "KneeingSoccerball_M", "ReceiveSoccerball_M", "SoccerHeader_M", "SoccerPass_M", "SoccerTackle_M", "StrikeFowardJog_M"];
   const MODELS = {}, CLIPS = {};
   // LOD (como DLS/FIFA): cada modelo de jugador tiene dos versiones simplificadas que comparten huesos, pesos y texturas; de lejos se pinta la de menos triángulos
   async function lodBuild(root) {
@@ -315,9 +319,14 @@
     const rel = angD(a.h, a.mh), lat = table === GKT || v > 4.2 ? 0 : clamp((Math.abs(rel) - .7) / .6, 0, 1);
     const tb = lat * clamp(v / 1.2, 0, 1) * (Math.abs(rel) > 2.3 ? 1 : 0), tl = lat * clamp(v / 1.2, 0, 1) * (Math.abs(rel) <= 2.3 && rel < 0 ? 1 : 0), tr = lat * clamp(v / 1.2, 0, 1) * (Math.abs(rel) <= 2.3 && rel > 0 ? 1 : 0);
     const k = Math.min(1, dt * 7); a.sideW.back += (tb - a.sideW.back) * k; a.sideW.left += (tl - a.sideW.left) * k; a.sideW.right += (tr - a.sideW.right) * k;
-    const sw = Math.min(1, a.sideW.back + a.sideW.left + a.sideW.right), lw = (1 - ow) * (1 - sw);
+    const sw = Math.min(1, a.sideW.back + a.sideW.left + a.sideW.right); let lw = (1 - ow) * (1 - sw);
+    // diagonal: corriendo rápido con el cuerpo girado respecto a la marcha (ej. mirando al balón mientras corre a su sitio)
+    let dW = 0; if (DIAG && table !== GKT && table !== GKT2 && table !== INJ) { const ar = Math.abs(rel), tg = v > 3 && ar > .3 && ar < 1.6 ? clamp((ar - .3) / .45, 0, 1) * clamp((v - 3) / 1.2, 0, 1) * (rel < 0 ? -1 : 1) : 0;
+      a.diagW = (a.diagW || 0) + (tg - (a.diagW || 0)) * k; dW = Math.min(1, Math.abs(a.diagW)); }
+    const lwD = lw * dW; lw *= 1 - dW;
     const put = (n, wt, time) => { if (wt <= .002) return; const ac = a.act(n); used.add(n); if (!ac.isRunning()) ac.play(); ac.enabled = true; ac.paused = true; ac.setEffectiveWeight(wt); ac.time = time; };
     for (const [c, wt] of [[A, 1 - w], [B, w]]) put(c.n, wt * lw, c.v === 0 ? (a.idleT += dt * .5) % c.dur : (((c.lph + a.Phi / c.cyc) % 1 + 1) % 1) * c.dur);
+    if (lwD > .002) { const D = a.diagW < 0 ? DIAG.L : DIAG.R, ws = clamp((v - 4.6) / 2.3, 0, 1); for (const [c, wt] of [[D[0], 1 - ws], [D[1], ws]]) put(c.n, wt * lwD, (((c.lph + a.Phi) % 1) + 1) % 1 * c.dur); }
     for (const s of ["back", "left", "right"]) { const c = SIDE[s], wt = a.sideW[s] * (1 - ow); if (wt > .002) { a.sPhi = (a.sPhi || 0) + dt * Math.max(.6, v / c.v) / c.dur * (s === "back" || s === "left" || s === "right" ? a.sideW[s] : 0); put(c.n, wt, ((a.sPhi % 1) + 1) % 1 * c.dur); } }
     a.locoA = A; a.locoB = B; a.locoW = w;
     const o = a.one || a.lastOne; if (o && (a.one || a.oneW > 0)) put(o.n, ow, Math.min(o.t, META[o.n].dur - 1e-3));
@@ -814,7 +823,7 @@
     for (const d of team(1 - o.t)) { if (d.gk || d.one || d.down > 0 || d === M.human) continue; const dx = d.x - o.x, dy = d.y - o.y, dd = Math.hypot(dx, dy); if (dd > 1 || dd < .25) continue;
       const behind = -(dx * Math.cos(o.h) + dy * Math.sin(o.h)); if (behind < .35) continue; if (Math.random() > dt * .5) continue;
       const shield = o.shield && simT - o.shield < .4, edge = (o.st.phy - d.st.phy) * .012 + (shield ? .22 : 0);
-      if (Math.random() < .5 + edge) { startOne(d, "ShoveReaction", { ts: 1.3, h0: d.h, end: 1, fadeIn: .1, rootScale: .5 }); d.down = .45; }      // aguanta: el defensor sale rebotado
+      if (Math.random() < .5 + edge) { startOne(d, Math.random() < .5 && META.HitReaction ? "HitReaction" : "ShoveReaction", { ts: 1.3, h0: d.h, end: 1, fadeIn: .1, rootScale: .5 }); d.down = .45; }      // aguanta: el defensor sale rebotado
       else if (Math.random() < .3) { foul(d, o, false); msg("¡AGARRÓN!", 1.2); }                                                                  // agarrón: falta
       else { startOne(o, "ShoveReaction", { ts: 1.3, h0: o.h, end: 1, fadeIn: .1, rootScale: .5 }); o.dr.loose = .6; M.owner = null; touchBy(d); }  // le gana la posición
       break; } }
@@ -1022,7 +1031,7 @@
     const up = new THREE.Vector3(Math.cos(-a.h + Math.PI / 2) * 0, 1, 0); const fw = new THREE.Vector3(Math.cos(a.h), 0, Math.sin(a.h)); up.addScaledVector(fw, .25).normalize(); aimBone(A, F, up); aimBone(F, H, up);
     // la tarjeta mira hacia delante (de cara al jugador y a la cámara)
     H.getWorldQuaternion(_q2); _q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.atan2(fw.x, fw.z)); cardMesh.quaternion.copy(_q2.invert().multiply(_q)); }
-  function showCard(col, f, red) { if (f && f.t != null) coachReact(f.t, "protesta"); play("grada_silba", red ? .5 : .3); if (!refA) return; if (!f.one && !f.gk) startOne(f, "StandingArguing", { t0: 1.5, ts: 1.1, end: 4.6, rootScale: 0, fadeIn: .2, h0: Math.atan2(refA.y - f.y, refA.x - f.x) }); cardMesh.material.color.setHex(col); refA.h = refA.mh = Math.atan2(f.y - refA.y, f.x - refA.x);
+  function showCard(col, f, red) { if (f && f.t != null) coachReact(f.t, "protesta"); play("grada_silba", red ? .5 : .3); if (!refA) return; if (!f.one && !f.gk) startOne(f, Math.random() < .45 && META.AngryGesture ? "AngryGesture" : "StandingArguing", { t0: 1.5, ts: 1.1, end: 4.6, rootScale: 0, fadeIn: .2, h0: Math.atan2(refA.y - f.y, refA.x - f.x) }); cardMesh.material.color.setHex(col); refA.h = refA.mh = Math.atan2(f.y - refA.y, f.x - refA.x);
     refA.cardT = simT + 2.2; cardMesh.visible = true; later(2.2, () => { cardMesh.visible = false; });
     if (red) { f.sent = true; if (M.lockP === f) { M.lockP = null; M.human = null; M.lockOut = true; } if (M.human === f) { const c = team(f.t).find(q => !q.gk && q !== f); if (c) setHuman(c); } } }
   function knockDown(p, a) { p.down = 2.4; p.dr.plan = null; const o = startOne(p, Math.random() < .5 ? "SoccerTrip" : "FallFlat", { ts: 1.1, h0: a, end: 2.2, fadeIn: .08 }); if (o) o.after = () => { startOne(p, "GettingUp", { ts: 1.5, t0: .4, end: 2.4, rootScale: 0 }); }; }
@@ -1885,11 +1894,11 @@
   }
   function celebC(p, C) { const c = M.celeb, sc = c.sc, el = simT - c.at;
     if (p === sc) { const d = Math.hypot(c.x - p.x, c.y - p.y);
-      if (!c.slid && (d < 6 || el > 2.4) && !p.one) { c.slid = true; startOne(p, "RunningSlide", { ts: 1, h0: p.h, fadeIn: .12, end: 1.45, after: () => startOne(p, ["Cheering", "Victory", "FistPump", "StandingFistPump", "KneelingPointing"][Math.floor(Math.random() * 5)], { ts: 1, end: 2.8, rootScale: 0, fadeIn: .2 }) }); }
+      if (!c.slid && (d < 6 || el > 2.4) && !p.one) { c.slid = true; startOne(p, "RunningSlide", { ts: 1, h0: p.h, fadeIn: .12, end: 1.45, after: () => { const L_ = ["Cheering", "Victory", "FistPump", "StandingFistPump", "KneelingPointing", "VictoryIdle", "PointingForward", "Excited"].filter(n => META[n]); startOne(p, L_[Math.floor(Math.random() * L_.length)], { ts: 1, end: 2.8, rootScale: 0, fadeIn: .2 }); } }); }
       return c.slid ? { dir: null, m: 0 } : { dir: Math.atan2(c.y - p.y, c.x - p.x), m: 1, speed: 6.4 }; }
     if (p.t === c.t && !p.gk && !p.sent && el > .5) { const d = Math.hypot(sc.x - p.x, sc.y - p.y); if (d > 1.6 && d < 40) return { dir: Math.atan2(sc.y - p.y, sc.x - p.x), m: 1, speed: Math.min(6, 1 + d * .5) };
       if (d <= 1.6 && !p.one && Math.random() < .03) startOne(p, ["Clapping", "Rallying", "StandingCheering", "Excited", "FistPump"][Math.floor(Math.random() * 5)], { ts: 1, rootScale: 0, end: 2.2, fadeIn: .2 }); return { dir: null, m: 0, face: Math.atan2(sc.y - p.y, sc.x - p.x) }; }
-    if (p.t !== c.t && !p.gk && !p.one && Math.random() < .004) startOne(p, "Disappointed", { ts: 1, rootScale: 0, fadeIn: .3 });
+    if (p.t !== c.t && !p.gk && !p.one && Math.random() < .004) { const L_ = ["Disappointed", "Disappointed", "Defeat", "AngryGesture"].filter(n => META[n]); startOne(p, L_[Math.floor(Math.random() * L_.length)], { ts: 1, rootScale: 0, fadeIn: .3, end: 3 }); }
     return C; }
   /* ---------- presentación de televisión: vuelo de cámara sobre el estadio lleno antes del saque ---------- */
   const intro = document.createElement("div"); Object.assign(intro.style, { position: "fixed", left: 0, right: 0, bottom: "14%", textAlign: "center", fontWeight: 900, fontStyle: "italic", textShadow: "0 4px 18px #000", pointerEvents: "none", transition: "opacity .4s", opacity: 0 });
@@ -1914,7 +1923,7 @@
     }, 120);
     return { him, can };
   })();
-  const CEL_A = ["Cheering", "StandingCheering", "Clapping", "FistPump", "StandingFistPump", "Happy", "Victory"].filter(n => META[n]);
+  const CEL_A = ["Cheering", "StandingCheering", "Clapping", "FistPump", "StandingFistPump", "Happy", "Victory", "VictoryIdle", "PointingForward", "Excited"].filter(n => META[n]);
   function celebStep(dt) { const C = CEL, T0 = team(0);
     if (!C.ini) { C.ini = 1; document.body.classList.add("celeb"); M.human = null; M.humanTeam = -1; ring.visible = false; aimMesh.visible = false; ballMesh.visible = false; for (const a of OFF) a.wrap.visible = false;
       const cx = L / 2, cy = W / 2 + 4; C.c = [cx, cy]; C.cap = T0[C.capi] || T0.find(q => !q.gk) || T0[0];
@@ -2214,6 +2223,14 @@
         if (d > .5 && Math.hypot(ball.x - p.x, ball.y - p.y) > 1.1) { C.dir = Math.atan2(ty - p.y, tx - p.x); C.m = 1; C.speed = Math.min(4.6, 1.5 + d * 1.5); C.spr = false; } }
       p._C = C;
       if (!p.gk && !p.one && !hasBall(p) && p.v < 2.2 && C.dir != null && C.m > .5 && Math.abs(angD(p.h, C.dir)) > 2.5 && simT - (p.q180 || -9) > 2) { p.q180 = simT; const o = startOne(p, "Quick180Turn", { ts: 1.35, h0: p.h, end: 1.15, rootScale: 0, fadeIn: .08, turnTo: C.dir, turnT: 1 }); if (o) o.after = () => { p.mh = p.h; }; }
+      if (!p.gk && !p.one && p !== M.human && !hasBall(p) && !p.req && p.down <= 0 && M.phase !== "stop" && !p.sent) {
+        // girarse parado con pasos (antes giraba como una peonza)
+        const fc = C.face != null ? C.face : (C.dir == null || C.m < .05) ? Math.atan2(ball.y - p.y, ball.x - p.x) : null, df = fc != null ? angD(p.h, fc) : 0;
+        if (fc != null && p.v < .4 && Math.abs(df) > 1.25 && simT - (p.t90 || -9) > 2.2 && META.StandingTurnLeft90) { p.t90 = simT; const o = startOne(p, df < 0 ? "StandingTurnLeft90" : "StandingTurnRight90", { ts: 1.6, h0: p.h, end: 1.05, rootScale: 0, fadeIn: .1, turnTo: fc, turnT: .9 }); if (o) o.after = () => { p.mh = p.h; }; }
+        // arrancada explosiva desde parado
+        else if (C.dir != null && C.spr && C.m > .9 && p.v < .6 && Math.abs(angD(p.h, C.dir)) < .6 && simT - (p.t0s || -9) > 4 && META.IdleToSprint) { p.t0s = simT; const o = startOne(p, "IdleToSprint", { ts: 1.3, h0: p.h, end: .62, fadeIn: .08, rootScale: 1 }); if (o) o.after = () => { p.v = Math.max(p.v, 4); p.mh = p.h; }; }
+        // frenada desde carrera cuando llega a su sitio
+        else if ((C.dir == null || C.m < .05) && p.v > 5.2 && simT - (p.t0s || -9) > 4 && META.RunToStop && M.phase === "play") { p.t0s = simT; const o = startOne(p, "RunToStop", { ts: 1.45, h0: p.mh, end: 1.05, fadeIn: .1, rootScale: .7 }); if (o) o.after = () => { p.v = 0; p.mh = p.h; }; } }
       if (!p.gk) { moveP(p, dt, C); stepOne(p, dt); }
       if (STREET && !p.sent && M.phase !== "stop") { p.x = clamp(p.x, .35, L - .35); p.y = clamp(p.y, .35, W - .35); }   // la jaula: nadie sale de la pista
       p.sta = clamp((p.sta == null ? 1 : p.sta) + (p.v > 6.2 ? -.045 : p.v > 4.5 ? -.004 : .03) * dt * (1.15 - (p.st.phy - 70) * .01), 0, 1);
@@ -2239,7 +2256,7 @@
     ballStep(ball, dt);
     outOfPlay();
     for (let t = 0; t < 2; t++) gkStep(t, dt);
-    for (const p of P) { pose(p, dt, p.gk && !p.run ? GKT : p.inj && p.v < 2.6 ? INJ : p === M.human ? FWD : FWDS[p.i % 3]); place(p); }
+    for (const p of P) { pose(p, dt, p.gk && !p.run ? (p.t ? GKT2 : GKT) : p.inj && p.v < 2.6 ? INJ : p === M.human ? FWD : p.cat === "fwd" ? FWDo : FWDS[p.i % 3]); place(p); }
     for (const a of OFF) { offStep(a, dt); pose(a, dt, FWD); place(a); if (a.cardT > simT) { flushPose(a); a.wrap.updateMatrixWorld(true); raiseArm(a); } }
     if (ball.hold && !(M.set && M.set.type === "throw")) { const g = ball.hold; if (g.gk && gkS[g.t].mode !== "throw") gkHands(g); }
     ballMesh.position.copy(P3(ball.x, ball.y, ball.z + BR));
@@ -2276,6 +2293,9 @@
             float ca = dot(q0, q0) * .006; b0 = vec3(texture2D(t, vU + q0 * ca).r, b0.g, texture2D(t, vU - q0 * ca).b);
             vec3 nb = (texture2D(t, vU + vec2(px.x, 0.)).rgb + texture2D(t, vU - vec2(px.x, 0.)).rgb + texture2D(t, vU + vec2(0., px.y)).rgb + texture2D(t, vU - vec2(0., px.y)).rgb) * .25;
             b0 += (b0 - nb) * .55; b0 = max(b0, 0.); }
+          else {   // nitidez suave también sin el filtro realista: bordes más definidos en el móvil
+            vec3 nb = (texture2D(t, vU + vec2(px.x, 0.)).rgb + texture2D(t, vU - vec2(px.x, 0.)).rgb + texture2D(t, vU + vec2(0., px.y)).rgb + texture2D(t, vU - vec2(0., px.y)).rgb) * .25;
+            b0 += (b0 - nb) * .3; b0 = max(b0, 0.); }
           vec3 c = (b0 + texture2D(bl, vU).rgb * (real > .5 ? .22 : .35)) * (real > .5 ? 1.12 : 1.);
           c = aces(c);
           if (real > .5) { float lr = dot(c, vec3(.2126,.7152,.0722));
