@@ -890,19 +890,42 @@ function stepMini(dt) { if (!MG.k) { mode = "hub"; return; }
 function mgCam(dt, fw, fh) { stepYaw(dt); const want = new THREE.Vector3(me.x + Math.sin(YAW) * fw, fh, me.z + Math.cos(YAW) * fw); cam.position.lerp(want, SNAP ? 1 : Math.min(1, dt * 3)); SNAP = 0; cam.lookAt(me.x, 1.2, me.z); sun.target.position.set(me.x, 0, me.z); sun.position.set(me.x - 40, 35, me.z + 25); }
 // ---------- minijuego: toques (darle al balón cuando baja a los pies; cada vez el margen es más pequeño) ----------
 const TQS = { n: 0, y: 0, vy: 0, end: 0 };
-function startToques() { mode = "toques"; me.x = TOQ.x; me.z = TOQ.z; me.dir = -Math.PI / 2; me.spd = 0; Object.assign(TQS, { n: 0, y: 1.6, vy: 1.5, end: 0 }); SNAP = 1;
-  tip("Pulsa <b>J</b> / <b>A</b> / <b>Espacio</b> (o el botón PASE) justo cuando el balón baje a tus pies"); say("¡Toques!", 1200); }
+function startToques() { if (!store.get("toq_tut", 0)) return toquesTuto(true); toquesGo(); }
+// explicación del minijuego (sale la primera vez; luego se puede volver a ver desde el botón "¿Cómo se juega?")
+function toquesTuto(primera) { const P = $("#panel"), best = store.get("toques", 0);
+  P.innerHTML = `<h3>TOQUES</h3><div style="text-align:left;line-height:1.45">
+    <p>Mantén el balón en el aire sin que toque el suelo.</p>
+    <p><b>Cuando el balón baje a tus pies</b>, pulsa <b>J</b>, <b>A</b> o <b>Espacio</b> (en el móvil, el botón <b>PASE</b>).</p>
+    <p>Si pulsas cuando aún está alto: <i>«¡Demasiado pronto!»</i>. Si esperas demasiado: <i>«Se te cayó»</i>.</p>
+    <p>Con cada toque el balón cae más rápido y tienes menos margen.</p>
+    <p>A partir de <b>30 toques</b> ganas monedas: 5 por cada 10 toques.${best ? ` Tu récord: <b>${best}</b>.` : ""}</p></div>
+    <div class="col" style="margin-top:10px"><button onclick="store.set('toq_tut',1);$('#panel').style.display='none';toquesGo()"><b>¡A jugar!</b></button>
+    <button onclick="store.set('toq_tut',1);this.closest('#panel').style.display='none'">${primera ? "Ahora no" : "Cerrar"}</button></div>`;
+  P.style.display = "block"; }
+function toquesGo() { mode = "toques"; me.x = TOQ.x; me.z = TOQ.z; me.dir = -Math.PI / 2; me.spd = 0; Object.assign(TQS, { n: 0, y: BR + .25, vy: 0, end: 0, wait: 1.3, pie: 0 }); SNAP = 1;
+  // fuera los aros del suelo mientras se juega (tapaban los pies)
+  TQS.ocultos = []; S.traverse(o => { if (o.isMesh && o.visible && o.geometry && o.geometry.type === "RingGeometry" && Math.hypot(o.position.x - TOQ.x, o.position.z - TOQ.z) < 3) { o.visible = false; TQS.ocultos.push(o); } });
+  if (typeof ring !== "undefined" && ring) ring.visible = false;
+  tip(`Pulsa <b>J</b> / <b>A</b> / <b>Espacio</b> (o PASE) cuando el balón baje a tus pies · <u style="cursor:pointer" onclick="toquesTuto()">¿Cómo se juega?</u>`); say("¡Preparado!", 1100); }
 function toqueHit() { if (TQS.end > 0) return; const lo = .16 + Math.min(.3, TQS.n * .006);
-  if (TQS.vy < 0 && TQS.y < .95 && TQS.y > lo) { TQS.n++; TQS.vy = 4.2 + Math.random() * .8; once(me.a, Math.random() < .5 ? "ThighCtl" : "FirstTouch", .32, 2.2); tip(`<b style="font-size:1.6em">${TQS.n}</b> toques`); }
+  if (TQS.wait > 0) return;
+  if (TQS.vy < 0 && TQS.y < .95 && TQS.y > lo) { TQS.n++; TQS.vy = 4.2 + Math.random() * .8;
+    // con el pie si el balón va bajo (alternando pierna) y con el muslo si va más alto
+    if (TQS.y < .55) { TQS.pie ^= 1; once(me.a, TQS.pie ? "Pass" : "PassL", .3, 2.6); } else once(me.a, "ThighCtl", .32, 2.2);
+    tip(`<b style="font-size:1.6em">${TQS.n}</b> ${TQS.n === 1 ? "toque" : "toques"}`); }
   else if (TQS.y >= .95) toqueFail("¡Demasiado pronto!"); }
 function toqueFail(why) { if (TQS.end > 0) return; TQS.end = 2.4; bevAdd("toq", TQS.n, 1); misEv("toques", TQS.n); if (TQS.n >= 30) addCoins(Math.floor(TQS.n / 10) * 5, "toques"); const best = store.get("toques", 0); if (TQS.n > best) store.set("toques", TQS.n);
   say((why ? why + " · " : "") + (TQS.n > best ? "¡Récord! " : "") + TQS.n + " toques", 2200); }
 function stepToques(dt) {
-  if (TQS.end > 0) { TQS.end -= dt; if (TQS.end <= 0) { mode = "hub"; ballM.position.set(CX, BR, 0); tip(""); } }
+  if (TQS.end > 0) { TQS.end -= dt; if (TQS.end <= 0) { mode = "hub"; ballM.position.set(CX, BR, 0); tip(""); (TQS.ocultos || []).forEach(o => o.visible = true); TQS.ocultos = []; if (typeof ring !== "undefined" && ring) ring.visible = true; } }
+  else if (TQS.wait > 0) { TQS.wait -= dt; if (TQS.wait <= 0) { TQS.vy = 4.4; once(me.a, "Pass", .3, 2.6); say("¡Toques!", 900); } }   // saque inicial: se lo levanta él mismo
   else { TQS.vy -= 9.8 * (1 + TQS.n * .012) * dt; TQS.y += TQS.vy * dt; if (TQS.y < BR) { TQS.y = BR; toqueFail("Se te cayó"); } }
-  ballM.position.set(me.x + Math.cos(me.dir) * .45, Math.max(BR, TQS.y) + gy(me.x, me.z), me.z + Math.sin(me.dir) * .45); ballM.rotation.x += dt * 6;
+  const fw = .38 + Math.min(.12, Math.max(0, TQS.y - .3) * .08), lado = (TQS.pie ? -1 : 1) * .1;   // el balón cae delante del pie que toca
+  ballM.position.set(me.x + Math.cos(me.dir) * fw - Math.sin(me.dir) * lado, Math.max(BR, TQS.y) + gy(me.x, me.z), me.z + Math.sin(me.dir) * fw + Math.cos(me.dir) * lado); ballM.rotation.x += dt * (TQS.vy > 0 ? 9 : 4);
   me.a.wrap.position.set(me.x, gy(me.x, me.z), me.z); me.a.wrap.rotation.y = -me.dir + Math.PI / 2; loco(me.a, 0, false); me.a.lock = Math.max(0, (me.a.lock || 0) - dt); me.a.mixer.update(dt);
-  stepYaw(dt); const want = new THREE.Vector3(me.x + Math.sin(YAW) * 4.5, 2.2, me.z + Math.cos(YAW) * 4.5); cam.position.lerp(want, SNAP ? 1 : Math.min(1, dt * 3)); SNAP = 0; cam.lookAt(me.x, 1, me.z);
+  // cámara de tres cuartos por delante: se ven los pies, el balón y la cara (antes iba por la espalda y el cuerpo tapaba el balón)
+  const fx = Math.cos(me.dir), fz = Math.sin(me.dir), want = new THREE.Vector3(me.x + fx * 3.6 - fz * 2.0, 1.4, me.z + fz * 3.6 + fx * 2.0);
+  cam.position.lerp(want, SNAP ? 1 : Math.min(1, dt * 3)); SNAP = 0; cam.lookAt(me.x + fx * .3, 1.0, me.z + fz * .3);
   sun.target.position.set(me.x, 0, me.z); sun.position.set(me.x - 40, 35, me.z + 25); }
 // ---------- partido 4 contra 4 en la jaula ----------
 const G = { ents: [], ball: { x: 0, z: 0, y: .11, vx: 0, vz: 0, vy: 0 }, owner: null, human: null, score: [0, 0], t: 0, goalT: 0, last: 0 };
