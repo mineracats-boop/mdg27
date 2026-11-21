@@ -295,13 +295,14 @@
   function lodSel() { if (!lodOn) return; const H = cv.height || 540, k = H / (2 * Math.tan(cam.fov * Math.PI / 360));
     for (const a of ACT) { const d = a.wrap.position.distanceTo(cam.position), px = 1.82 * k / Math.max(1, d), lv = px > 170 || a === M.human ? 0 : px > 75 ? 1 : 2;
       if (a.lodLv === lv) continue; a.lodLv = lv; a.inner.traverse(o => { if (o.isMesh && o.userData.lod) o.geometry = o.userData.lod[lv]; }); } }
-  async function makeActor(modelName, kit, num, des) {
+  async function makeActor(modelName, kit, num, des, look) {
     if (!MODELS[modelName]) { MODELS[modelName] = await GL().parseAsync(b64buf(await asset("m_" + modelName)), ""); CLIPS[modelName] = {}; MODELS[modelName].scene.traverse(o => { if (o.isMesh) { smoothN(o.geometry); const mp = o.material && o.material.map, im = mp && mp.image;
         if (im && !mp.isCompressedTexture && im.width > TEXMAX) { const c = document.createElement("canvas"); c.width = c.height = TEXMAX; c.getContext("2d").drawImage(im, 0, 0, TEXMAX, TEXMAX); if (im.close) im.close(); mp.image = c; mp.needsUpdate = true; } } });
       await lodBuild(MODELS[modelName].scene); }
     const g = MODELS[modelName], wrap = new THREE.Group(), inner = THREE.SkeletonUtils ? THREE.SkeletonUtils.clone(g.scene) : SkeletonUtils.clone(g.scene);
     const bb = new THREE.Box3().setFromObject(g.scene), k = 1.82 / (bb.max.y - bb.min.y); inner.scale.setScalar(k); inner.position.y = -bb.min.y * k;
     inner.traverse(o => { if (o.isMesh) { o.castShadow = true; o.frustumCulled = false; o.userData.lod = o.geometry.userData.lod || null; if (kit) o.material = kitMat(o.material, kit[0], kit[1], num, o.geometry, des, kit[2]); } }); wrap.add(inner); S.add(wrap);
+    if (look && LOOKP[modelName]) { try { await dress(inner, modelName, look); } catch (e) { console.warn("aspecto", e); } }
     const mixer = new THREE.AnimationMixer(inner), acts = {};
     const act = n => acts[n] || (acts[n] = mixer.clipAction(CLIPS[modelName][n] || (CLIPS[modelName][n] = clipOne(MODELS[modelName], n))));
     const toes = { R: inner.getObjectByName("RightToeBase"), L: inner.getObjectByName("LeftToeBase") }, hands = [inner.getObjectByName("RightHand"), inner.getObjectByName("LeftHand")], head = inner.getObjectByName("Head");
@@ -365,6 +366,37 @@
   const F433 = [ ["POR", .0, .5], ["LI", .2, .12], ["DFC", .15, .37], ["DFC", .15, .63], ["LD", .2, .88], ["MC", .38, .3], ["MCD", .32, .5], ["MC", .38, .7], ["EI", .62, .14], ["DC", .66, .5], ["ED", .62, .86] ];
   const NAMES = [ ["Duarte", "Rivas", "Calleja", "Montoya", "Ferrer", "Salas", "Ibarra", "Vidal", "Toscano", "Lagos", "Peralta"], ["Okafor", "Brandt", "Lindqvist", "Moreau", "Kovač", "Halvorsen", "Esposito", "Nakamura", "Duval", "Mbaye", "Sørensen"] ];
   const PJM = window.PJM || ["pn01", "pn02", "pn03", "pn04", "pn05", "pn06", "pn07", "pn08", "pn09", "pn10", "pn11", "pn12", "pj01", "pj05", "pj02", "pj07", "pj11", "pj14", "pj03", "pj04", "pj06", "pj08"];
+  /* ---------- aspecto de cada jugador: cuerpo calvo (cv1..cv5, Meshy) + pelo (h01..h12, Vincent Page, CC-BY 4.0) + color + barba (b1..b4)
+     Los jugadores reales vienen por nombre en m3d/looks.txt ("cuerpo|pelo|color|barba", p. ej. "cv4|h03|1|b3"); el resto, al azar pero siempre igual para el mismo nombre ---------- */
+  const LOOKP = { cv1: { k: 1.0946, t: [-.0003, 1.82, -.0125] }, cv2: { k: 1.1006, t: [.0002, 1.82, .0122] }, cv3: { k: 1.1486, t: [-.0004, 1.82, .0233] }, cv4: { k: 1.1689, t: [.0008, 1.82, .0099] }, cv5: { k: 1.1332, t: [.0002, 1.82, .0245] } };
+  const HCOL = ["#0e0a07", "#24170e", "#3a2414", "#5a3b20", "#8a5c2e", "#b8894a", "#d9bb7c", "#7c3214", "#8c8c8c", "#e6e0d2"];   // negro, castaños, rubios, pelirrojo, canoso, blanco
+  let LOOKS = {}; try { LOOKS = JSON.parse(await asset("looks")) || {}; } catch (e) { LOOKS = {}; }
+  const hshL = s => [...String(s)].reduce((h, c) => (h * 131 + c.charCodeAt(0)) >>> 0, 17);
+  function lookOf(name) {
+    const s = name && LOOKS[name];
+    if (s) { const [m, h, c, b] = String(s).split("|"); return { m, h: h && h !== "-" ? h : null, c: +c || 0, b: b && b !== "-" ? b : null }; }
+    let h = hshL(name || Math.random()); const nx = k => { const v = h % k; h = Math.floor(h / k) ^ (h * 2654435761 >>> 7); h >>>= 0; return v; };
+    const m = "cv" + (1 + nx(5)), hr = nx(100), hair = hr < 80 ? "h" + String(1 + nx(12)).padStart(2, "0") : hr < 94 ? "r1" : null;
+    const col = m === "cv1" ? [0, 1, 2, 3, 3, 4, 5, 6, 7][nx(9)] : m === "cv2" ? [0, 1, 1, 2, 3][nx(5)] : [0, 0, 1][nx(3)];
+    const br = nx(100), b = br < 45 ? null : br < 72 ? "b3" : br < 88 ? "b1" : br < 95 ? "b2" : "b4";
+    return { m, h: hair, c: col, b };
+  }
+  let PELOS = null; const BARB = {}, HMAT = {};
+  const hairMat = (c, st) => HMAT[c + (st || "")] || (HMAT[c + (st || "")] = st
+    ? new THREE.MeshStandardMaterial({ color: c, roughness: .85, vertexColors: true, transparent: true, opacity: st === "b3" ? .6 : st === "r1" ? .8 : 1, depthWrite: st !== "b3" && st !== "r1" })
+    : new THREE.MeshStandardMaterial({ color: c, roughness: .55, side: THREE.DoubleSide }));
+  async function dress(inner, mn, L) {
+    const P_ = LOOKP[mn], head = inner.getObjectByName("Head"); if (!P_ || !head) return; inner.updateMatrixWorld(true);
+    const col = HCOL[L.c] || HCOL[0], T_ = new THREE.Matrix4().compose(new THREE.Vector3().fromArray(P_.t), new THREE.Quaternion(), new THREE.Vector3(P_.k, P_.k, P_.k)), I_ = new THREE.Matrix4();
+    const put = (src, mat, base) => { src.updateMatrix(); const m = new THREE.Mesh(src.geometry, mat); new THREE.Matrix4().multiplyMatrices(base, src.matrix).decompose(m.position, m.quaternion, m.scale);
+      m.castShadow = true; m.frustumCulled = false; m.userData.look = 1; inner.add(m); m.updateMatrixWorld(true); head.attach(m); };
+    const barb = async () => { let B = BARB[mn]; if (!B) { B = BARB[mn] = await GL().parseAsync(b64buf(await asset("barbas_" + mn)), "");
+        B.scene.traverse(o => { const ca = o.isMesh && o.geometry.attributes.color; if (!ca) return; const n = ca.count, a = new Float32Array(n * 4);   // el rojo del color de vértice es el difuminado del borde → transparencia
+          for (let i = 0; i < n; i++) { a[i * 4] = a[i * 4 + 1] = a[i * 4 + 2] = 1; a[i * 4 + 3] = ca.getX(i); } o.geometry.setAttribute("color", new THREE.BufferAttribute(a, 4)); }); } return B; };
+    if (L.h && L.h[0] === "r") { const s = (await barb()).scene.getObjectByName(L.h); if (s && s.isMesh) put(s, hairMat(col, L.h), I_); }   // rapado: capa fina pegada al cráneo (de cada cuerpo)
+    else if (L.h) { if (!PELOS) PELOS = await GL().parseAsync(b64buf(await asset("pelos")), ""); const s = PELOS.scene.getObjectByName(L.h); if (s && s.isMesh) put(s, hairMat(col), T_); }
+    if (L.b) { const s = (await barb()).scene.getObjectByName(L.b); if (s && s.isMesh) put(s, hairMat(col, L.b), I_); }
+  }
   // posiciones del juego → profundidad, categoría y anchura
   const ROLE = { POR: [0, "gk"], DFC: [.15, "def"], LI: [.2, "def", 1], LD: [.2, "def", 1], CAI: [.25, "def", 1], CAD: [.25, "def", 1], LTI: [.25, "def", 1], LTD: [.25, "def", 1], MCD: [.32, "mid"], MC: [.38, "mid"], MI: [.45, "mid"], MD: [.45, "mid"], MCO: [.5, "mid"], MP: [.5, "mid"], MO: [.55, "mid"], EI: [.62, "fwd"], ED: [.62, "fwd"], SD: [.64, "fwd"], DC: [.66, "fwd"] };
   const SIDE_W = { LI: .1, CAI: .1, LTI: .1, MI: .12, EI: .14, LD: .9, CAD: .9, LTD: .9, MD: .88, ED: .86 };
@@ -474,13 +506,14 @@
     for (let i = 0; i < NP; i++) {
       const role = roles[i], R = ROLE[role] || ROLE.MC, gkk = i === 0 || role === "POR", d = src ? src[i] : null;
       const numb = d && d.num ? d.num : [1, 3, 4, 5, 2, 8, 6, 10, 11, 9, 7][i]; setLoad("jugadores " + (t * NP + i + 1) + "/" + 2 * NP);
-      const a = await makeActor(gkk ? TEAMS[t].gkModel : PJM[(i - 1 + t * 10 + (EMB ? 0 : 0)) % PJM.length], gkk ? (t ? ["#f59e0b", "#1f2937"] : ["#16a34a", "#111827"]) : TEAMS[t].kit, numb, gkk ? 9 : TEAMS[t].des);
+      const lk = gkk || window.PJM ? null : lookOf(d ? d.n : NAMES[t][i] + t), mdl = gkk ? TEAMS[t].gkModel : lk ? lk.m : PJM[(i - 1 + t * 10) % PJM.length];
+      const a = await makeActor(mdl, gkk ? (t ? ["#f59e0b", "#1f2937"] : ["#16a34a", "#111827"]) : TEAMS[t].kit, numb, gkk ? 9 : TEAMS[t].des, lk);
       const r = () => 68 + Math.floor(Math.random() * 20), S0 = d && d.st ? d.st : null, sv = (k, def) => S0 && S0[k] != null ? +S0[k] : def;
       const st = { pac: sv("pac", r()), acc: sv("pac", r()), agi: sv("dri", r()), dri: sv("dri", r()), sho: sv("sho", r()), pas: sv("pas", r()), def: sv("def", r()), phy: sv("phy", r()), gk: gkk ? (d && d.ov ? +d.ov : 82) : 40 };
       if (!S0) { if (R[1] === "fwd") { st.sho += 8; st.pac += 5; st.def -= 15; } if (R[1] === "def") { st.def += 8; st.sho -= 15; } }
       if (t === 1 && window.ST_RD) for (const kk in st) st[kk] = clamp(st[kk] + window.ST_RD, 30, 99);
       if (EMB && EMB.cpu && EMB.cpu.includes(t)) { const k = { "Fácil": -8, "Normal": 0, "Difícil": 5, "Leyenda": 9 }[EMB.diff] || 0; for (const kk in st) st[kk] = clamp(st[kk] + k, 30, 99); }
-      Object.assign(a, { model: gkk ? TEAMS[t].gkModel : PJM[(i - 1 + t * 10) % PJM.length], t, i, role, cat: gkk ? "gk" : R[1], fb: !!R[2], base: { d: R[0], w: widths[i] != null ? widths[i] : .5 }, gk: gkk, name: d ? d.n : NAMES[t][i], u: d ? d.u : null, num: [1, 3, 4, 5, 2, 8, 6, 10, 11, 9, 7][i],
+      Object.assign(a, { model: mdl, look: lk, t, i, role, cat: gkk ? "gk" : R[1], fb: !!R[2], base: { d: R[0], w: widths[i] != null ? widths[i] : .5 }, gk: gkk, name: d ? d.n : NAMES[t][i], u: d ? d.u : null, num: [1, 3, 4, 5, 2, 8, 6, 10, 11, 9, 7][i],
         st, ai: { t: Math.random() * .5, run: null, tgt: null }, dr: { plan: null, lastT: -9, loose: 0, lastFoot: "R" }, down: 0 });
       P.push(a);
     }
@@ -1850,8 +1883,8 @@
   async function doSub(outP, bi) {
     const T = TEAMS[outP.t], b = T.bench[bi]; if (!b || b.used || T.subs >= 5 || outP.sent) return false; const gkk = b.role === "POR";
     if (gkk !== !!outP.gk) return false; b.used = true; T.subs++;
-    const usedM = new Set(P.filter(q => q.t === outP.t).map(q => q.model)), model = gkk ? "gn03" : (PJM.find(m => !usedM.has(m)) || PJM[(outP.i * 7 + T.subs) % PJM.length]);
-    let a; try { a = await makeActor(model, gkk ? (outP.t ? ["#f59e0b", "#1f2937"] : ["#16a34a", "#111827"]) : T.kit, b.num, gkk ? 9 : T.des); } catch (e) { b.used = false; T.subs--; return false; }
+    const usedM = new Set(P.filter(q => q.t === outP.t).map(q => q.model)), lkS = gkk || window.PJM ? null : lookOf(b.n), model = gkk ? "gn03" : lkS ? lkS.m : (PJM.find(m => !usedM.has(m)) || PJM[(outP.i * 7 + T.subs) % PJM.length]);
+    let a; try { a = await makeActor(model, gkk ? (outP.t ? ["#f59e0b", "#1f2937"] : ["#16a34a", "#111827"]) : T.kit, b.num, gkk ? 9 : T.des, lkS); } catch (e) { b.used = false; T.subs--; return false; }
     const r = () => 66 + Math.floor(Math.random() * 18), S0 = b.st, sv = (k, d) => S0 && S0[k] != null ? +S0[k] : d;
     const st = { pac: sv("pac", r()), acc: sv("pac", r()), agi: sv("dri", r()), dri: sv("dri", r()), sho: sv("sho", r()), pas: sv("pas", r()), def: sv("def", r()), phy: sv("phy", r()), gk: gkk ? (b.ov ? +b.ov : 78) : 40 };
     Object.assign(a, { t: outP.t, i: outP.i, role: outP.role, cat: outP.cat, fb: outP.fb, base: outP.base, gk: outP.gk, name: b.n, u: b.u || null, num: b.num, st, model, ai: { t: .3, run: null, tgt: null }, dr: { plan: null, lastT: -9, loose: 0, lastFoot: "R" }, down: 0, sta: 1,
