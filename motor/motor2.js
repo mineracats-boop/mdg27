@@ -373,6 +373,10 @@
   const HCOL = ["#0e0a07", "#24170e", "#3a2414", "#5a3b20", "#8a5c2e", "#b8894a", "#d9bb7c", "#7c3214", "#8c8c8c", "#e6e0d2"];   // negro, castaños, rubios, pelirrojo, canoso, blanco
   let LOOKS = {}; try { LOOKS = JSON.parse(await asset("looks")) || {}; } catch (e) { LOOKS = {}; }
   const hshL = s => [...String(s)].reduce((h, c) => (h * 131 + c.charCodeAt(0)) >>> 0, 17);
+  // apellido para las etiquetas: respeta partículas (Mac Allister, van Dijk, De Bruyne) y "Júnior" → "Vinícius Jr."
+  const NPART = new Set(["mac", "mc", "van", "von", "de", "der", "den", "di", "da", "do", "dos", "das", "del", "della", "la", "le", "el", "al", "ben", "bin", "ter", "ten", "st.", "san", "du", "dal", "dei", "y"]);
+  const apel = n => { const w = String(n || "").trim().split(/\s+/); if (w.length < 2) return w[0] || ""; const l = w[w.length - 1].toLowerCase().replace(/\.$/, "");
+    if (w.length === 2 && ["júnior", "junior", "jr"].includes(l)) return w[0] + " Jr."; let i = w.length - 1; while (i > 0 && NPART.has(w[i - 1].toLowerCase())) i--; return w.slice(i).join(" "); };
   function lookOf(name, team) {   // "Nombre@Equipo" manda sobre "Nombre" (p. ej. Messi del Barça 2009 con melena y el actual con barba)
     const s = name && (LOOKS[name + "@" + team] || LOOKS[name]);
     if (s) { const [m, h, c, b] = String(s).split("|"); return { m, h: h && h !== "-" ? h : null, c: +c || 0, b: b && b !== "-" ? b : null }; }
@@ -507,7 +511,7 @@
     for (let i = 0; i < NP; i++) {
       const role = roles[i], R = ROLE[role] || ROLE.MC, gkk = i === 0 || role === "POR", d = src ? src[i] : null;
       const numb = d && d.num ? d.num : [1, 3, 4, 5, 2, 8, 6, 10, 11, 9, 7][i]; setLoad("jugadores " + (t * NP + i + 1) + "/" + 2 * NP);
-      const lk = gkk || window.PJM ? null : lookOf(d ? d.n : NAMES[t][i] + t, TEAMS[t].name), mdl = gkk ? TEAMS[t].gkModel : lk ? lk.m : PJM[(i - 1 + t * 10) % PJM.length];
+      const lk = gkk || window.PJM ? null : lookOf(d ? (d.full || d.n) : NAMES[t][i] + t, TEAMS[t].name), mdl = gkk ? TEAMS[t].gkModel : lk ? lk.m : PJM[(i - 1 + t * 10) % PJM.length];
       const a = await makeActor(mdl, gkk ? (t ? ["#f59e0b", "#1f2937"] : ["#16a34a", "#111827"]) : TEAMS[t].kit, numb, gkk ? 9 : TEAMS[t].des, lk);
       const r = () => 68 + Math.floor(Math.random() * 20), S0 = d && d.st ? d.st : null, sv = (k, def) => S0 && S0[k] != null ? +S0[k] : def;
       const st = { pac: sv("pac", r()), acc: sv("pac", r()), agi: sv("dri", r()), dri: sv("dri", r()), sho: sv("sho", r()), pas: sv("pas", r()), def: sv("def", r()), phy: sv("phy", r()), gk: gkk ? (d && d.ov ? +d.ov : 82) : 40 };
@@ -1754,7 +1758,7 @@
   const ntag = new Map(); function nomTag(p) { let d = ntag.get(p); if (!d) { d = document.createElement("div"); Object.assign(d.style, { position: "fixed", left: 0, top: 0, pointerEvents: "none", font: (TS.on ? "800 13px" : "800 11px") + " 'Barlow Condensed',system-ui", letterSpacing: ".03em", textShadow: "0 1px 2px #000,0 0 3px #000", whiteSpace: "nowrap", transform: "translate(-50%,-100%)", zIndex: 4 }); document.body.appendChild(d); ntag.set(p, d); } return d; }
   function nomFrame() { const off = M.replay || M.intro || M.noms === 2; for (const p of P) { const d = nomTag(p); if (off || p.sent || p === M.human || (M.noms === 1 && p.t === (M.humanTeam >= 0 ? M.humanTeam : 0))) { d.style.display = "none"; continue; }
       _pv.copy(P3(p.x, p.y, 2.05)).project(cam); if (_pv.z >= 1 || Math.abs(_pv.x) > 1.05 || Math.abs(_pv.y) > 1.05) { d.style.display = "none"; continue; }
-      d.style.display = ""; d.style.left = ((_pv.x + 1) / 2 * innerWidth) + "px"; d.style.top = ((1 - _pv.y) / 2 * innerHeight) + "px"; const n = (p.num ? p.num + " " : "") + String(p.name || "").split(" ").pop();
+      d.style.display = ""; d.style.left = ((_pv.x + 1) / 2 * innerWidth) + "px"; d.style.top = ((1 - _pv.y) / 2 * innerHeight) + "px"; const n = (p.num ? p.num + " " : "") + apel(p.name);
       if (d.dataset.n !== n) { d.dataset.n = n; d.textContent = n; d.style.color = p.t === (M.humanTeam >= 0 ? M.humanTeam : 0) ? "#ffffff" : "#ffd0d0"; } } }
   // marcador: en el móvil se puede encoger (tocándolo) a una pastilla pequeña con el resultado y el minuto
   const sbm = document.createElement("div"); sbm.id = "sbm"; Object.assign(sbm.style, { position: "fixed", left: "10px", top: "8px", zIndex: 6, display: "none", background: "rgba(8,16,36,.82)", color: "#fff", font: "800 14px 'Barlow Condensed',system-ui", padding: "5px 11px", borderRadius: "999px", border: "1px solid rgba(255,216,107,.5)", cursor: "pointer", letterSpacing: ".04em" }); document.body.appendChild(sbm);
@@ -1772,7 +1776,7 @@
     radar.style.display = M.replay || M.intro || M.radarOff || DR || CEL ? "none" : ""; if (radar.style.display === "") { const rr = radar.getBoundingClientRect(); radarX.style.left = (rr.right - 14) + "px"; radarX.style.top = (rr.top - 10) + "px"; radarX.style.display = ""; } else radarX.style.display = "none"; radarBtn.style.display = M.radarOff && !M.replay && !M.intro ? "" : "none"; if (aimMesh.visible && (!M.set || !M.set.aim || M.phase !== "set")) aimMesh.visible = false;
     const h = M.human; if (h && !M.replay && !M.intro && !h.sent) { _pv.copy(P3(h.x, h.y, 2.15)).project(cam); if (_pv.z < 1) { tag.style.display = ""; tag.style.left = ((_pv.x + 1) / 2 * innerWidth) + "px"; tag.style.top = ((1 - _pv.y) / 2 * innerHeight) + "px";
         { const pw = $("#pw"); if (pw.style.display === "block" && M.phase === "play") Object.assign(pw.style, { left: tag.style.left, top: (parseFloat(tag.style.top) - 44) + "px", bottom: "auto", width: "96px", height: "9px" }); else if (pw.style.top) Object.assign(pw.style, { left: "", top: "", bottom: "", width: "", height: "" }); }   // barra de potencia encima del jugador, como en DLS
-        const n = h.name.split(" ").pop(); if (tag.dataset.n !== n) { tag.dataset.n = n; $("#tgN").textContent = (h.num ? h.num + " · " : "") + n; } const e = h.sta == null ? 1 : h.sta; $("#tgE").style.width = (e * 100) + "%"; $("#tgE").style.background = e > .5 ? "#3ddc84" : e > .25 ? "#ffd23a" : "#ff4d5e"; } else tag.style.display = "none"; } else tag.style.display = "none";
+        const n = apel(h.name); if (tag.dataset.n !== n) { tag.dataset.n = n; $("#tgN").textContent = (h.num ? h.num + " · " : "") + n; } const e = h.sta == null ? 1 : h.sta; $("#tgE").style.width = (e * 100) + "%"; $("#tgE").style.background = e > .5 ? "#3ddc84" : e > .25 ? "#ffd23a" : "#ff4d5e"; } else tag.style.display = "none"; } else tag.style.display = "none";
   }
   // partes: 1 y 2 (45'), 3 y 4 prórroga (15'); descuento al final de cada parte según goles, cambios y tarjetas
   const perLen = h => h <= 2 ? M.halfLen : M.halfLen / 3, perBase = h => [0, 0, 45, 90, 105][h], perMin = h => h <= 2 ? 45 : 15;
@@ -1884,7 +1888,7 @@
   async function doSub(outP, bi) {
     const T = TEAMS[outP.t], b = T.bench[bi]; if (!b || b.used || T.subs >= 5 || outP.sent) return false; const gkk = b.role === "POR";
     if (gkk !== !!outP.gk) return false; b.used = true; T.subs++;
-    const usedM = new Set(P.filter(q => q.t === outP.t).map(q => q.model)), lkS = gkk || window.PJM ? null : lookOf(b.n, T.name), model = gkk ? "gn03" : lkS ? lkS.m : (PJM.find(m => !usedM.has(m)) || PJM[(outP.i * 7 + T.subs) % PJM.length]);
+    const usedM = new Set(P.filter(q => q.t === outP.t).map(q => q.model)), lkS = gkk || window.PJM ? null : lookOf(b.full || b.n, T.name), model = gkk ? "gn03" : lkS ? lkS.m : (PJM.find(m => !usedM.has(m)) || PJM[(outP.i * 7 + T.subs) % PJM.length]);
     let a; try { a = await makeActor(model, gkk ? (outP.t ? ["#f59e0b", "#1f2937"] : ["#16a34a", "#111827"]) : T.kit, b.num, gkk ? 9 : T.des, lkS); } catch (e) { b.used = false; T.subs--; return false; }
     const r = () => 66 + Math.floor(Math.random() * 18), S0 = b.st, sv = (k, d) => S0 && S0[k] != null ? +S0[k] : d;
     const st = { pac: sv("pac", r()), acc: sv("pac", r()), agi: sv("dri", r()), dri: sv("dri", r()), sho: sv("sho", r()), pas: sv("pas", r()), def: sv("def", r()), phy: sv("phy", r()), gk: gkk ? (b.ov ? +b.ov : 78) : 40 };
