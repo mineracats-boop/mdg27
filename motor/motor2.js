@@ -200,7 +200,7 @@
     g.strokeText(String(n), 64, 70); g.fillText(String(n), 64, 70); const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; return t; };
   // diseños de camiseta (atlas 5x4: diseño k → delante 2k, detrás 2k+1); el rojo es el color 1 del club, el azul el 2 y el blanco los ribetes
   const PATT = await loadTex("camisetas").catch(() => null); if (PATT) { PATT.generateMipmaps = true; PATT.minFilter = THREE.LinearMipmapLinearFilter; }
-  const CAL = Object.assign({ y0: .815, y1: .5, hw: .14, sl: .13 }, window.KITCAL || {});
+  const CAL = Object.assign({ y0: .86, y1: .545, hw: .14, sl: .13 }, window.KITCAL || {});
   function kitMat(src, c1, c2, num, geo, des, c3) {
     const m = src.clone(); if (geo && !geo.boundingBox) geo.computeBoundingBox(); const bb = geo ? geo.boundingBox : null;
     const U = { k1: { value: new THREE.Color(c1) }, k2: { value: new THREE.Color(c2) }, k3: { value: new THREE.Color(c3 || c2) }, pT: { value: PATT }, des: { value: PATT && des != null ? des : -1 }, cal: { value: new THREE.Vector4(CAL.y0, CAL.y1, CAL.hw, CAL.sl) }, nuT: { value: num != null ? numTex(num, c1) : null }, hasN: { value: num != null ? 1 : 0 },
@@ -229,6 +229,7 @@
           kc = pc.b > .6 && pc.r < .4 ? k2 : pc.r > .6 && pc.g > .6 && pc.b > .6 ? vec3(.92) : k1; }
         kShirt = max(shirt, shorts); diffuseColor.rgb = mix(c, kc * lum, max(shirt, am * (1. - shorts)));
         diffuseColor.rgb = mix(diffuseColor.rgb, k3 * lum, shorts);
+        diffuseColor.rgb *= 1. + .75 * smoothstep(.42, .1, mx) * (1. - max(kShirt, am));   // pieles oscuras: un poco más de luz para que no se pierdan los rasgos
         if (hasN > .5 && shirt > .5) { float H = bsz.y; vec2 q = vec2((vB.x - (bmin.x + bsz.x * .5)) / H, (vB.y - bmin.y) / H);
           float bk = smoothstep(.15, .45, -vBN.z); vec2 nu = vec2(1. - (q.x + .075) / .15, (q.y - .58) / .13);
           if (bk > 0. && nu.x > 0. && nu.x < 1. && nu.y > 0. && nu.y < 1.) { vec4 t = texture2D(nuT, nu); diffuseColor.rgb = mix(diffuseColor.rgb, t.rgb, t.a * bk); } }
@@ -389,7 +390,7 @@
     const P_ = LOOKP[mn], head = inner.getObjectByName("Head"); if (!P_ || !head) return; inner.updateMatrixWorld(true);
     const col = HCOL[L.c] || HCOL[0], T_ = new THREE.Matrix4().compose(new THREE.Vector3().fromArray(P_.t), new THREE.Quaternion(), new THREE.Vector3(P_.k, P_.k, P_.k)), I_ = new THREE.Matrix4();
     const put = (src, mat, base) => { src.updateMatrix(); const m = new THREE.Mesh(src.geometry, mat); new THREE.Matrix4().multiplyMatrices(base, src.matrix).decompose(m.position, m.quaternion, m.scale);
-      m.castShadow = true; m.frustumCulled = false; m.userData.look = 1; inner.add(m); m.updateMatrixWorld(true); head.attach(m); };
+      m.castShadow = false; m.frustumCulled = false; m.userData.look = 1; inner.add(m); m.updateMatrixWorld(true); head.attach(m); };
     const barb = async () => { let B = BARB[mn]; if (!B) { B = BARB[mn] = await GL().parseAsync(b64buf(await asset("barbas_" + mn)), "");
         B.scene.traverse(o => { const ca = o.isMesh && o.geometry.attributes.color; if (!ca) return; const n = ca.count, a = new Float32Array(n * 4);   // el rojo del color de vértice es el difuminado del borde → transparencia
           for (let i = 0; i < n; i++) { a[i * 4] = a[i * 4 + 1] = a[i * 4 + 2] = 1; a[i * 4 + 3] = ca.getX(i); } o.geometry.setAttribute("color", new THREE.BufferAttribute(a, 4)); }); } return B; };
