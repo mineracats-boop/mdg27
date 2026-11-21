@@ -19,7 +19,7 @@
 
   /* ---------- render ---------- */
   const cv = $("#cv"), Rn = new THREE.WebGLRenderer({ canvas: cv, antialias: true, powerPreference: "high-performance" });
-  window.__RN = Rn; window.__CAM = () => [cam, sun]; Rn.domElement.addEventListener("webglcontextlost", e => { e.preventDefault(); try { localStorage.setItem("mdg27q", "baja"); } catch (er) {} const d = document.createElement("div"); Object.assign(d.style, { position: "fixed", inset: "0", display: "grid", placeItems: "center", background: "#050a14", color: "#fff", zIndex: 99, textAlign: "center", padding: "16px", font: "600 18px system-ui" }); d.innerHTML = "La tarjeta gráfica se ha quedado sin memoria.<br>He puesto la calidad en Baja.<br><br><button style='font:inherit;padding:10px 22px;border:0;border-radius:8px;background:#ffd23a;color:#111;cursor:pointer'>Volver a cargar</button>"; d.querySelector("button").onclick = () => location.reload(); document.body.appendChild(d); }); Rn.debug.checkShaderErrors = !!window.SHDBG; if (QUAL !== "alta") Rn.shadowMap.type = THREE.PCFShadowMap; Rn.outputColorSpace = THREE.SRGBColorSpace; Rn.toneMapping = THREE.ACESFilmicToneMapping; Rn.toneMappingExposure = 1.05;
+  window.__RN = Rn; window.__CAM = () => [cam, sun]; Rn.domElement.addEventListener("webglcontextlost", e => { e.preventDefault(); try { localStorage.setItem("mdg27q", "baja"); } catch (er) {} const d = document.createElement("div"); Object.assign(d.style, { position: "fixed", inset: "0", display: "grid", placeItems: "center", background: "#050a14", color: "#fff", zIndex: 99, textAlign: "center", padding: "16px", font: "600 18px system-ui" }); d.innerHTML = "La tarjeta gráfica se ha quedado sin memoria.<br>He puesto la calidad en Baja.<br><br><button style='font:inherit;padding:10px 22px;border:0;border-radius:8px;background:#ffd23a;color:#111;cursor:pointer'>Volver a cargar</button>"; d.querySelector("button").onclick = () => location.reload(); document.body.appendChild(d); }); Rn.debug.checkShaderErrors = !!window.SHDBG; Rn.shadowMap.type = THREE.PCFShadowMap; Rn.outputColorSpace = THREE.SRGBColorSpace; Rn.toneMapping = THREE.ACESFilmicToneMapping; Rn.toneMappingExposure = 1.05;
   Rn.shadowMap.enabled = true; Rn.shadowMap.type = THREE.PCFSoftShadowMap;
   // texturas comprimidas para la tarjeta gráfica (KTX2/Basis): ocupan unas 8 veces menos memoria; el descompresor va incluido (sin internet también)
   if (window.KTX2Loader && !/ktx=0/.test(location.search)) { try { const [bj, bw] = await Promise.all([asset("basis_js"), asset("basis_wasm")]);
@@ -41,7 +41,7 @@
       fragmentShader: "varying vec3 vP; void main(){ float h = normalize(vP).y; vec3 up = mix(vec3(.85,.9,1.), vec3(.45,.65,1.), smoothstep(0., .7, h)); vec3 dn = vec3(.16,.32,.12); vec3 c = h > 0. ? up : mix(vec3(.5,.55,.5), dn, smoothstep(0., -.3, h)); c += vec3(3.) * smoothstep(.985, 1., dot(normalize(vP), normalize(vec3(-.4,.75,-.5)))); gl_FragColor = vec4(c, 1.); }" }));
     es.add(sk); const pm = new THREE.PMREMGenerator(Rn); S.environment = pm.fromScene(es, .03).texture; S.environmentIntensity = .55; pm.dispose(); }
   S.add(new THREE.HemisphereLight(0xe8eeff, 0x3a5a2a, 1.0));
-  const sun = new THREE.DirectionalLight(0xfff4e0, 2.4); sun.castShadow = QUAL !== "baja"; sun.shadow.mapSize.set(QUAL === "alta" ? 2048 : 1024, QUAL === "alta" ? 2048 : 1024);
+  const sun = new THREE.DirectionalLight(0xfff4e0, 2.4); sun.castShadow = true; sun.shadow.mapSize.set(1024, 1024);    // mismas sombras en todos los aparatos: las proyectan copias de pocos polígonos que no se pintan en cámara
   Object.assign(sun.shadow.camera, { left: -22, right: 22, top: 22, bottom: -22, near: 1, far: 170 }); sun.shadow.bias = -.0004; sun.shadow.normalBias = .02; S.add(sun, sun.target);
   const loadTex = async (n, srgb = true) => { const src = await asset(n); return new Promise(res => { const im = new Image(); im.onload = () => { const t = new THREE.Texture(im); if (srgb) t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = Math.min(8, Rn.capabilities.getMaxAnisotropy()); t.needsUpdate = true; res(t); }; im.src = src; }); };
 
@@ -244,7 +244,7 @@
     for (let i = 0; i < P_.count; i++) { const e = acc.get(key(i)), l = Math.hypot(e[0], e[1], e[2]) || 1; N.setXYZ(i, e[0] / l, e[1] / l, e[2] / l); } N.needsUpdate = true; }
   const pickA = l => { l = l.filter(n => META[n]); return l[Math.floor(Math.random() * l.length)]; };
   const WARM_L = ["StallSoccerball1", "StallSoccerball3", "GoalkeeperCatch3", "GoalkeeperDirecting", "GoalkeeperDirecting1", "GoalkeeperPlacingBall", "GoalkeeperSidestep1", "KneeingSoccerball1", "RunForwardLeft", "RunForwardRight", "SprintLeft", "SprintRight", "OffensiveIdle", "GoalkeeperIdle1", "StandingTurnLeft90", "StandingTurnRight90", "IdleToSprint", "RunToStop", "HitReaction", "AngryGesture", "VictoryIdle", "PointingForward", "Defeat", "Receive", "Receive_M", "BreathingIdle", "SoccerIdle", "SoccerTackle2", "GoalkeeperMiss", "GoalkeeperDropKick", "SoccerPenaltyKick", "FistPump", "StandingFistPump", "KneelingPointing", "Rallying", "StandingCheering", "Excited", "InjuredWalking", "Quick180Turn", "StandingArguing", "ShoveReaction", "JoggingStumble", "SoccerSpin", "StallSoccerball", "ScissorKick", "ScissorKick_M", "GoalkeeperCatch1", "GoalkeeperCatch2", "Cheering", "Chip", "Clapping", "Disappointed", "FallFlat", "GettingUp", "GoalkeeperBodyBlock", "GoalkeeperBodyBlock1", "GoalkeeperCatch", "GoalkeeperDivingSave", "GoalkeeperDivingSave1", "GoalkeeperIdle", "GoalkeeperOverhandThrow", "GoalkeeperScoop", "GoalkeeperSidestep", "JogBackward", "JogForward", "JogStrafeLeft", "JogStrafeRight", "KickSoccerball1", "KneeingSoccerball", "Pointing", "ReceiveSoccerball", "Running", "RunningSlide", "SoccerHeader", "SoccerPass", "SoccerTackle", "SoccerTrip", "SprintForward", "StandardIdle", "StandardRun", "StandardWalk", "StrikeFowardJog", "ThrowIn", "Victory", "Chip_M", "KickSoccerball1_M", "KneeingSoccerball_M", "ReceiveSoccerball_M", "SoccerHeader_M", "SoccerPass_M", "SoccerTackle_M", "StrikeFowardJog_M"];
-  const MODELS = {}, CLIPS = {};
+  const MODELS = {}, CLIPS = {}, SHPX = new THREE.MeshBasicMaterial({ colorWrite: false, depthWrite: false });
   // LOD (como DLS/FIFA): cada modelo de jugador tiene dos versiones simplificadas que comparten huesos, pesos y texturas; de lejos se pinta la de menos triángulos
   async function lodBuild(root) {
     const MS = window.MeshoptSimplifier; if (!MS) return; try { await MS.ready; } catch (e) { return; }
@@ -254,16 +254,25 @@
           const lg = new THREE.BufferGeometry(); for (const k in g.attributes) lg.setAttribute(k, g.attributes[k]); lg.morphAttributes = g.morphAttributes; lg.setIndex(new THREE.BufferAttribute(ix, 1)); if (!g.boundingBox) g.computeBoundingBox(); lg.boundingBox = g.boundingBox; lg.boundingSphere = g.boundingSphere; lg.userData.lodOf = g; return lg; } catch (e) { return null; } };
       g.userData.lod = [g, mk(.4, .01) || g, mk(.16, .03) || g]; });
   }
+  // geometría para la sombra: muy simplificada (~1.500 triángulos), se calcula una vez por modelo
+  function shadowGeo(g) { if (g.userData.shg !== undefined) return g.userData.shg; let out = (g.userData.lod && g.userData.lod[2]) || null;
+    try { if (g.index) { if (!g.boundingBox) g.computeBoundingBox(); const P_ = g.attributes.position, n = P_.count, bb = g.boundingBox, cs = (bb.max.y - bb.min.y) / 38;   // agrupar vértices en celdas (~3 cm): sombra de pocos polígonos
+        const rep = new Uint32Array(n), cell = new Map(); for (let i = 0; i < n; i++) { const k = Math.floor((P_.getX(i) - bb.min.x) / cs) + "," + Math.floor((P_.getY(i) - bb.min.y) / cs) + "," + Math.floor((P_.getZ(i) - bb.min.z) / cs); let r = cell.get(k); if (r === undefined) { r = i; cell.set(k, i); } rep[i] = r; }
+        const ix = [], seen = new Set(), I = g.index; for (let f = 0; f < I.count; f += 3) { const a = rep[I.getX(f)], b = rep[I.getX(f + 1)], c = rep[I.getX(f + 2)]; if (a === b || b === c || a === c) continue; const k = [a, b, c].sort((x, y) => x - y).join(","); if (seen.has(k)) continue; seen.add(k); ix.push(a, b, c); }
+        if (ix.length > 300) { const sg = new THREE.BufferGeometry(); for (const k of ["position", "skinIndex", "skinWeight"]) if (g.attributes[k]) sg.setAttribute(k, g.attributes[k]); sg.setIndex(ix); sg.boundingBox = g.boundingBox; sg.boundingSphere = g.boundingSphere; out = sg; } } } catch (e) {}
+    return (g.userData.shg = out); }
   // elige el nivel de detalle por el tamaño del jugador en pantalla (en píxeles)
   let lodOn = !/lod=0/.test(location.search);
   // sombras de mancha (como en los juegos de móvil): un círculo oscuro bajo cada jugador cuando no hay sombras reales
   const BLOB = (() => { const geo = new THREE.PlaneGeometry(1, 1); geo.rotateX(-Math.PI / 2);
     return { geo, mat: new THREE.ShaderMaterial({ transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, uniforms: {}, vertexShader: "varying vec2 vU; void main(){ vU = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.); }",
       fragmentShader: "varying vec2 vU; void main(){ float d = length(vU - .5) * 2.; gl_FragColor = vec4(0., 0., 0., (1. - smoothstep(.05, 1., d)) * .8); }" }) }; })();
-  function blobFor(a, sz) { if (a.blob) return a.blob; const m = new THREE.Mesh(BLOB.geo, BLOB.mat); m.scale.set(sz, 1, sz); m.renderOrder = 1; m.frustumCulled = false; m.visible = false; S.add(m); return (a.blob = m); }
-  function blobSel() { const sh = sun.castShadow && Rn.shadowMap.enabled;
-    for (const a of ACT) { const real = sh && (a.inner.userData.cs ?? true), b = blobFor(a, 1.45); b.visible = !real && a.wrap.visible; if (b.visible) b.position.set(a.wrap.position.x, .07, a.wrap.position.z); }
-    const bb = blobFor(window.__ballBlob || (window.__ballBlob = {}), .5); bb.visible = !sh && ballMesh.visible; if (bb.visible) { const z = Math.max(0, ballMesh.position.y - BR); bb.position.set(ballMesh.position.x, .071, ballMesh.position.z); const k = .5 + Math.min(1, z / 6) * .5; bb.scale.set(k, 1, k); } }
+  // todas las manchas en una sola llamada de dibujo (instancias)
+  const BLOBI = (() => { const mi = BLOB.mat.clone(); mi.vertexShader = "varying vec2 vU; void main(){ vU = uv; gl_Position = projectionMatrix * modelViewMatrix * instanceMatrix * vec4(position, 1.); }"; const m = new THREE.InstancedMesh(BLOB.geo, mi, 64); m.renderOrder = 1; m.frustumCulled = false; m.count = 0; S.add(m); return m; })(), _bm = new THREE.Matrix4(), _bs = new THREE.Vector3(), _bq = new THREE.Quaternion(), _bp = new THREE.Vector3();
+  function blobSel() { const sh = sun.castShadow && Rn.shadowMap.enabled; let n = 0;
+    for (const a of ACT) { const real = sh && (a.inner.userData.cs ?? true); if (real || !a.wrap.visible || n >= 63) continue; _bp.set(a.wrap.position.x, .07, a.wrap.position.z); _bs.set(1.45, 1, 1.45); BLOBI.setMatrixAt(n++, _bm.compose(_bp, _bq, _bs)); }
+    if (ballMesh.visible) { const z = Math.max(0, ballMesh.position.y - BR), k = (.5 + Math.min(1, z / 6) * .5) * .5; _bp.set(ballMesh.position.x, .071, ballMesh.position.z); _bs.set(k, 1, k); BLOBI.setMatrixAt(n++, _bm.compose(_bp, _bq, _bs)); }
+    BLOBI.count = n; BLOBI.instanceMatrix.needsUpdate = true; }
   // estadio con la luz "pintada": se calcula una vez la luz de cada vértice y se dibuja sin iluminación en tiempo real; luego se juntan las piezas por material (menos llamadas de dibujo)
   function bakeStatic() {
     const lights = []; S.traverse(o => { if (o.isLight) lights.push(o); }); S.updateMatrixWorld(true);
@@ -303,6 +312,8 @@
     const g = MODELS[modelName], wrap = new THREE.Group(), inner = THREE.SkeletonUtils ? THREE.SkeletonUtils.clone(g.scene) : SkeletonUtils.clone(g.scene);
     const bb = new THREE.Box3().setFromObject(g.scene), k = 1.82 / (bb.max.y - bb.min.y); inner.scale.setScalar(k); inner.position.y = -bb.min.y * k;
     inner.traverse(o => { if (o.isMesh) { o.castShadow = true; o.frustumCulled = false; o.userData.lod = o.geometry.userData.lod || null; if (kit) o.material = kitMat(o.material, kit[0], kit[1], num, o.geometry, des, kit[2]); } }); wrap.add(inner); S.add(wrap);
+    // sombra de los jugadores: mancha bajo los pies en todos los aparatos (como en los juegos de móvil): barata y siempre igual
+    inner.traverse(o => { if (o.isMesh) o.castShadow = false; }); inner.userData.cs = false;
     if (look && LOOKP[modelName]) { try { await dress(inner, modelName, look); } catch (e) { console.warn("aspecto", e); } }
     const mixer = new THREE.AnimationMixer(inner), acts = {};
     const act = n => acts[n] || (acts[n] = mixer.clipAction(CLIPS[modelName][n] || (CLIPS[modelName][n] = clipOne(MODELS[modelName], n))));
@@ -394,12 +405,12 @@
     const P_ = LOOKP[mn], head = inner.getObjectByName("Head"); if (!P_ || !head) return; inner.updateMatrixWorld(true);
     const col = HCOL[L.c] || HCOL[0], T_ = new THREE.Matrix4().compose(new THREE.Vector3().fromArray(P_.t), new THREE.Quaternion(), new THREE.Vector3(P_.k, P_.k, P_.k)), I_ = new THREE.Matrix4();
     const put = (src, mat, base) => { src.updateMatrix(); const m = new THREE.Mesh(src.geometry, mat); new THREE.Matrix4().multiplyMatrices(base, src.matrix).decompose(m.position, m.quaternion, m.scale);
-      m.castShadow = false; m.frustumCulled = false; m.userData.look = 1; inner.add(m); m.updateMatrixWorld(true); head.attach(m); };
+      m.castShadow = false; m.frustumCulled = false; m.userData.look = 1; m.userData.lod = src.geometry.userData.lod || null; inner.add(m); m.updateMatrixWorld(true); head.attach(m); };
     const barb = async () => { let B = BARB[mn]; if (!B) { B = BARB[mn] = await GL().parseAsync(b64buf(await asset("barbas_" + mn)), "");
         B.scene.traverse(o => { const ca = o.isMesh && o.geometry.attributes.color; if (!ca) return; const n = ca.count, a = new Float32Array(n * 4);   // el rojo del color de vértice es el difuminado del borde → transparencia
           for (let i = 0; i < n; i++) { a[i * 4] = a[i * 4 + 1] = a[i * 4 + 2] = 1; a[i * 4 + 3] = ca.getX(i); } o.geometry.setAttribute("color", new THREE.BufferAttribute(a, 4)); }); } return B; };
     if (L.h && L.h[0] === "r") { const s = (await barb()).scene.getObjectByName(L.h); if (s && s.isMesh) put(s, hairMat(col, L.h), I_); }   // rapado: capa fina pegada al cráneo (de cada cuerpo)
-    else if (L.h) { if (!PELOS) PELOS = await GL().parseAsync(b64buf(await asset("pelos")), ""); const s = PELOS.scene.getObjectByName(L.h); if (s && s.isMesh) put(s, hairMat(col), T_); }
+    else if (L.h) { if (!PELOS) { PELOS = await GL().parseAsync(b64buf(await asset("pelos")), ""); try { await lodBuild(PELOS.scene); } catch (e) {} } const s = PELOS.scene.getObjectByName(L.h); if (s && s.isMesh) put(s, hairMat(col), T_); }
     if (L.b) { const s = (await barb()).scene.getObjectByName(L.b); if (s && s.isMesh) put(s, hairMat(col, L.b), I_); }
   }
   // posiciones del juego → profundidad, categoría y anchura
@@ -577,7 +588,7 @@
     for (const md of SRC) { const rel = md.matrixWorld; for (const sp of md.pts) { if (Math.random() < .1) continue; q.copy(sp).applyMatrix4(rel);
         const yaw = Math.atan2(-(q.x), -(q.z)) ; mm.makeRotationY(yaw); mm.setPosition(q.x + (Math.random() - .5) * .1, q.y, q.z); im.setMatrixAt(k, mm);
         cc.setScalar(.8 + Math.random() * .25); im.setColorAt(k, cc); { const r = Math.random(); aF[k * 3] = Math.floor(Math.random() * 3) + (r < .5 ? 0 : r < .7 ? 3 : r < .86 ? 6 : 9); } aF[k * 3 + 1] = Math.random(); k++; } }
-    im.count = QUAL === "baja" ? Math.floor(k * .5) : k; geo.setAttribute("aF", new THREE.InstancedBufferAttribute(aF, 3)); S.add(im);
+    im.count = k; geo.setAttribute("aF", new THREE.InstancedBufferAttribute(aF, 3)); S.add(im);
     return { im, U, n: k };
   } catch (e) { console.warn("público", e); return null; } })();
   const team = t => P.filter(p => p.t === t && !p.sent), GKP = t => P.find(q => q.t === t && q.gk), mid = t => team(t).find(q => q.cat === "mid") || team(t)[Math.min(5, team(t).length - 1)];
@@ -2378,7 +2389,7 @@
       if (!window.STEP && !M.intro && simT > 4) { if (f < (TOUCHQ ? 38 : 48) && dynS <= .81) lowQ++; else lowQ = Math.max(0, lowQ - .5);
         if (lowQ >= 2 && !draw.q1) { draw.q1 = 1; sun.shadow.mapSize.set(1024, 1024); if (sun.shadow.map) { sun.shadow.map.dispose(); sun.shadow.map = null; } lowQ = 0; }
         else if (lowQ >= 2 && !draw.q2) { draw.q2 = 1; maxDpr = Math.min(maxDpr, 1.5); lowQ = 0; }
-        else if (lowQ >= 2 && !draw.q3) { draw.q3 = 1; if (CROWD) CROWD.im.count = Math.floor(CROWD.n * .55); for (const a of P.concat(OFF)) a.inner.traverse(o => { if (o.isMesh) o.castShadow = a.gk || a === M.human; }); for (const a of P.concat(OFF)) a.inner.userData.cs = !!(a.gk || a === M.human); lowQ = 0; }
+        else if (lowQ >= 2 && !draw.q3) { draw.q3 = 1; if (CROWD) CROWD.im.count = Math.floor(CROWD.n * .7); lowQ = 0; }
         else if (lowQ >= 2 && !draw.q4) { draw.q4 = 1; maxDpr = Math.min(maxDpr, 1.25); sun.shadow.mapSize.set(512, 512); if (sun.shadow.map) { sun.shadow.map.dispose(); sun.shadow.map = null; } lowQ = 0; }   // antes se congelaban las sombras y, como el sol sigue al balón, salían manchas y cuadros negros fuera de sitio
         else if (lowQ >= 2 && !draw.q5) { draw.q5 = 1; maxDpr = Math.min(maxDpr, 1.1); lowQ = 0; }
         else if (lowQ >= 2 && !draw.q6 && PF.on && PF.lite) { draw.q6 = 1; PF.on = false; lowQ = 0; } } }
