@@ -15282,12 +15282,15 @@ function buildNatTeams() {
 }
 // liga «Históricos» (solo partido rápido y torneos propios): los equipos míticos del Draft
 function buildHistTeams() { return HIST.map(T => { const xi = pickXI(T.pl, "4-3-3").filter(Boolean); return { liga: "Históricos", nombre: T.nombre, sh: T.sh, c1: T.c1, c2: T.c2, ov: Math.round(xi.reduce((a, p) => a + p.ov, 0) / Math.max(1, xi.length)), pl: T.pl, hist: 1 }; }); }
-// liga «Resto del mundo» (como en FIFA): clubes de ligas que no están en el juego; solo partido rápido y torneos, no carrera ni Ultimate Team
+// liga «Resto del mundo» (como en FIFA): clubes de ligas que no están en el juego; partido rápido, torneos y cartas del Ultimate Team, no carrera
 function buildRestTeams() { if (typeof DB_RESTO === "undefined") return [];
   return DB_RESTO.map(([nombre, sh, c1, c2, eu, raw]) => { const pl = raw.split("|").map(s => { const [n, pos, ov, nac, edad] = s.split(":");
       return { k: "rm." + slug(nombre) + "." + slug(n), n, pos, nac, edad: +edad, ov: +ov, f: legStats(pos, +ov, n), club: nombre, sh, c1, c2, liga: "Resto del mundo" }; });
     const xi = pickXI(pl, "4-3-3").filter(Boolean); return { liga: "Resto del mundo", nombre, sh, c1, c2, ov: Math.round(xi.reduce((a, p) => a + p.ov, 0) / Math.max(1, xi.length)), pl, rest: 1, eu: !!eu }; }); }
-const QT = CLUBS.concat(buildRestTeams(), buildNatTeams(), buildHistTeams());
+const REST_T = buildRestTeams();
+// sus jugadores también salen como cartas del Ultimate Team (liga «Resto del mundo»); en carrera no, porque sus clubes no están en CLUBS
+for (const T of REST_T) for (const p of T.pl) { const dk = slug(p.n) + "|" + p.edad; if (PBY[p.k] || SEEN[dk]) continue; SEEN[dk] = 1; PL.push(p); PBY[p.k] = p; }
+const QT = CLUBS.concat(REST_T, buildNatTeams(), buildHistTeams());
 const qtId = c => (c.nat ? "n:" : "c:") + c.nombre + (c.nat ? "" : "|" + c.liga);
 const qtBy = id => QT.find(c => qtId(c) === id);
 function qtTeam(id) { const c = qtBy(id); const t = teamFromPL(c, "4-3-3", pickXI(c.pl, "4-3-3")); t.name = c.nombre; t.sh = c.sh; t.c1 = c.c1; t.c2 = c.c2; return t; }
