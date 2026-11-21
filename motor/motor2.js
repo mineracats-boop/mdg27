@@ -373,8 +373,8 @@
   const HCOL = ["#0e0a07", "#24170e", "#3a2414", "#5a3b20", "#8a5c2e", "#b8894a", "#d9bb7c", "#7c3214", "#8c8c8c", "#e6e0d2"];   // negro, castaños, rubios, pelirrojo, canoso, blanco
   let LOOKS = {}; try { LOOKS = JSON.parse(await asset("looks")) || {}; } catch (e) { LOOKS = {}; }
   const hshL = s => [...String(s)].reduce((h, c) => (h * 131 + c.charCodeAt(0)) >>> 0, 17);
-  function lookOf(name) {
-    const s = name && LOOKS[name];
+  function lookOf(name, team) {   // "Nombre@Equipo" manda sobre "Nombre" (p. ej. Messi del Barça 2009 con melena y el actual con barba)
+    const s = name && (LOOKS[name + "@" + team] || LOOKS[name]);
     if (s) { const [m, h, c, b] = String(s).split("|"); return { m, h: h && h !== "-" ? h : null, c: +c || 0, b: b && b !== "-" ? b : null }; }
     let h = hshL(name || Math.random()); const nx = k => { const v = h % k; h = Math.floor(h / k) ^ (h * 2654435761 >>> 7); h >>>= 0; return v; };
     const m = "cv" + (1 + nx(5)), hr = nx(100), hair = hr < 80 ? "h" + String(1 + nx(19)).padStart(2, "0") : hr < 94 ? "r1" : null;
@@ -507,7 +507,7 @@
     for (let i = 0; i < NP; i++) {
       const role = roles[i], R = ROLE[role] || ROLE.MC, gkk = i === 0 || role === "POR", d = src ? src[i] : null;
       const numb = d && d.num ? d.num : [1, 3, 4, 5, 2, 8, 6, 10, 11, 9, 7][i]; setLoad("jugadores " + (t * NP + i + 1) + "/" + 2 * NP);
-      const lk = gkk || window.PJM ? null : lookOf(d ? d.n : NAMES[t][i] + t), mdl = gkk ? TEAMS[t].gkModel : lk ? lk.m : PJM[(i - 1 + t * 10) % PJM.length];
+      const lk = gkk || window.PJM ? null : lookOf(d ? d.n : NAMES[t][i] + t, TEAMS[t].name), mdl = gkk ? TEAMS[t].gkModel : lk ? lk.m : PJM[(i - 1 + t * 10) % PJM.length];
       const a = await makeActor(mdl, gkk ? (t ? ["#f59e0b", "#1f2937"] : ["#16a34a", "#111827"]) : TEAMS[t].kit, numb, gkk ? 9 : TEAMS[t].des, lk);
       const r = () => 68 + Math.floor(Math.random() * 20), S0 = d && d.st ? d.st : null, sv = (k, def) => S0 && S0[k] != null ? +S0[k] : def;
       const st = { pac: sv("pac", r()), acc: sv("pac", r()), agi: sv("dri", r()), dri: sv("dri", r()), sho: sv("sho", r()), pas: sv("pas", r()), def: sv("def", r()), phy: sv("phy", r()), gk: gkk ? (d && d.ov ? +d.ov : 82) : 40 };
@@ -1884,7 +1884,7 @@
   async function doSub(outP, bi) {
     const T = TEAMS[outP.t], b = T.bench[bi]; if (!b || b.used || T.subs >= 5 || outP.sent) return false; const gkk = b.role === "POR";
     if (gkk !== !!outP.gk) return false; b.used = true; T.subs++;
-    const usedM = new Set(P.filter(q => q.t === outP.t).map(q => q.model)), lkS = gkk || window.PJM ? null : lookOf(b.n), model = gkk ? "gn03" : lkS ? lkS.m : (PJM.find(m => !usedM.has(m)) || PJM[(outP.i * 7 + T.subs) % PJM.length]);
+    const usedM = new Set(P.filter(q => q.t === outP.t).map(q => q.model)), lkS = gkk || window.PJM ? null : lookOf(b.n, T.name), model = gkk ? "gn03" : lkS ? lkS.m : (PJM.find(m => !usedM.has(m)) || PJM[(outP.i * 7 + T.subs) % PJM.length]);
     let a; try { a = await makeActor(model, gkk ? (outP.t ? ["#f59e0b", "#1f2937"] : ["#16a34a", "#111827"]) : T.kit, b.num, gkk ? 9 : T.des, lkS); } catch (e) { b.used = false; T.subs--; return false; }
     const r = () => 66 + Math.floor(Math.random() * 18), S0 = b.st, sv = (k, d) => S0 && S0[k] != null ? +S0[k] : d;
     const st = { pac: sv("pac", r()), acc: sv("pac", r()), agi: sv("dri", r()), dri: sv("dri", r()), sho: sv("sho", r()), pas: sv("pas", r()), def: sv("def", r()), phy: sv("phy", r()), gk: gkk ? (b.ov ? +b.ov : 78) : 40 };
