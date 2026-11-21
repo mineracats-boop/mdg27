@@ -367,7 +367,7 @@
   const F433 = [ ["POR", .0, .5], ["LI", .2, .12], ["DFC", .15, .37], ["DFC", .15, .63], ["LD", .2, .88], ["MC", .38, .3], ["MCD", .32, .5], ["MC", .38, .7], ["EI", .62, .14], ["DC", .66, .5], ["ED", .62, .86] ];
   const NAMES = [ ["Duarte", "Rivas", "Calleja", "Montoya", "Ferrer", "Salas", "Ibarra", "Vidal", "Toscano", "Lagos", "Peralta"], ["Okafor", "Brandt", "Lindqvist", "Moreau", "Kovač", "Halvorsen", "Esposito", "Nakamura", "Duval", "Mbaye", "Sørensen"] ];
   const PJM = window.PJM || ["pn01", "pn02", "pn03", "pn04", "pn05", "pn06", "pn07", "pn08", "pn09", "pn10", "pn11", "pn12", "pj01", "pj05", "pj02", "pj07", "pj11", "pj14", "pj03", "pj04", "pj06", "pj08"];
-  /* ---------- aspecto de cada jugador: cuerpo calvo (cv1..cv5, Meshy) + pelo (h01..h12, Vincent Page, CC-BY 4.0) + color + barba (b1..b4)
+  /* ---------- aspecto de cada jugador: cuerpo calvo (cv1..cv5, Meshy) + pelo (h01..h12 Vincent Page, h13..h18 MotionStudioArts, h19 OCBacon; CC-BY 4.0) + color + barba (b1..b4)
      Los jugadores reales vienen por nombre en m3d/looks.txt ("cuerpo|pelo|color|barba", p. ej. "cv4|h03|1|b3"); el resto, al azar pero siempre igual para el mismo nombre ---------- */
   const LOOKP = { cv1: { k: 1.0946, t: [-.0003, 1.82, -.0125] }, cv2: { k: 1.1006, t: [.0002, 1.82, .0122] }, cv3: { k: 1.1486, t: [-.0004, 1.82, .0233] }, cv4: { k: 1.1689, t: [.0008, 1.82, .0099] }, cv5: { k: 1.1332, t: [.0002, 1.82, .0245] } };
   const HCOL = ["#0e0a07", "#24170e", "#3a2414", "#5a3b20", "#8a5c2e", "#b8894a", "#d9bb7c", "#7c3214", "#8c8c8c", "#e6e0d2"];   // negro, castaños, rubios, pelirrojo, canoso, blanco
@@ -377,7 +377,7 @@
     const s = name && LOOKS[name];
     if (s) { const [m, h, c, b] = String(s).split("|"); return { m, h: h && h !== "-" ? h : null, c: +c || 0, b: b && b !== "-" ? b : null }; }
     let h = hshL(name || Math.random()); const nx = k => { const v = h % k; h = Math.floor(h / k) ^ (h * 2654435761 >>> 7); h >>>= 0; return v; };
-    const m = "cv" + (1 + nx(5)), hr = nx(100), hair = hr < 80 ? "h" + String(1 + nx(12)).padStart(2, "0") : hr < 94 ? "r1" : null;
+    const m = "cv" + (1 + nx(5)), hr = nx(100), hair = hr < 80 ? "h" + String(1 + nx(19)).padStart(2, "0") : hr < 94 ? "r1" : null;
     const col = m === "cv1" ? [0, 1, 2, 3, 3, 4, 5, 6, 7][nx(9)] : m === "cv2" ? [0, 1, 1, 2, 3][nx(5)] : [0, 0, 1][nx(3)];
     const br = nx(100), b = br < 45 ? null : br < 72 ? "b3" : br < 88 ? "b1" : br < 95 ? "b2" : "b4";
     return { m, h: hair, c: col, b };
