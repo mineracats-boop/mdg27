@@ -8668,6 +8668,14 @@ function freshState() {
     st: { packs: 0, specials: 0, buy: 0, sell: 0, played: 0, won: 0, drawn: 0, lost: 0, gf: 0, ga: 0, titles: 0 }, log: [] };
 }
 let S = Object.assign(freshState(), store.get(SAVE_KEY, {}));
+// claves de cartas antiguas (p. ej. «laliga-ea-sports.» → «laliga.» al cambiar el nombre de la liga): se pasan a la clave actual
+function fixKeys(st) { const byCN = {}, byN = {}; for (const p of PL) { const w = p.k.split("."), n = w[w.length - 1], c = w[w.length - 2]; byCN[c + "." + n] = p.k; (byN[n] = byN[n] || []).push(p.k); }
+  const map = k => { if (typeof k !== "string" || PBY[k]) return k; const w = k.split("."); if (w.length < 3) return k; const n = w[w.length - 1], c = w[w.length - 2]; return byCN[c + "." + n] || (byN[n] && byN[n].length === 1 ? byN[n][0] : k); };
+  let n = 0; const walk = o => { if (!o || typeof o !== "object") return; for (const key in o) { const v = o[key]; if (key === "k" && typeof v === "string") { const m = map(v); if (m !== v) { o[key] = m; n++; } } else if (v && typeof v === "object") walk(v); } };
+  walk(st); const lost = (st.cards || []).filter(c => !PBY[c.k]).map(c => c.u);
+  if (lost.length) { st.cards = st.cards.filter(c => PBY[c.k]); if (st.squad) for (const a of ["xi", "bn"]) if (Array.isArray(st.squad[a])) st.squad[a] = st.squad[a].map(u => lost.includes(u) ? null : u); }
+  return n + lost.length; }
+if (fixKeys(S)) store.set(SAVE_KEY, S);
 let saveT;
 function save() { clearTimeout(saveT); saveT = setTimeout(() => store.set(SAVE_KEY, S), 250); }
 document.addEventListener("visibilitychange", () => { if (document.hidden) store.set(SAVE_KEY, S); });
@@ -8675,7 +8683,7 @@ function addLog(t) { S.log.unshift({ t, at: Date.now() }); S.log = S.log.slice(0
 
 /* ---------------- cartas ---------------- */
 const P = c => PBY[c.k];
-const C = u => S.cards.find(c => c.u === u);
+const C = u => S.cards.find(c => c.u === u && PBY[c.k]);   // una carta cuyo jugador ya no existe no rompe la plantilla
 const ovOf = c => Math.min(99, (P(c) ? P(c).ov : 50) + VER[c.v].b + (c.lv || 0));
 function statsOf(c) { const p = P(c), b = VER[c.v].b + (c.lv || 0), f = p ? p.f : { pac: 50, sho: 50, pas: 50, dri: 50, def: 50, phy: 50 }; const o = {}; for (const s in f) o[s] = Math.min(99, f[s] + b); return o; }
 function value(c) {
