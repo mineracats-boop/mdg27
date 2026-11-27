@@ -244,7 +244,7 @@ async function cargarCoches() { for (const [k, c] of Object.entries(COCHES)) { t
 function cocheMalla(tipo) { const src = CARM[tipo]; if (!src) return null; const g = src.clone(), bb = new THREE.Box3().setFromObject(g), k = COCHES[tipo].len / (bb.max.x - bb.min.x); g.scale.setScalar(k);
   const c = bb.getCenter(new THREE.Vector3()); g.position.set(-c.x * k, -bb.min.y * k, -c.z * k); g.traverse(o => { if (o.isMesh) o.castShadow = o.receiveShadow = true; }); const inn = new THREE.Group(); inn.add(g); inn.rotation.y = Math.PI; const w = new THREE.Group(); w.add(inn); S.add(w); return w; }   // los modelos miran a -x: se giran
 function cocheCabe(c, x, z, h) { const T = COCHES[c.tipo], ch = Math.cos(h), sh = Math.sin(h);
-  for (const sx of [-T.len / 2, T.len / 2]) for (const sz of [-T.an / 2, T.an / 2]) { const px = x + ch * sx - sh * sz, pz = z + sh * sx + ch * sz; if (!enCalzada(px, pz) || gasChoca(px, pz) || OBST.some(([ox, oz, r]) => Math.hypot(px - ox, pz - oz) < r * .8)) return false; }
+  for (const sx of [-T.len / 2, T.len / 2]) for (const sz of [-T.an / 2, T.an / 2]) { const px = x + ch * sx - sh * sz, pz = z + sh * sx + ch * sz; if (!enCalzada(px, pz) || gasChoca(px, pz) || OBST.some(([ox, oz, r]) => Math.hypot(px - ox, pz - oz) < r * .8) || colPunto(px, pz)) return false; }
   for (const o of TRAF.concat(miCoche ? [miCoche] : [])) if (o !== c && Math.hypot(o.x - x, o.z - z) < (T.len + COCHES[o.tipo].len) / 2 - .3) return false; return true; }
 // rutas del tráfico: vuelta a la ciudad por la calle principal, la oeste, el bulevar y la este, en los dos sentidos, por el carril de la derecha
 // también vueltas cortas que suben y bajan por la avenida (los carriles pasan entre los surtidores)
@@ -404,7 +404,7 @@ function buildBarrio() {
   for (const sh of SHOPS) DOORS.push({ k: sh.k, x: sh.dx, z: fz + .9 });
   // farolas a lo largo del paseo y de la calle, bancos y papeleras
   const metal = new THREE.MeshStandardMaterial({ color: 0x2b2f35, roughness: .5, metalness: .6 }), bulbM = new THREE.MeshBasicMaterial({ color: 0xffd9a0 });
-  for (let x = X0 + 4; x <= X1 + 40; x += 16) for (const z of [-5.3, SEA_Z - 1.2]) { if (z < 0 && (x > X1 || enCalzada(x, z) || enCalzada(x + .5, z) || enCalzada(x - .5, z))) continue; const p = new THREE.Mesh(new THREE.CylinderGeometry(.08, .1, 6, 8), metal); p.position.set(x, 3, z); p.castShadow = true; S.add(p);
+  for (let x = X0 + 4; x <= X1 + 40; x += 16) for (const z of [-5.3, SEA_Z - 1.2]) { if (z < 0 && (x > X1 || enCalzada(x, z) || enCalzada(x + .5, z) || enCalzada(x - .5, z))) continue; const p = new THREE.Mesh(new THREE.CylinderGeometry(.08, .1, 6, 8), metal); p.position.set(x, 3, z); p.castShadow = true; S.add(p); colAdd(x, z, 0, .14, .14);
     const bulb = new THREE.Mesh(new THREE.SphereGeometry(.22, 10, 8), bulbM); bulb.position.set(x, 5.95, z); S.add(bulb); }
   // cancha de la playa (arena) en el paseo
   const sand = SA_has("st_arena.webp") ? mat("st_arena.webp", [5, 2]) : new THREE.MeshStandardMaterial({ color: 0xd8c08c, roughness: 1 });
@@ -610,7 +610,23 @@ function bakeProp(node, size, mode = "h") {
   const M = new THREE.Matrix4().makeRotationY(rot).multiply(new THREE.Matrix4().makeScale(k, k, k)).multiply(new THREE.Matrix4().makeTranslation(-c.x, -bb.min.y, -c.z));
   parts.forEach(p => { p.g.applyMatrix4(M); p.m = p.m.clone(); p.m.side = THREE.DoubleSide; if (p.m.map) p.m.map.anisotropy = 4; if (p.m.transparent || p.m.alphaTest) { p.m.alphaTest = Math.max(p.m.alphaTest || 0, .4); p.m.transparent = false; } }); return parts;
 }
-function instance(parts, list, shadow = true) {   // una llamada de dibujo por material para todas las copias
+/* ---------- colisiones: cajas orientadas de los objetos del barrio (props, farolas), coches y gente ---------- */
+const COLB = [];
+function colAdd(x, z, ry, hx, hz, ox = 0, oz = 0) { const c = Math.cos(ry), s = Math.sin(ry); COLB.push({ x: x + c * ox + s * oz, z: z - s * ox + c * oz, c, s, hx, hz }); }
+function obbOut(e, r, b) { const dx = e.x - b.x, dz = e.z - b.z, lx = b.c * dx - b.s * dz, lz = b.s * dx + b.c * dz; if (Math.abs(lx) > b.hx + r || Math.abs(lz) > b.hz + r) return false;
+  const qx = clamp(lx, -b.hx, b.hx), qz = clamp(lz, -b.hz, b.hz); let ex = lx - qx, ez = lz - qz, d = Math.hypot(ex, ez), nx = lx, nz = lz;
+  if (d > 1e-4) { if (d >= r) return false; nx = qx + ex / d * r; nz = qz + ez / d * r; }
+  else { const px = b.hx - Math.abs(lx), pz = b.hz - Math.abs(lz); if (px < pz) nx = Math.sign(lx || 1) * (b.hx + r); else nz = Math.sign(lz || 1) * (b.hz + r); }
+  e.x = b.x + b.c * nx + b.s * nz; e.z = b.z - b.s * nx + b.c * nz; return true; }
+const carBox = c => { const T = COCHES[c.tipo]; return { x: c.x, z: c.z, c: Math.cos(-c.h), s: Math.sin(-c.h), hx: T.len / 2, hz: T.an / 2 }; };
+function colPunto(x, z) { const e = { x, z }; return COLB.some(b => Math.abs(x - b.x) < 8 && Math.abs(z - b.z) < 8 && obbOut(e, .05, b)); }
+// el jugador andando no atraviesa objetos, coches (aparcados, el tuyo o el tráfico) ni a la gente
+function colJugador(e, r = .32) { for (const b of COLB) if (Math.abs(e.x - b.x) < 8 && Math.abs(e.z - b.z) < 8) obbOut(e, r, b);
+  for (const c of TRAF.concat(miCoche && miCoche !== e.coche ? [miCoche] : [])) if (Math.abs(e.x - c.x) < 6 && Math.abs(e.z - c.z) < 6) obbOut(e, r, carBox(c));
+  for (const n of NPCS) { const w = n.a && n.a.wrap; if (!w || !w.visible || w.parent !== S) continue; const dx = e.x - w.position.x, dz = e.z - w.position.z, d = Math.hypot(dx, dz), R = r + .3; if (d < R && d > 1e-3) { e.x = w.position.x + dx / d * R; e.z = w.position.z + dz / d * R; } } }
+function instance(parts, list, shadow = true, col = "box") {   // una llamada de dibujo por material para todas las copias
+  if (col) { const bb = new THREE.Box3(); parts.forEach(p => { p.g.computeBoundingBox(); bb.union(p.g.boundingBox); }); const cx = (bb.min.x + bb.max.x) / 2, cz = (bb.min.z + bb.max.z) / 2, hx = (bb.max.x - bb.min.x) / 2 * .88, hz = (bb.max.z - bb.min.z) / 2 * .88;
+    if (bb.max.y - bb.min.y > .25) for (const [x, z, ry, sc = 1] of list) { if (typeof col === "number") colAdd(x, z, ry || 0, col * sc, col * sc); else colAdd(x, z, ry || 0, hx * sc, hz * sc, cx * sc, cz * sc); } }
   for (const p of parts) { const im = new THREE.InstancedMesh(p.g, p.m, list.length), q = new THREE.Object3D();
     list.forEach(([x, z, ry, s = 1], i) => { q.position.set(x, list.y != null ? list.y : gy(x, z), z); q.rotation.set(0, ry || 0, 0); q.scale.setScalar(s); q.updateMatrix(); im.setMatrixAt(i, q.matrix); });
     im.castShadow = shadow; im.receiveShadow = true; S.add(im); }
@@ -625,12 +641,12 @@ async function addProps() {
     for (let x = X0 + 12; x < X1 + 36; x += 16) { if (inBeach(x)) continue; palms.push([x, SEA_Z - 2.7, rnd() * 6.28, .85 + rnd() * .35]); if ((x / 16 | 0) % 2 === 0) benches.push([x + 3.4, SEA_Z - 1.9, 0]); bins.push([x - 6.6, SEA_Z - 1.7, 0]); }
     for (let x = X0 + 20; x < X1 - 4; x += 32) bins.push([x, -5.75, 0]);
     for (const x of [BEACH.x0 - 4, BEACH.x1 + 4]) for (const z of [BEACH.z0 - .2]) palms.push([x, z, rnd() * 6.28, .9 + rnd() * .3]);
-    instance(palmP, palms); instance(bench, benches); instance(bin, bins);
+    instance(palmP, palms, true, .35); instance(bench, benches); instance(bin, bins);
     // playa: arena alrededor de la cancha con sombrillas y tumbonas
     const sand = new THREE.Mesh(new THREE.PlaneGeometry(BEACH.x1 - BEACH.x0 + 12, BEACH.z1 - BEACH.z0 + 2), new THREE.MeshStandardMaterial({ color: 0xd8c08c, roughness: 1 })); sand.rotation.x = -Math.PI / 2; sand.position.set((BEACH.x0 + BEACH.x1) / 2, .195, (BEACH.z0 + BEACH.z1) / 2); sand.receiveShadow = true; S.add(sand);
     const um = bakeProp(umb.scene, 2.5), lg = bakeProp(lng.scene, 1.9, "len"), U = [], Lg = [];
     for (const x of [BEACH.x0 - 3.4, BEACH.x1 + 3.4]) for (const z of [BEACH.z0 + 1.6, (BEACH.z0 + BEACH.z1) / 2 + 1, BEACH.z1 - 1]) { U.push([x, z, rnd() * 6.28]); Lg.push([x + (x < BEACH.x0 ? -1.2 : 1.2), z - .6, Math.PI / 2]); }
-    U.y = .2; Lg.y = .2; instance(um, U); instance(lg, Lg);
+    U.y = .2; Lg.y = .2; instance(um, U, true, .12); instance(lg, Lg);
     instance(bakeProp(cart.scene, 2.2, "len"), [[-50.5, 15.5, -.4], [TOQ.x + 9, TOQ.z - 3, .5], [X0 + 30, 9, 2.6]]);   // carritos de helados
   } catch (e) { console.warn("props", e); }
   // ---- vida de barrio: modelos de Sketchfab (CC BY), cada uno se carga por separado para que un fallo no deje el barrio vacío ----
@@ -694,6 +710,7 @@ function stepHub(dt) {
     if (!inCage && me.x > CX - CW / 2 - 1 && Math.abs(me.z) > 1.6) me.x = Math.min(me.x, CX - CW / 2 - 1);
     if (inCage && me.x > CX - CW / 2 + 3) { goMatch(); return; } }
   else { const ox = INTPOS[place]; me.x = clamp(me.x, ox - 4.5, ox + 4.5); me.z = clamp(me.z, MOSTR[place] ? 59.85 : 57.2, 63.4); }
+  if (place === "calle") colJugador(me);
   if (place === "calle") for (const [ox, oz, r] of OBST) { const dx = me.x - ox, dz = me.z - oz, d = Math.hypot(dx, dz); if (d < r && d > .001) { me.x = ox + dx / d * r; me.z = oz + dz / d * r; } }
   let yy = place === "calle" ? gyRampa(me.x, me.z) : gy(me.x, me.z); if (me.y0 != null && yy - me.y0 > .45) { me.x = px; me.z = pz; yy = me.y0; me.spd *= .3; } me.y0 = yy;
   me.a.wrap.position.set(me.x, yy, me.z); me.a.wrap.rotation.y = -me.dir + Math.PI / 2; me.a.lock = 0; loco(me.a, me.skate ? 0 : me.spd, false); me.a.mixer.update(dt); }
