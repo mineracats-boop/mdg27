@@ -541,7 +541,7 @@
     let gps = []; try { gps = navigator.getGamepads ? [...navigator.getGamepads()] : []; } catch (e) {} const gp = gps.find(p => p && p.connected);
     if (gp) { const ax = gp.axes[0] || 0, ay = gp.axes[1] || 0; if (Math.hypot(ax, ay) > .18) { mx = ax; my = ay; }
       const b = i => i != null && gp.buttons[i] && (gp.buttons[i].pressed || gp.buttons[i].value > .4), pm = padMapFor(gp);
-      I.spr = I.spr || b(pm.sprint); I.fin = I.fin || b(pm.skill); I.shoot = I.shoot || b(pm.shoot); I.pass = I.pass || b(pm.pass); I.lob = I.lob || b(pm.lob); I.thru = I.thru || b(pm.through); I.sw = I.sw || b(pm.sw); I.ctx = I.ctx || b(pm.spin); I.stop = I.stop || b(pm.stop); I.walk = I.walk || b(pm.jockey);
+      I.spr = I.spr || b(pm.sprint); I.fin = I.fin || b(pm.skill); I.shoot = I.shoot || b(pm.shoot); I.pass = I.pass || b(pm.pass); I.lob = I.lob || b(pm.lob); I.thru = I.thru || b(pm.through); I.sw = I.sw || b(pm.sw); I.ctx = I.ctx || b(pm.spin) || b(pm.stop);   /* pulsar cualquier stick (L3/R3) = botón de REGATE */ I.walk = I.walk || b(pm.jockey);
       // cruceta (botones 12-15, o eje en mandos no estándar) también mueve
       { let dx = (b(15) ? 1 : 0) - (b(14) ? 1 : 0), dy = (b(13) ? 1 : 0) - (b(12) ? 1 : 0); if (gp.mapping !== "standard" && gp.axes.length > 9) { const h = gp.axes[9]; if (Math.abs(h) < 1.05 && h !== 0) { const a = Math.round((h + 1) * 3.5); if (a === 0) dy = -1; else if (a === 2) dx = 1; else if (a === 4) dy = 1; else if (a === 6) dx = -1; } } if ((dx || dy) && Math.hypot(mx, my) < .2) { mx = dx; my = dy; } }
       // stick derecho: golpe lateral = amago, adelante = caño/conducción larga, en diagonal adelante = bicicleta
@@ -1030,20 +1030,30 @@
   }
   const nearestDef = p => team(1 - p.t).filter(q => !q.gk && q.down <= 0).sort((a, b) => dist(a, p) - dist(b, p))[0];
   // botón REGATE (como en DLS): el regate depende de hacia dónde empujas el stick respecto a donde miras
+  // botón de REGATE (G, REGATE en el móvil o pulsar un stick del mando) + dirección respecto a hacia donde corre tu jugador:
+  // sin dirección = autopase · adelante = ruleta (con esprint, sombrero) · atrás = pisada · a un lado = croqueta
+  // en diagonal hacia delante = amago · en diagonal hacia atrás = bicicleta
   function ctxSkill(p, I) {
-    const d0 = nearestDef(p), close = d0 && dist(d0, p) < 3.5 && Math.abs(angD(p.h, Math.atan2(d0.y - p.y, d0.x - p.x))) < .9;
-    if (I.dir == null || I.m < .3) return close ? "hat" : "stop";
+    if (I.dir == null || I.m < .3) return "nut";
     const rel = Math.abs(angD(p.h, I.dir));
-    if (rel < .5) return "nut";
-    if (rel < 1.05) return "step";
-    if (rel > 2.3) return "spin";
-    return I.spr ? "feint" : "croq"; }
+    if (rel < .4) return I.spr ? "hat" : "spin";
+    if (rel < 1.1) return "feint";
+    if (rel < 2.0) return "croq";
+    if (rel < 2.5) return "step";
+    return "stop"; }
   // ¿se come el amago? como en DLS cuenta el momento: si el defensa viene lanzado hacia ti y está a 1-3 m, pica casi siempre
   function foolChance(p, d0, base) { const d = dist(d0, p), toMe = Math.atan2(p.y - d0.y, p.x - d0.x), closing = (d0.v || 0) * Math.cos(angD(d0.h, toMe));
     const timing = d > .9 && d < 3.2 ? .12 + clamp(closing / 6, 0, .2) : d < .9 ? -.15 : -.1;
     return clamp(base + timing + (p.st.dri - d0.st.def) * .012, .15, .92); }
   function fool(d0, x, y, t) { d0.fooled = { until: simT + t, x, y }; d0.v = Math.min(d0.v || 0, 1.2);
     if (!d0.one && META.JoggingStumble && Math.random() < .55) startOne(d0, "JoggingStumble", { ts: 1.5, end: Math.min(1.1, t + .2), rootScale: .4, h0: d0.h, fadeIn: .08 }); }
+  // regates de captura real (pack de mocap): el balón va pegado al pie que lo toca
+  let SKSIGN = window.SKSIGN || 1; const MOC = n => baseClips[n] && META[n] ? n : null, _ft1 = new THREE.Vector3(), _ft2 = new THREE.Vector3();
+  function footBall(p, k = .5) { flushPose(p); p.toes.L.getWorldPosition(_ft1); p.toes.R.getWorldPosition(_ft2);
+    const a = [_ft1.x + L / 2, _ft1.z + W / 2], b = [_ft2.x + L / 2, _ft2.z + W / 2], f = Math.hypot(ball.x - a[0], ball.y - a[1]) < Math.hypot(ball.x - b[0], ball.y - b[1]) ? a : b;
+    const tx = f[0] + Math.cos(p.h) * .13, ty = f[1] + Math.sin(p.h) * .13; ball.x = lerp(ball.x, tx, k); ball.y = lerp(ball.y, ty, k); ball.vx = Math.cos(p.h) * p.v * .5; ball.vy = Math.sin(p.h) * p.v * .5; ball.z = 0; M.owner = p; }
+  // el clip normal desplaza al jugador hacia su derecha; el espejo (_M), hacia su izquierda
+  const mocSide = (n, side) => MOC(n) && MOC(n + "_M") ? (side * SKSIGN > 0 ? n + "_M" : n) : null;
   function skillMove(p, kind, I) {
     const outH = I.dir != null ? I.dir : p.h; p.skillT = simT;
     if (p === M.human && !window.STEP) { const NM = { spin: "RULETA", feint: "AMAGO", step: "BICICLETA", croq: "CROQUETA", hat: "SOMBRERO", stop: "FRENO", nut: nearestDef(p) && dist(nearestDef(p), p) < 3 ? "CAÑO" : "AUTOPASE" }; if (NM[kind] && !/CAÑO|SOMBRERO/.test(NM[kind])) msg(NM[kind], .55); }   // el nombre del regate, para aprender a hacerlos
@@ -1057,8 +1067,10 @@
       const fakeN = side > 0 ? "SprintForwardRight" : "SprintForwardLeft", dur = kind === "step" ? .42 : .26;
       p.leanT = { v: side * .3 * (kind === "step" ? 1.2 : 1), until: simT + dur * .55 };   // el cuerpo se inclina hacia el lado del engaño
       if (kind === "step") later(dur * .5, () => { p.leanT = { v: -side * .32, until: simT + dur * .45 }; });   // bicicleta: cambia de lado a mitad
-      const o = startOne(p, META[fakeN] ? fakeN : (side > 0 ? "JogStrafeRight" : "JogStrafeLeft"), { ts: kind === "step" ? 1.15 : 1.5, end: dur, rootScale: .35, h0: p.h, fadeIn: .05 });
-      if (o) { o.during = () => { ball.x = lerp(ball.x, p.x + Math.cos(p.h) * .45, .45); ball.y = lerp(ball.y, p.y + Math.sin(p.h) * .45, .45); ball.vx = Math.cos(p.h) * p.v * .6; ball.vy = Math.sin(p.h) * p.v * .6; M.owner = p; };
+      const mc = mocSide(kind === "step" ? "MocStep" : "MocFeint", side);
+      const o = mc ? startOne(p, mc, { ts: kind === "step" ? 1.15 : 1.35, rootScale: 1, h0: p.h, fadeIn: .06 }) : startOne(p, META[fakeN] ? fakeN : (side > 0 ? "JogStrafeRight" : "JogStrafeLeft"), { ts: kind === "step" ? 1.15 : 1.5, end: dur, rootScale: .35, h0: p.h, fadeIn: .05 });
+      if (mc) p.leanT = null;
+      if (o) { o.during = () => { if (mc) { footBall(p); return; } ball.x = lerp(ball.x, p.x + Math.cos(p.h) * .45, .45); ball.y = lerp(ball.y, p.y + Math.sin(p.h) * .45, .45); ball.vx = Math.cos(p.h) * p.v * .6; ball.vy = Math.sin(p.h) * p.v * .6; M.owner = p; };
         o.after = () => { const out = p.h + side * .8; ball.vx = Math.cos(out) * 5; ball.vy = Math.sin(out) * 5; p.h = p.mh = out; p.v = Math.max(p.v, 4.4); M.owner = p; p.leanT = { v: -side * .25, until: simT + .3 }; }; }
       if (d0 && dist(d0, p) < 4.5 && Math.random() < foolChance(p, d0, kind === "step" ? .58 : .52)) fool(d0, p.x + Math.cos(p.h - side * 1.2) * 3, p.y + Math.sin(p.h - side * 1.2) * 3, .85);
       touchSfx(2); }
@@ -1071,8 +1083,8 @@
       kickSnd(6); }
     else if (kind === "croq") { // croqueta: el balón pasa de un pie a otro hacia un lado, rápido; el defensa que está delante puede quedarse clavado
       const d0 = nearestDef(p), side = I.dir != null ? (angD(p.h, I.dir) >= 0 ? 1 : -1) : 1, out = p.h + side * 1.15;
-      const cn = side > 0 ? "RunLeft" : "RunRight", o = startOne(p, META[cn] ? cn : (side > 0 ? "JogStrafeLeft" : "JogStrafeRight"), { ts: 1.7, end: .36, rootScale: .75, h0: p.h, fadeIn: .05 }); p.skillT = simT; p.leanT = { v: -side * .22, until: simT + .3 };
-      if (o) { o.during = () => { ball.x = lerp(ball.x, p.x + Math.cos(out) * .42, .55); ball.y = lerp(ball.y, p.y + Math.sin(out) * .42, .55); ball.vx = Math.cos(out) * Math.max(1.5, p.v * .8); ball.vy = Math.sin(out) * Math.max(1.5, p.v * .8); M.owner = p; };
+      const cn = side > 0 ? "RunLeft" : "RunRight", mc = mocSide("MocCroq", -side), o = mc ? startOne(p, mc, { ts: 1.25, rootScale: 1, h0: p.h, fadeIn: .06 }) : startOne(p, META[cn] ? cn : (side > 0 ? "JogStrafeLeft" : "JogStrafeRight"), { ts: 1.7, end: .36, rootScale: .75, h0: p.h, fadeIn: .05 }); p.skillT = simT; if (!mc) p.leanT = { v: -side * .22, until: simT + .3 };
+      if (o) { o.during = () => { if (mc) { footBall(p, .6); return; } ball.x = lerp(ball.x, p.x + Math.cos(out) * .42, .55); ball.y = lerp(ball.y, p.y + Math.sin(out) * .42, .55); ball.vx = Math.cos(out) * Math.max(1.5, p.v * .8); ball.vy = Math.sin(out) * Math.max(1.5, p.v * .8); M.owner = p; };
         o.after = () => { const go = p.h + side * .55; ball.vx = Math.cos(go) * 4.2; ball.vy = Math.sin(go) * 4.2; p.h = p.mh = go; p.v = Math.max(p.v, 3.4); }; }
       if (d0 && dist(d0, p) < 4 && Math.random() < foolChance(p, d0, .55)) fool(d0, p.x - Math.sin(p.h) * side * 2.5, p.y + Math.cos(p.h) * side * 2.5, .8);
       touchSfx(3); }
@@ -1085,7 +1097,9 @@
     else { // frenar: la suela para el balón y el jugador se clava
       p.v = Math.min(p.v, 1); ball.vx = ball.vy = 0; ball.x = p.x + Math.cos(p.h) * .3; ball.y = p.y + Math.sin(p.h) * .3; p.dr.plan = null; touchSfx(3);
       { const d0 = nearestDef(p); if (d0 && dist(d0, p) < 3.2 && (d0.v || 0) > 3 && Math.random() < foolChance(p, d0, .45)) fool(d0, d0.x + Math.cos(d0.h) * 2.5, d0.y + Math.sin(d0.h) * 2.5, .7); }   // el que venía lanzado se pasa de largo
-      startOne(p, pickA(["StallSoccerball", "StallSoccerball1", "StallSoccerball3"]), { ts: 1.6, t0: .1, end: .75, rootScale: 0, fadeIn: .08, h0: p.h }); }
+      const ms = MOC("MocStop") ? (Math.random() < .5 ? "MocStop" : "MocStop_M") : null;   // pisada real con la suela
+      if (ms) { const o = startOne(p, ms, { ts: 1.6, end: 1.05, rootScale: 0, fadeIn: .08, h0: p.h }); if (o) o.during = () => footBall(p, .35); }
+      else startOne(p, pickA(["StallSoccerball", "StallSoccerball1", "StallSoccerball3"]), { ts: 1.6, t0: .1, end: .75, rootScale: 0, fadeIn: .08, h0: p.h }); }
   }
   // regate de la máquina con cabeza: mira dónde está el defensa y hacia qué lado hay sitio
   function aiSkill(p, d0) { if (simT - (p.skillT || -9) < 2) return null; const toD = Math.atan2(d0.y - p.y, d0.x - p.x), rel = angD(p.h, toD), dd = dist(d0, p);
