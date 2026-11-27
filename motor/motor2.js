@@ -528,7 +528,7 @@
       const st = { pac: sv("pac", r()), acc: sv("pac", r()), agi: sv("dri", r()), dri: sv("dri", r()), sho: sv("sho", r()), pas: sv("pas", r()), def: sv("def", r()), phy: sv("phy", r()), gk: gkk ? (d && d.ov ? +d.ov : 82) : 40 };
       if (!S0) { if (R[1] === "fwd") { st.sho += 8; st.pac += 5; st.def -= 15; } if (R[1] === "def") { st.def += 8; st.sho -= 15; } }
       if (t === 1 && window.ST_RD) for (const kk in st) st[kk] = clamp(st[kk] + window.ST_RD, 30, 99);
-      if (EMB && EMB.cpu && EMB.cpu.includes(t)) { const k = { "Fácil": -8, "Normal": 0, "Difícil": 5, "Leyenda": 9 }[EMB.diff] || 0; for (const kk in st) st[kk] = clamp(st[kk] + k, 30, 99); }
+      if (EMB && EMB.cpu && EMB.cpu.includes(t)) { const k = { "Fácil": -4, "Normal": 0, "Difícil": 3, "Leyenda": 6 }[EMB.diff] || 0; for (const kk in st) st[kk] = clamp(st[kk] + k, 30, 99); }
       Object.assign(a, { model: mdl, look: lk, t, i, role, cat: gkk ? "gk" : R[1], fb: !!R[2], base: { d: R[0], w: widths[i] != null ? widths[i] : .5 }, gk: gkk, name: d ? d.n : NAMES[t][i], u: d ? d.u : null, num: [1, 3, 4, 5, 2, 8, 6, 10, 11, 9, 7][i],
         st, ai: { t: Math.random() * .5, run: null, tgt: null }, dr: { plan: null, lastT: -9, loose: 0, lastFoot: "R" }, down: 0 });
       P.push(a);
@@ -1034,7 +1034,8 @@
     const tg = p.t, gx = opp(tg), cmd = p.hdrCmd; p.hdrCmd = null;
     // sin botón pulsado (o la IA sin rival encima): controla con el pecho en vez de cabecear a ciegas; si viene muy alto, la deja caer
     { const hum = p === M.human || (R2 && p === R2.human), box = prog(tg, p.x) > .8 && Math.abs(p.y - W / 2) < 20, hs = Math.hypot(ball.vx, ball.vy);
-      if (!cmd && (hum || (!duel && !box && Math.random() < .6))) {
+      const ownBox = prog(tg, p.x) < .2 && Math.abs(p.y - W / 2) < 22;   // en tu área, sin botón, tu defensa despeja de cabeza (no la controla con el pecho)
+      if (!cmd && ((hum && !ownBox) || (!duel && !box && Math.random() < .6))) {
         if (ball.z > 1.8 || hs > 19) return false;
         const fh = hum && lastI.dir != null ? lastI.dir : p.h, k = clamp(1.1 + p.v * .7, 1, 5); ball.vx = Math.cos(fh) * k; ball.vy = Math.sin(fh) * k; ball.vz = -.5; ball.wx = ball.wy = ball.wz = 0;
         startOne(p, Math.random() < .5 ? "Receive" : "Receive_M", { ts: 1.5, t0: .45, end: 1.05, rootScale: 0, h0: p.h, fadeIn: .06 }); M.owner = null; touchBy(p); ball.hdrT = simT; touchSfx(4); return true; } }
@@ -1160,6 +1161,12 @@
     if (I.walk && M.phase === "play") { const o = M.owner;
       if (o && o.t !== p.t) { p.jockey = simT; return { dir: I.dir, m: Math.min(I.m, .55), spr: false, face: Math.atan2(o.y - p.y, o.x - p.x), speed: I.m > .05 ? 2.6 : 0 }; }
       if (hasBall(p)) { const opp = team(1 - p.t).filter(q => !q.gk).sort((a, b) => dist(a, p) - dist(b, p))[0]; if (opp && dist(opp, p) < 4) { p.shield = simT; return { dir: I.dir, m: Math.min(I.m, .4), spr: false, face: Math.atan2(p.y - opp.y, p.x - opp.x), speed: I.m > .05 ? 1.5 : 0 }; } } }
+    // ayudas sin stick (como en FIFA): el que recibe un pase va a por el balón en vez de dejarlo pasar,
+    // y en un centro rival a tu área tu defensa va al punto de remate
+    if (M.phase === "play" && (I.dir == null || I.m < .2) && !hasBall(p) && !p.one && p.down <= 0) {
+      const ps = M.pass, go = (x, y) => { const d = Math.hypot(x - p.x, y - p.y); return { dir: Math.atan2(y - p.y, x - p.x), m: d > .35 ? 1 : 0, spr: d > 3 }; };
+      if (ps && ps.to === p && ps.t === p.t && !M.owner && simT - ps.at < 3) { const ip = ps.k === "cross" || ps.k === "lob" ? headerPt(p) : interceptPt(p); return go(ip.x, ip.y); }
+      if (ps && (ps.k === "cross" || ps.k === "lob") && ps.t !== p.t && !M.owner && prog(p.t, ball.x) < .34 && simT - ps.at < 3) { const hp = ps.to ? headerPt(ps.to) : predictBall(.6); return go(hp.x, hp.y); } }
     return { dir: I.dir, m: I.m, spr: I.spr };
   }
   // pase asistido como en FIFA: elige al compañero en la dirección del stick
@@ -1368,7 +1375,7 @@
         const gx = own(t), d = dist(p, owner), tx = owner.x + (gx - owner.x) * (1.4 / Math.max(5, Math.abs(gx - owner.x))), ty = owner.y + (W / 2 - owner.y) * .05;
         goTo(tx, ty, d > 5, d < 5 ? Math.atan2(owner.y - p.y, owner.x - p.x) : null);
         const db = Math.hypot(ball.x - p.x, ball.y - p.y);
-        const dk = EMB && EMB.cpu && EMB.cpu.includes(t) ? ({ "Fácil": .6, "Normal": 1, "Difícil": 1.25, "Leyenda": 1.45 }[EMB.diff] || 1) : 1;
+        const dk = EMB && EMB.cpu && EMB.cpu.includes(t) ? ({ "Fácil": .8, "Normal": 1, "Difícil": 1.12, "Leyenda": 1.25 }[EMB.diff] || 1) : 1;
         // DLS: si el que conduce viene lanzado hacia él o se deja el balón largo, el defensa entra con decisión
         const dbo = Math.hypot(ball.x - owner.x, ball.y - owner.y), atMe = owner.v > 4.5 && Math.cos(angD(owner.mh, Math.atan2(p.y - owner.y, p.x - owner.x))) > .6, longT = dbo > .9 && db < dbo + .2;
         if (db < (longT ? 2.2 : 1.6) && Math.random() < dt * (1.6 + (p.st.def - 70) * .04 + (atMe ? 3.2 : 0) + (longT ? 4 : 0)) * dk) tackle(p, longT && db > 1.4);
@@ -1416,7 +1423,12 @@
     if (p.ai.t <= 0 && !p.req && !p.one) {
       p.ai.t = .25 + Math.random() * .35;
       // tiro
-      const SR = STREET ? 15 : 27; if (dG < SR && Math.cos(ang) > .4) { const blocked = laneRisk(p, gx, W / 2, t), chance = (1 - dG / SR) * 1.55 - blocked * .2 + (press < 2 ? -.15 : 0);
+      // mano a mano con el portero (ningún defensa por delante ni pegado): no se la pasa a nadie; encara y tira
+      const SR = STREET ? 15 : 27, solo = dG < (STREET ? 22 : 34) && Math.cos(ang) > .2 && !team(1 - t).some(q => !q.gk && !q.sent && (prog(t, q.x) > prog(t, p.x) - .005 || dist(q, p) < 2.2) && Math.abs(q.y - p.y) < 14);
+      if (solo) { if (dG < (STREET ? 9 : 15) || (dG < 20 && Math.random() < .35)) { const g = GKP(1 - t), side = Math.sign(W / 2 - g.y) || (Math.random() < .5 ? -1 : 1);
+          requestKick(p, { k: "shot", p: clamp(.5 + dG * .012 + Math.random() * .15, .4, .85), fin: true, tx: gx + M.dirOf[t] * .2, ty: W / 2 + side * GW / 2 * (.45 + Math.random() * .4) }); return C; }
+        C.dir = Math.atan2(W / 2 - p.y, gx - p.x); C.m = 1; C.spr = true; return C; }
+      if (dG < SR && Math.cos(ang) > .4) { const blocked = laneRisk(p, gx, W / 2, t), chance = (1 - dG / SR) * 1.55 - blocked * .2 + (press < 2 ? -.15 : 0);
         if (chance > .45 || (dG < SR * .48 && chance > .2) || Math.random() < chance * .25) { const side = Math.random() < .5 ? -1 : 1, fin = dG > SR * .52 && Math.random() < .5;
           requestKick(p, { k: "shot", p: clamp(.45 + dG * .015 + Math.random() * .2, .3, .9), fin, tx: gx + M.dirOf[t] * .2, ty: W / 2 + side * GW / 2 * (.2 + Math.random() * .66), press: press < 1.5 ? .1 : 0 }); return C; } }
       // centro desde la banda en el último tercio
@@ -1959,7 +1971,7 @@
   const CEL = EMB && EMB.celebra ? Object.assign({ t: 0 }, EMB.celebra) : null; window.__CEL = CEL;
   /* ---------- música del estadio: himno de salida (mientras carga y en la presentación) y cánticos de la grada durante el partido ---------- */
   const MUS3 = (() => { if (DR || CEL || STREET) { if (window.HIM0) window.HIM0.pause(); return null; } const mk = (f, loop) => { try { const a = new Audio("../musica/" + f); a.loop = !!loop; a.preload = "auto"; a.volume = 0; return a; } catch (e) { return null; } };
-    const him = window.HIM0 || null, can = mk("canto.mp3"), st = { him: him ? .55 : 0, can: 0, canT: 0, next: 50 + Math.random() * 40, lastGoal: null, t0: performance.now() };
+    const him = window.HIM0 || null, can = null /* cánticos quitados: sonaban raros */, st = { him: him ? .55 : 0, can: 0, canT: 0, next: 50 + Math.random() * 40, lastGoal: null, t0: performance.now() };
     const fade = (a, to, k) => { if (!a) return; const v = a.volume + (to - a.volume) * k; a.volume = Math.max(0, Math.min(1, Math.abs(v - to) < .01 ? to : v)); if (a.volume === 0 && !a.paused && to === 0) a.pause(); };
     let last = performance.now();
     setInterval(() => { const now = performance.now(), dt = (now - last) / 1000; last = now; const V = SFXV();
@@ -2080,7 +2092,7 @@
     if (NET.bt) { const ox = ball.x, oy = ball.y; ball.x += (NET.bt[0] - ball.x) * k; ball.y += (NET.bt[1] - ball.y) * k; ball.z += (NET.bt[2] - ball.z) * k; ball.vx = (ball.x - ox) / Math.max(dt, 1e-3); ball.vy = (ball.y - oy) / Math.max(dt, 1e-3);
       ballMesh.position.copy(P3(ball.x, ball.y, ball.z + BR)); const bs = Math.hypot(ball.vx, ball.vy); if (bs > .05) ballMesh.rotateOnWorldAxis(new THREE.Vector3(ball.vy, 0, -ball.vx).normalize(), -bs * dt / BR); }
     if (M.human) { ring.visible = true; ring.position.copy(P3(M.human.x, M.human.y, .03)); } else ring.visible = false;
-    if (TS.btn) { const def = !!(M.owner && M.owner.t !== M.humanTeam && M.phase === "play"); if (TS.def !== def) { TS.def = def; for (const [b, a, d] of TS.btn) b.textContent = def ? d : a; } }   // botones táctiles: cambian al defender
+    if (TS.btn) { const mine = M.owner ? M.owner.t === M.humanTeam : (M.pass && simT - M.pass.at < 2.5 ? M.pass.t === M.humanTeam : !(M.last && M.last.t !== M.humanTeam)), def = M.phase === "play" && !mine; /* sin el balón (también en un pase o balón suelto del rival) = botones de defensa */ if (TS.def !== def) { TS.def = def; for (const [b, a, d] of TS.btn) b.textContent = def ? d : a; } }   // botones táctiles: cambian al defender
     crowdSound(); if (CROWD) { CROWD.U.uT.value += dt; CROWD.U.uEx.value = M.crowdEx; const gk = M.goalTeam != null && simT - M.goalT < 14, e = M.crowdEx; CROWD.U.uExT.value.set(gk ? (M.goalTeam === 0 ? e : Math.min(e, .08)) : e, gk ? (M.goalTeam === 1 ? e : Math.min(e, .08)) : e); } camera(dt); }
   // menús del partido con el mando (pausa, cambios, controles, salir): stick o cruceta para moverse, aceptar y atrás
   const UIP = { prev: [], sel: null, rep: 0, dir: null };
@@ -2397,7 +2409,7 @@
   // paso de simulación nunca mayor de 1/60 s: con pocos fps se hacen varios pasos (el balón no se queda atrás ni cambia el ritmo del juego)
   function frame(now) { const dt = Math.min(.1, (now - last) / 1000); last = now; if (!window.STEP) { const n = Math.min(3, Math.max(1, Math.ceil(dt * 30 - 1e-6))), h = dt / n; const gs = M.replay || M.intro ? 1 : 1.1; for (let i = 0; i < n; i++) tick(h * gs); /* ritmo DLS: el partido va un 10 % más rápido */ draw(dt); } requestAnimationFrame(frame); }
   window.__run = (n = 1, h = 1 / 30, noDraw) => { for (let i = 0; i < n; i++) tick(h); if (!noDraw) draw(h); return { clock: M.clock, half: M.half, phase: M.phase, score: [TEAMS[0].score, TEAMS[1].score], owner: M.owner && (M.owner.t + ":" + M.owner.role), set: M.set && M.set.type }; };
-  window.__skill = (k, d) => skillMove(M.human, k, { dir: d, m: 1 }); window.__test = { foul, OFF, P, M, ball, K, TEAMS, gkS, startSet, TIMERS, requestKick, GKP, passTo, startOne, pose, place, META, traj, headerPt, get simT() { return simT; } };
+  window.__skill = (k, d) => skillMove(M.human, k, { dir: d, m: 1 }); window.__test = { foul, OFF, P, M, ball, K, TEAMS, gkS, startSet, TIMERS, requestKick, GKP, passTo, startOne, pose, place, META, traj, headerPt, get simT() { return simT; } }; window.__dev = { baseClips, FWD, stepOne };   // pruebas: añadir clips nuevos sin tocar el juego
   M.lockP = EMB && EMB.lock ? P.find(q => q.u === EMB.lock && q.t === M.humanTeam) || null : null; if (EMB && EMB.lock && !M.lockP) M.lockOut = true;
   if (M.lockP) M.human = M.lockP; else if (M.humanTeam >= 0 && !M.lockOut) setHuman(team(M.humanTeam).find(q => q.cat === "fwd") || team(M.humanTeam)[10]); updHud(); startSet("kick", 0);
   /* ---------- ambiente de noche y clima (luces de estadio, lluvia y nieve) ---------- */
