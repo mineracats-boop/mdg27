@@ -1439,7 +1439,8 @@
       if (prog(t, p.x) > .76 && Math.abs(p.y - W / 2) > 18 && Math.random() < .6) { const tgt = team(t).filter(q => !q.gk && q !== p && prog(t, q.x) > .78 && Math.abs(q.y - W / 2) < 12).sort((a, b) => openness(b, t) - openness(a, t))[0];
         if (tgt) { passTo(p, tgt, "cross", .7); const z = M.pass ? null : null; return C; } }
       // pases
-      let best = null, bs = press < 2.5 ? 0 : 1.2;
+      const wallP = STREET && (p.y < 2.2 || p.y > W - 2.2 || p.x < 2.2 || p.x > L - 2.2);   // pegado a la pared: busca el pase antes
+      let best = null, bs = wallP ? -1.5 : press < 2.5 ? 0 : 1.2;
       for (const q of team(t)) { if (q === p || q.down > 0) continue; const d = dist(p, q); if (d < 5 || d > 42) continue;
         const gain = prog(t, q.x) - prog(t, p.x), op = Math.min(6, openness(q, t)), risk = passRisk(p, q.x + Math.cos(q.mh) * q.v * .4, q.y + Math.sin(q.mh) * q.v * .4), off = prog(t, q.x) > lastLine(t) + .003 && prog(t, q.x) > .5;
         let s = gain * 15 + Math.min(4, op) * .6 - risk * 2.6 - d * .04 - (q.gk ? 2.5 : 0) - (off ? 9 : 0) - (op < 2.5 ? 2 : 0) + (Math.random() - .5) * .8;
@@ -1450,12 +1451,14 @@
         { const crowd = team(1 - t).filter(o => Math.hypot(o.x - p.x, o.y - p.y) < 13).length, far = Math.abs(q.y - p.y); if (crowd >= 3 && far > W * .4 && op > 5) { s += 1.6 + (crowd - 3) * .5; if (d > 26) k = "lob"; } }   // cambio de juego al lado débil
         if (s > bs) { bs = s; best = [q, k]; } }
       const dribT = simT - (p.ai.gotT || simT);
-      if (best && (press < 3 || bs > 1.8 || (dribT > 1.8 && bs > .9) || Math.random() < .12)) { passTo(p, best[0], best[1], .5 + Math.random() * .2); return C; }
+      if (best && (wallP || press < 3 || bs > 1.8 || (dribT > 1.8 && bs > .9) || Math.random() < .12)) { passTo(p, best[0], best[1], .5 + Math.random() * .2); return C; }
     }
     // conducir: hacia la portería, apartándose del rival más cercano
     let dirx = M.dirOf[t], diry = (W / 2 - p.y) / 60;
     for (const o of team(1 - t)) { const dx = p.x - o.x, dy = p.y - o.y, d = Math.hypot(dx, dy); if (d < 6 && d > .1) { dirx += dx / d * (6 - d) * .25; diry += dy / d * (6 - d) * .35; } }
     if (p.y < 6) diry += (6 - p.y) * .35; else if (p.y > W - 6) diry -= (p.y - (W - 6)) * .35;   // no conducir hacia la banda: se sale
+    if (STREET) { const m = 4.5, k = .9; if (p.y < m) diry += (m - p.y) * k; else if (p.y > W - m) diry -= (p.y - (W - m)) * k;   // jaula: se separa de las paredes en vez de ir pegado a ellas
+      if (Math.abs(p.y - W / 2) > GW / 2) { if (p.x < m) dirx += (m - p.x) * k; else if (p.x > L - m) dirx -= (p.x - (L - m)) * k; } }
     { const d0 = nearestDef(p); if (d0 && dist(d0, p) < 2.6 && !p.one && simT - (p.skillT || -9) > 2.5 && Math.random() < dt * (.13 + Math.max(0, p.st.dri - 74) * .035)) {   // la máquina también regatea (más los buenos regateadores)
         const pk = aiSkill(p, d0); if (pk) { skillMove(p, pk.k, { dir: pk.dir, m: 1, spr: pk.k === "feint" }); return { dir: null, m: 0 }; } } }
     C.dir = Math.atan2(diry, dirx); C.m = 1; C.spr = press > 6 && prog(t, p.x) > .4;
