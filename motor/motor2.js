@@ -1134,8 +1134,9 @@
     // golpeos con barra de potencia (pase, tiro, centro, al hueco)
     // regates: ruleta (R / stick derecho) y frenar el balón con la suela (T / stick izquierdo)
     if (I.ctx && M.owner && M.owner.t !== p.t) I.walk = true;   // REGATE defendiendo = contener
-    if (hasBall(p) && !p.one && !charge && I.ctxD) { skillMove(p, ctxSkill(p, I), I); return { dir: null, m: 0 }; }
-    if (hasBall(p) && !p.one && !charge && I.rskD && I.rs != null) { const J = { dir: I.rs, m: 1, spr: I.spr }; skillMove(p, ctxSkill(p, J), J); return { dir: null, m: 0 }; }
+    if (hasBall(p) && !p.one && !charge && I.ctxD) { { const k = ctxSkill(p, I), d0 = nearestDef(p), sd = d0 && dist(d0, p) < 6 ? (angD(p.h, Math.atan2(d0.y - p.y, d0.x - p.x)) >= 0 ? -1 : 1) : (Math.random() < .5 ? -1 : 1);   // sale hacia el lado contrario al defensa
+        skillMove(p, k, Object.assign({}, I, { dir: /croq|feint|step/.test(k) ? p.h + sd * 1.2 : k === "nut" ? null : p.h, m: 1 })); } return { dir: null, m: 0 }; }
+    if (hasBall(p) && !p.one && !charge && I.rskD && I.rs != null) { const J = { dir: I.rs, m: 1, spr: I.spr, mx: Math.cos(I.rs), my: Math.sin(I.rs) }; skillMove(p, ctxSkill(p, J), J); return { dir: null, m: 0 }; }
     if (hasBall(p) && !p.one && !charge && (I.spinD || I.stopD || I.feintD || I.nutD || I.stepD)) { skillMove(p, I.spinD ? "spin" : I.stopD ? "stop" : I.feintD ? "feint" : I.nutD ? "nut" : "step", I); return { dir: null, m: 0 }; }
     const keys = { shot: I.shoot, pass: I.pass, lob: I.lob, thru: I.thru };
     if (hasBall(p) || (!M.owner && Math.hypot(ball.x - p.x, ball.y - p.y) < 2.2 && ball.z < .6)) {
@@ -1211,17 +1212,17 @@
   }
   const nearestDef = p => team(1 - p.t).filter(q => !q.gk && q.down <= 0).sort((a, b) => dist(a, p) - dist(b, p))[0];
   // botón REGATE (como en DLS): el regate depende de hacia dónde empujas el stick respecto a donde miras
-  // botón de REGATE (G, REGATE en el móvil o pulsar un stick del mando) + dirección respecto a hacia donde corre tu jugador:
-  // sin dirección = autopase · adelante = ruleta (con esprint, sombrero) · atrás = pisada · a un lado = croqueta
-  // en diagonal hacia delante = amago · en diagonal hacia atrás = bicicleta
+  // botón de REGATE (G, REGATE en el móvil o pulsar un stick del mando) + hacia dónde tengas el stick EN LA PANTALLA:
+  // sin dirección = autopase · arriba = ruleta · abajo = pisada · izquierda = croqueta · derecha = amago
+  // diagonal arriba = bicicleta · diagonal abajo = sombrero
   function ctxSkill(p, I) {
-    if (I.dir == null || I.m < .3) return "nut";
-    const rel = Math.abs(angD(p.h, I.dir));
-    if (rel < .4) return I.spr ? "hat" : "spin";
-    if (rel < 1.1) return "feint";
-    if (rel < 2.0) return "croq";
-    if (rel < 2.5) return "step";
-    return "stop"; }
+    const mx = I.mx || 0, my = I.my || 0; if (Math.hypot(mx, my) < .3) return "nut";
+    const a = Math.atan2(my, mx) * 180 / Math.PI;   // 0 = derecha, -90 = arriba, 90 = abajo, ±180 = izquierda
+    if (a > -112.5 && a < -67.5) return "spin";
+    if (a > 67.5 && a < 112.5) return "stop";
+    if (a >= -22.5 && a <= 22.5) return "feint";
+    if (a >= 157.5 || a <= -157.5) return "croq";
+    return a < 0 ? "step" : "hat"; }
   // ¿se come el amago? como en DLS cuenta el momento: si el defensa viene lanzado hacia ti y está a 1-3 m, pica casi siempre
   function foolChance(p, d0, base) { const d = dist(d0, p), toMe = Math.atan2(p.y - d0.y, p.x - d0.x), closing = (d0.v || 0) * Math.cos(angD(d0.h, toMe));
     const timing = d > .9 && d < 3.2 ? .12 + clamp(closing / 6, 0, .2) : d < .9 ? -.15 : -.1;
